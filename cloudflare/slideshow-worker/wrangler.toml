@@ -1,0 +1,16 @@
+name = "slideshow-player"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+routes = [
+  { pattern = "share.calgarydhamaka.com/s/*", zone_name = "calgarydhamaka.com" }
+]
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "slideshow-studio"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "slideshow-studio-db"
+database_id = "36d9cf1c-547e-4522-8fc1-4c9dacd8cb2d"

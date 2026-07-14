@@ -1,0 +1,44 @@
+# ── Core web framework ────────────────────────────────────────────────────────
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-Mail==0.10.0
+Werkzeug==3.0.3
+
+# ── Database ──────────────────────────────────────────────────────────────────
+SQLAlchemy==2.0.31
+# For production PostgreSQL, also install:
+# psycopg2-binary==2.9.9
+
+# ── Config ────────────────────────────────────────────────────────────────────
+python-dotenv==1.0.1
+
+# ── Image processing ──────────────────────────────────────────────────────────
+Pillow==10.4.0
+
+# ── Audio processing
+mutagen==1.47.0   # fast audio metadata (duration, tags) ──────────────────────────────────────────────────────────
+moviepy==1.0.3
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+humanize==4.10.0
+
+# ── GPS reverse geocoding ─────────────────────────────────────────────────────
+geopy==2.4.1
+
+# ── SMS (Twilio for OTP) ──────────────────────────────────────────────────────
+twilio==9.3.2
+
+# ── Job queue (optional — only needed for background renders) ─────────────────
+celery==5.4.0
+redis==5.0.7
+
+# ── Google OAuth + YouTube upload (optional) ──────────────────────────────────
+google-auth==2.32.0
+google-auth-oauthlib==1.2.1
+google-api-python-client==2.140.0
+
+# ── Production server ─────────────────────────────────────────────────────────
+gunicorn==22.0.0
+
+opencv-python-headless>=4.8.0

@@ -1,0 +1,57 @@
+{% extends "shared/base.html" %}
+{% block title %}New project — Slideshow Studio{% endblock %}
+{% block main_class %}{% endblock %}
+
+{% block content %}
+<div class="auth-wrap" style="align-items:flex-start;padding-top:60px">
+  <div class="auth-card" style="max-width:460px">
+    <div style="margin-bottom:20px">
+      <a href="{{ url_for('projects.index') }}" style="font-size:12px;color:#8a9bb0;display:flex;align-items:center;gap:4px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Projects
+      </a>
+    </div>
+    <div class="auth-title">New project</div>
+    <div class="auth-sub">You can change all settings later.</div>
+    <form method="POST" action="{{ url_for('projects.new') }}">
+      <div class="form-group">
+        <label class="form-label">Project name <span style="color:#dc2626">*</span></label>
+        <input type="text" name="name" class="form-control"
+               placeholder="Krish graduation 2026" required autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Title slide text</label>
+        <input type="text" name="title_text" class="form-control"
+               placeholder="Krish graduation 2026">
+        <div class="form-hint">Shown as the opening slide. Can be left blank.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">End slide text</label>
+        <input type="text" name="end_text" class="form-control"
+               value="Thank You for Watching">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Render versions</label>
+        <div class="version-grid" style="grid-template-columns:1fr 1fr">
+          {% for vk, vinfo in render_versions.items() %}
+          {% set default_on = vk in ('hd', '4k', 'phone_smart', 'phone_stack') %}
+          <label class="version-item" style="{{ 'border-color:#1e3a52;background:#f5f9fc' if default_on else '' }}">
+            <input type="checkbox" name="render_versions" value="{{ vk }}"
+                   {% if default_on %}checked{% endif %}
+                   style="width:14px;height:14px;accent-color:#1e3a52">
+            <div>
+              <div class="version-label" style="font-size:12px">{{ vinfo.label }}</div>
+              <div class="version-res">{{ vinfo.res[0] }}×{{ vinfo.res[1] }}</div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:10px">
+        Create project
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

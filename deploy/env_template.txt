@@ -1,0 +1,29 @@
+# Copy this to /var/www/slideshow/.env on Hetzner
+# Fill in all values
+
+SECRET_KEY=generate-a-random-secret-key-here
+FLASK_ENV=production
+DATABASE_URL=sqlite:////var/www/slideshow/instance/slideshow_studio.db
+
+# Storage
+STORAGE_BASE=/tmp/slideshow
+TEMP_DIR=/tmp/slideshow_temp
+
+# Cloudflare R2
+CF_ACCOUNT_ID=1c7e88f71388739b19ee02189a4a81d7
+CF_API_TOKEN=your_cf_api_token
+CF_R2_BUCKET=slideshow-studio
+CF_D1_ID=36d9cf1c-547e-4522-8fc1-4c9dacd8cb2d
+CF_R2_ACCESS_KEY_ID=your_r2_access_key
+CF_R2_SECRET_ACCESS_KEY=your_r2_secret_key
+CF_R2_ENDPOINT=https://1c7e88f71388739b19ee02189a4a81d7.r2.cloudflarestorage.com
+
+# ffmpeg
+FFMPEG_PATH=/usr/bin/ffmpeg
+
+# Email (OTP)
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=admin@calgarydhamaka.com
+MAIL_PASSWORD=your_email_password

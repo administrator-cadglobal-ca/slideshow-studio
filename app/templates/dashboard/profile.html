@@ -1,0 +1,19 @@
+{% extends "shared/base.html" %}
+{% block title %}Profile — Slideshow Studio{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left"><h1>Profile and settings</h1></div>
+</div>
+<div class="card-padded" style="max-width:480px">
+  <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:14px">Account</div>
+  <div style="display:grid;gap:10px">
+    <div><div style="font-size:11px;color:#6b7280">Name</div><div style="font-weight:500">{{ current_user.full_name }}</div></div>
+    <div><div style="font-size:11px;color:#6b7280">Email</div><div>{{ current_user.email }}</div></div>
+    <div><div style="font-size:11px;color:#6b7280">Phone</div><div>{{ current_user.phone }}</div></div>
+    <div><div style="font-size:11px;color:#6b7280">Role</div><div>{{ current_user.role | capitalize }}</div></div>
+    <div><div style="font-size:11px;color:#6b7280">Storage</div>
+      <div>{{ current_user.storage_used | filesizeformat }} used of {{ current_user.quota_bytes | filesizeformat }}</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

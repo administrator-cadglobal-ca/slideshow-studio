@@ -1,0 +1,61 @@
+﻿# ── Secrets & environment ──────────────────────────────────────────────
+.env
+.env.local
+*.env.local
+
+# ── Python ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+
+# ── Instance folder (SQLite DB lives here) ─────────────────────────────
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# ── User uploads & runtime artifacts ───────────────────────────────────
+tmp/
+uploads/
+media/
+app/static/uploads/
+
+# ── Logs ───────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Editor / IDE ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS files ───────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Old snapshots and unused files ─────────────────────────────────────
+Slideshow_Studio_Phase1.zip
+*.bak
+*.bak.*
+
+# ── pCloud metadata (just in case) ─────────────────────────────────────
+.pcloud/
+
+# ── Tailwind CLI binary (installed globally, not per-project) ──────────
+tailwindcss.exe
+
+# ── Cloudflare Wrangler local state ────────────────────────────────────
+.wrangler/
+cloudflare/*/node_modules/
+cloudflare/*/.wrangler/

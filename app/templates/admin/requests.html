@@ -1,0 +1,159 @@
+{% extends "shared/base.html" %}
+{% block title %}Registration requests — Admin{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+
+  <div class="page-header">
+    <div>
+      <h1>Registration requests</h1>
+      <p class="page-sub">
+        {{ requests|selectattr('status','eq','pending')|list|length }} pending
+        &nbsp;·&nbsp;
+        {{ requests|length }} total
+      </p>
+    </div>
+  </div>
+
+  {# ── Pending requests ──────────────────────────────────────────────────── #}
+  {% set pending = requests|selectattr('status','eq','pending')|list %}
+  {% if pending %}
+  <section class="req-section">
+    <div class="section-title">
+      <span class="req-badge-count">{{ pending|length }}</span>
+      Pending — waiting for review
+    </div>
+
+    <div class="req-list">
+      {% for req in pending %}
+      <div class="req-card" id="req-{{ req.id }}">
+        <div class="req-card-body">
+
+          {# Avatar + name #}
+          <div class="req-avatar">{{ req.first_name[0] }}{{ req.last_name[0] }}</div>
+
+          <div class="req-info">
+            <div class="req-name">
+              {{ req.full_name }}
+              {% if req.discount_code %}
+                <span class="disc-badge">{{ req.discount_code }}</span>
+              {% endif %}
+            </div>
+            <div class="req-meta">
+              <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> {{ req.email }}</span>
+              <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.77 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 17z"/></svg> {{ req.phone }}</span>
+              <span class="req-time">{{ req.created_at | naturaltime }}</span>
+            </div>
+
+            {% if req.message %}
+            <blockquote class="req-message">"{{ req.message }}"</blockquote>
+            {% endif %}
+
+            {# ── Approve / Reject actions ────────────────────────────────── #}
+            <div class="req-actions">
+              <form method="POST" action="{{ url_for('admin.approve_request', req_id=req.id) }}"
+                    onsubmit="return confirmApprove('{{ req.full_name }}')">
+                <button type="submit" class="btn btn-approve">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approve
+                </button>
+              </form>
+
+              <button class="btn btn-outline" onclick="toggleRejectForm({{ req.id }})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Reject
+              </button>
+            </div>
+
+            {# ── Reject form (hidden until button clicked) ───────────────── #}
+            <div class="reject-form" id="reject-{{ req.id }}" style="display:none">
+              <form method="POST" action="{{ url_for('admin.reject_request', req_id=req.id) }}">
+                <div class="reject-form-inner">
+                  <input type="text" name="note" class="reject-input"
+                         placeholder="Reason for rejection (optional — sent to user by SMS)">
+                  <button type="submit" class="btn btn-reject">Send rejection</button>
+                  <button type="button" class="btn btn-outline"
+                          onclick="toggleRejectForm({{ req.id }})">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% else %}
+  <div class="empty-state">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <p>No pending requests. All caught up.</p>
+  </div>
+  {% endif %}
+
+  {# ── Reviewed requests (collapsed history) ─────────────────────────────── #}
+  {% set reviewed = requests|rejectattr('status','eq','pending')|list %}
+  {% if reviewed %}
+  <section class="req-section">
+    <div class="section-title toggle-title" onclick="toggleHistory()">
+      Previously reviewed
+      <span class="history-count">{{ reviewed|length }}</span>
+      <svg id="historyChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+
+    <div id="historyList" style="display:none">
+      {% for req in reviewed %}
+      <div class="req-card req-card-reviewed">
+        <div class="req-card-body">
+          <div class="req-avatar req-avatar-sm
+            {% if req.status == 'approved' %}avatar-approved{% else %}avatar-rejected{% endif %}">
+            {{ req.first_name[0] }}{{ req.last_name[0] }}
+          </div>
+          <div class="req-info">
+            <div class="req-name">
+              {{ req.full_name }}
+              <span class="status-pill status-{{ req.status }}">{{ req.status }}</span>
+            </div>
+            <div class="req-meta">
+              <span>{{ req.email }}</span>
+              <span>{{ req.phone }}</span>
+              {% if req.reviewed_at %}
+              <span>{{ req.status | capitalize }} {{ req.reviewed_at | naturaltime }}</span>
+              {% endif %}
+            </div>
+            {% if req.review_note %}
+            <div class="req-note">Reason sent: "{{ req.review_note }}"</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmApprove(name) {
+  return confirm('Approve ' + name + '?\n\nAn SMS will be sent to their phone and their account will be activated immediately.');
+}
+
+function toggleRejectForm(id) {
+  const f = document.getElementById('reject-' + id);
+  const visible = f.style.display !== 'none';
+  f.style.display = visible ? 'none' : 'block';
+  if (!visible) f.querySelector('input').focus();
+}
+
+function toggleHistory() {
+  const list     = document.getElementById('historyList');
+  const chevron  = document.getElementById('historyChevron');
+  const open     = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+</script>
+{% endblock %}

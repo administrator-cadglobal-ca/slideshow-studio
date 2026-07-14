@@ -1,0 +1,169 @@
+{% extends "shared/base.html" %}
+{% block title %}Admin — Slideshow Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Admin panel</h1>
+    <div class="page-sub">Manage users, registrations, and system settings</div>
+  </div>
+</div>
+
+<div class="admin-layout">
+
+{# ── Sidebar nav ── #}
+<div class="admin-sidenav">
+  <a href="{{ url_for('admin.index') }}" class="sidenav-item {% if request.endpoint=='admin.index' %}active{% endif %}">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Overview
+  </a>
+  <a href="{{ url_for('admin.requests_list') }}" class="sidenav-item {% if request.endpoint=='admin.requests_list' %}active{% endif %}">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Requests
+    {% set pc = pending_requests_count() %}
+    {% if pc > 0 %}<span class="sidenav-count">{{ pc }}</span>{% endif %}
+  </a>
+  <a href="{{ url_for('admin.users_list') }}" class="sidenav-item {% if request.endpoint=='admin.users_list' %}active{% endif %}">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Users
+  </a>
+</div>
+
+{# ── Main content ── #}
+<div>
+  <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat-card">
+      <div class="stat-label">Pending requests</div>
+      <div class="stat-value" style="{{ 'color:#d97706' if pending|length > 0 else '' }}">{{ pending|length }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active users</div>
+      <div class="stat-value">{{ users|selectattr('is_active')|list|length }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total renders</div>
+      <div class="stat-value">{{ total_renders }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Storage backend</div>
+      <div style="font-size:13px;font-weight:600;margin-top:6px">pCloud</div>
+      <div class="stat-sub">P:\slideshow</div>
+    </div>
+  </div>
+
+  {% if pending %}
+  <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span style="font-size:13px;color:#92400e">
+      <strong>{{ pending|length }} registration request{{ 's' if pending|length != 1 }}</strong> waiting for review.
+    </span>
+    <a href="{{ url_for('admin.requests_list') }}" class="btn btn-sm btn-warning" style="margin-left:auto">Review now</a>
+  </div>
+  {% endif %}
+
+  {# Recent requests preview #}
+  {% if pending %}
+  <div class="section-hd" style="margin-bottom:10px">
+    <div class="section-title">Pending registrations</div>
+    <a href="{{ url_for('admin.requests_list') }}" class="btn btn-sm">View all</a>
+  </div>
+  <div class="req-list" style="margin-bottom:20px">
+    {% for req in pending[:3] %}
+    <div class="req-card-item">
+      <div class="req-card-body">
+        <div class="req-av req-av-sm">{{ req.first_name[0] }}{{ req.last_name[0] }}</div>
+        <div class="req-info">
+          <div class="req-name-row">
+            {{ req.full_name }}
+            {% if req.discount_code %}<span class="disc-tag">{{ req.discount_code }}</span>{% endif %}
+          </div>
+          <div class="req-meta-row">
+            <span>{{ req.email }}</span>
+            <span>{{ req.phone }}</span>
+            <span>{{ req.created_at | naturaltime }}</span>
+          </div>
+          {% if req.message %}<div class="req-msg">"{{ req.message }}"</div>{% endif %}
+          <div class="req-actions-row">
+            <form method="POST" action="{{ url_for('admin.approve_request', req_id=req.id) }}"
+                  onsubmit="return confirmApprove('{{ req.full_name }}')">
+              <button type="submit" class="btn btn-sm btn-success">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Approve
+              </button>
+            </form>
+            <button class="btn btn-sm btn-danger" onclick="toggleReject('{{ req.id }}')">Reject</button>
+          </div>
+          <div id="reject-{{ req.id }}" class="reject-expand" style="display:none">
+            <form method="POST" action="{{ url_for('admin.reject_request', req_id=req.id) }}">
+              <div class="reject-expand-inner">
+                <input type="text" name="note" placeholder="Reason (sent by SMS, optional)">
+                <button type="submit" class="btn btn-sm btn-danger">Send rejection</button>
+                <button type="button" class="btn btn-sm" onclick="toggleReject('{{ req.id }}')">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Recent users #}
+  <div class="section-hd" style="margin-bottom:10px">
+    <div class="section-title">Recent users</div>
+    <a href="{{ url_for('admin.users_list') }}" class="btn btn-sm">Manage all</a>
+  </div>
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Phone</th>
+          <th>Storage</th>
+          <th>Status</th>
+          <th>Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users[:8] %}
+        <tr>
+          <td>
+            <div class="td-user">
+              <div class="td-avatar {% if user.is_admin %}av-admin{% endif %}">{{ user.first_name[0] }}{{ user.last_name[0] }}</div>
+              <div>
+                <div class="td-name">{{ user.full_name }}</div>
+                <div class="td-meta">{{ user.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td><div class="td-meta">{{ user.phone }}</div></td>
+          <td>
+            <div class="td-meta">{{ user.storage_used|filesizeformat }} / {{ user.quota_bytes|filesizeformat }}</div>
+            <div class="progress" style="margin-top:3px;width:80px">
+              <div class="progress-bar" style="width:{{ [user.storage_pct,100]|min }}%"></div>
+            </div>
+          </td>
+          <td>
+            {% if user.is_active %}
+              <span class="pill pill-success">Active</span>
+            {% else %}
+              <span class="pill pill-danger">Suspended</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if user.is_admin %}
+              <span class="pill pill-purple">Admin</span>
+            {% else %}
+              <span class="pill pill-gray">User</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+{% endblock %}

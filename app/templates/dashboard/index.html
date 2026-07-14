@@ -1,0 +1,144 @@
+{% extends "shared/base.html" %}
+{% block title %}Dashboard — Slideshow Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 17 else 'evening') }}, {{ current_user.first_name }}</h1>
+    <div class="page-sub">
+      {% if active_job %}
+        1 render in progress
+        {% if active_job.current_version %} — {{ active_job.current_version.upper() }}{% endif %}
+      {% else %}
+        No active renders
+      {% endif %}
+      &nbsp;·&nbsp;
+      {{ projects|selectattr('status','eq','complete')|list|length }} project{{ 's' if projects|length != 1 }} complete
+    </div>
+  </div>
+  <a href="{{ url_for('projects.new') }}" class="btn btn-primary">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New project
+  </a>
+</div>
+
+{# ── Stats ── #}
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Projects</div>
+    <div class="stat-value">{{ projects|length }}</div>
+    <div class="stat-sub">{{ projects|selectattr('status','eq','complete')|list|length }} complete</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Videos rendered</div>
+    <div class="stat-value">{{ total_outputs }}</div>
+    <div class="stat-sub">across all projects</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Audio library</div>
+    <div class="stat-value">{{ audio_count }}</div>
+    <div class="stat-sub">song{{ 's' if audio_count != 1 }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Storage</div>
+    <div class="stat-value" style="font-size:18px">{{ current_user.storage_used|filesizeformat }}</div>
+    <div class="storage-bar-wrap">
+      <div class="storage-nums">
+        <span></span>
+        <span>{{ current_user.quota_bytes|filesizeformat }}</span>
+      </div>
+      <div class="progress">
+        <div class="progress-bar {% if current_user.storage_pct > 90 %}danger{% elif current_user.storage_pct > 70 %}warn{% endif %}"
+             style="width:{{ current_user.storage_pct|round(1) }}%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Active render ── #}
+{% if active_job %}
+<div class="card-padded" style="margin-bottom:20px;border-left:3px solid #d97706">
+  <div class="section-hd">
+    <div class="section-title" style="display:flex;align-items:center;gap:8px">
+      <span style="width:8px;height:8px;border-radius:50%;background:#d97706;display:inline-block;animation:pulse 1.5s infinite"></span>
+      Rendering now — {{ active_job.project.name }}
+    </div>
+    <a href="{{ url_for('renders.show', job_id=active_job.id) }}" class="btn btn-sm">View progress</a>
+  </div>
+  <div style="margin-top:10px">
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#8a9bb0;margin-bottom:5px">
+      <span>{{ active_job.current_version.upper() if active_job.current_version else 'Starting...' }}</span>
+      <span>{{ active_job.progress_pct|round(0)|int }}%</span>
+    </div>
+    <div class="progress">
+      <div class="progress-bar warn" style="width:{{ active_job.progress_pct or 0 }}%"></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Projects ── #}
+<div class="section-hd">
+  <div class="section-title">Your projects</div>
+  <a href="{{ url_for('projects.index') }}" class="btn btn-sm">View all</a>
+</div>
+
+{% if projects %}
+<div class="projects-grid">
+  {% for proj in projects[:6] %}
+  <a href="{{ url_for('projects.show', project_id=proj.id) }}" class="proj-card" style="display:block">
+    <div class="proj-thumb" style="background:{{ loop_colors[loop.index0 % loop_colors|length] }}">
+      {% if proj.photo_count > 0 %}
+        <span class="proj-thumb-count">{{ proj.photo_count }} photos</span>
+      {% endif %}
+    </div>
+    <div class="proj-body">
+      <div class="proj-name">{{ proj.name }}</div>
+      <div class="proj-meta">
+        {{ proj.photo_count }} photo{{ 's' if proj.photo_count != 1 }}
+        {% if proj.selected_songs|length %} · {{ proj.selected_songs|length }} song{{ 's' if proj.selected_songs|length != 1 }}{% endif %}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        {% if proj.status == 'complete' %}
+          <span class="pill pill-success">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            Complete
+          </span>
+        {% elif proj.status == 'rendering' %}
+          <span class="pill pill-warning">Rendering</span>
+          {% if proj.latest_job %}
+          <div class="progress" style="flex:1">
+            <div class="progress-bar warn" style="width:{{ proj.latest_job.progress_pct or 0 }}%"></div>
+          </div>
+          {% endif %}
+        {% elif proj.status == 'draft' %}
+          <span class="pill pill-gray">Draft</span>
+        {% else %}
+          <span class="pill pill-info">{{ proj.status|capitalize }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+
+  {% if projects|length < 6 %}
+  <a href="{{ url_for('projects.new') }}" class="proj-new-card">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New project
+  </a>
+  {% endif %}
+</div>
+{% else %}
+<div class="empty-state">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+  <p>No projects yet.</p>
+  <div class="empty-cta">
+    <a href="{{ url_for('projects.new') }}" class="btn btn-primary">Create your first project</a>
+  </div>
+</div>
+{% endif %}
+
+<style>
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+{% endblock %}

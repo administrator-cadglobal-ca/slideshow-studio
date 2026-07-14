@@ -1,0 +1,66 @@
+{% extends "shared/base.html" %}
+{% block title %}Request access — Slideshow Studio{% endblock %}
+{% block main_class %}{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card" style="max-width:480px">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      </div>
+      <span class="auth-logo-text">Slideshow Studio</span>
+    </div>
+    <div class="auth-title">Request access</div>
+    <div class="auth-sub">An admin will review your request and activate your account. You'll receive an SMS when it's ready.</div>
+    <form method="POST" action="{{ url_for('auth.register') }}">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">First name <span style="color:#dc2626">*</span></label>
+          <input type="text" name="first_name" class="form-control"
+                 value="{{ first_name or '' }}" placeholder="Gurmeet" required autofocus>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last name <span style="color:#dc2626">*</span></label>
+          <input type="text" name="last_name" class="form-control"
+                 value="{{ last_name or '' }}" placeholder="Singh" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email address <span style="color:#dc2626">*</span></label>
+        <input type="email" name="email" class="form-control"
+               value="{{ email or '' }}" placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone number <span style="color:#dc2626">*</span></label>
+        <input type="tel" name="phone" class="form-control"
+               value="{{ phone or '' }}" placeholder="+1 403 123 4567" required>
+        <div class="form-hint">Include country code — login codes are sent to this number.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">
+          Discount code
+          <span style="color:#8a9bb0;font-weight:400">(optional)</span>
+        </label>
+        <input type="text" name="discount_code" class="form-control"
+               value="{{ discount_code or '' }}" placeholder="FAMILY20"
+               style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label class="form-label">
+          Message to admin
+          <span style="color:#8a9bb0;font-weight:400">(optional)</span>
+        </label>
+        <textarea name="message" class="form-control" rows="3"
+                  placeholder="Tell us how you plan to use Slideshow Studio...">{{ message or '' }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary"
+              style="width:100%;justify-content:center;padding:10px">
+        Submit request
+      </button>
+    </form>
+    <div class="auth-footer">
+      Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

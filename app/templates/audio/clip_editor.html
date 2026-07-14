@@ -1,0 +1,532 @@
+{% extends "shared/base.html" %}
+{% block title %}Clips — {{ audio_file.orig_name }}{% endblock %}
+
+{% block head %}
+<style>
+.clip-wrap{max-width:860px;margin:0 auto}
+.clip-card{background:#fff;border:1px solid #e8e5e0;border-radius:12px;overflow:hidden;margin-bottom:14px}
+.clip-card-hd{padding:13px 20px;border-bottom:1px solid #f0ede8;font-size:13px;font-weight:600;
+  color:#374151;display:flex;align-items:center;justify-content:space-between}
+.clip-card-body{padding:20px}
+
+/* Waveform */
+.waveform-wrap{position:relative;height:88px;background:#0f1923;border-radius:8px;
+  overflow:hidden;cursor:pointer;user-select:none;margin-bottom:6px}
+.waveform-canvas{display:block;width:100%;height:100%}
+.clip-excluded-l{position:absolute;top:0;bottom:0;left:0;background:rgba(0,0,0,.55);pointer-events:none}
+.clip-excluded-r{position:absolute;top:0;bottom:0;right:0;background:rgba(0,0,0,.55);pointer-events:none}
+.clip-region{position:absolute;top:0;bottom:0;border-left:2px solid #3b82f6;border-right:2px solid #3b82f6;pointer-events:none}
+.handle{position:absolute;top:0;bottom:0;width:14px;cursor:ew-resize;z-index:10;
+  display:flex;align-items:center;justify-content:center;transform:translateX(-50%)}
+.handle-bar{width:3px;height:52px;border-radius:2px;background:#3b82f6}
+.handle-label{position:absolute;top:-22px;background:#3b82f6;color:#fff;
+  font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;font-family:monospace;pointer-events:none}
+.handle-label::after{content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
+  border:4px solid transparent;border-top-color:#3b82f6}
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:#f97316;pointer-events:none;z-index:9}
+.time-ruler{display:flex;justify-content:space-between;font-size:10px;color:#6b7280;font-family:monospace;padding:0 2px;margin-bottom:14px}
+
+/* Info boxes */
+.clip-info-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+.cic{background:#f9f8f6;border:1px solid #f0ede8;border-radius:8px;padding:10px 14px;text-align:center}
+.cic-label{font-size:10px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.cic-val{font-size:17px;font-weight:700;font-family:monospace;margin-top:3px;color:#1e3a52}
+.cic-val.hi{color:#d97706}
+
+/* Controls */
+.ctrl-strip{background:#f9f8f6;border-radius:8px;padding:11px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.c-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #e8e5e0;background:#fff;color:#374151;transition:.15s}
+.c-btn:hover{background:#f5f4f1}
+.c-btn.accent{background:#3b82f6;color:#fff;border-color:transparent}
+.c-btn.accent:hover{background:#2563eb}
+.c-btn.icon{width:36px;height:36px;padding:0;justify-content:center}
+.c-btn.sm{padding:5px 10px;font-size:12px}
+.ti-input{border:1px solid #d1cdc7;border-radius:7px;padding:7px 10px;font-size:14px;font-family:monospace;font-weight:600;text-align:center;width:90px;outline:none;color:#1a1a18}
+.ti-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.ti-quick{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.ti-qbtn{padding:3px 8px;border:1px solid #e8e5e0;border-radius:5px;font-size:10px;background:#fff;color:#5f6b7a;cursor:pointer;font-family:monospace}
+.ti-qbtn:hover{background:#f5f4f1}
+
+/* Clips list */
+.clips-list{display:flex;flex-direction:column;gap:8px}
+.clip-row{background:#f9f8f6;border:1px solid #e8e5e0;border-radius:8px;padding:12px 14px;
+  display:flex;align-items:center;gap:10px;transition:.12s;cursor:pointer}
+.clip-row:hover{border-color:#c8c4be}
+.clip-row.active{border-color:#3b82f6;background:#eff6ff}
+.clip-row-name{font-size:13px;font-weight:600;color:#1a1a18;flex:1}
+.clip-row-meta{font-size:11px;color:#6b7280;font-family:monospace}
+.clip-row-dur{font-size:11px;color:#059669;font-weight:600;font-family:monospace;min-width:40px;text-align:right}
+.clip-pill{font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid #e8e5e0;color:#6b7280;background:#fff}
+
+.vol-wrap{display:flex;align-items:center;gap:6px;margin-left:auto}
+.vol-slider{width:72px;accent-color:#1e3a52;cursor:pointer}
+.zoom-slider{width:80px;accent-color:#1e3a52;cursor:pointer}
+
+.loading-msg{text-align:center;color:#9ca3af;font-size:12px;padding:8px 0}
+
+input[type=text].clip-name-in{border:1px solid #e8e5e0;border-radius:6px;padding:5px 10px;font-size:13px;font-weight:600;outline:none;width:200px}
+input[type=text].clip-name-in:focus{border-color:#3b82f6}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="clip-wrap">
+  <div class="page-header" style="margin-bottom:14px">
+    <div class="page-header-left">
+      <div style="font-size:11px;color:#8a9bb0;margin-bottom:3px">
+        <a href="{{ url_for('audio.index') }}" style="color:#8a9bb0">Audio library</a>
+        <span style="margin:0 5px">›</span> Clip editor
+      </div>
+      <h1 style="font-size:18px">{{ audio_file.orig_name }}</h1>
+      <div class="page-sub">
+        Total duration: <strong id="totalDurDisplay">{{ audio_file.duration_display if audio_file.duration_s else 'Loading...' }}</strong>
+        · {{ audio_file.clip_count }} clip{{ 's' if audio_file.clip_count != 1 }}
+      </div>
+    </div>
+    <a href="{{ url_for('audio.index') }}" class="btn btn-sm">← Back</a>
+  </div>
+
+  {# ── Waveform + transport ── #}
+  <div class="clip-card">
+    <div class="clip-card-hd">
+      <span>Waveform</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:#6b7280">Zoom</span>
+        <input type="range" id="zoomSlider" class="zoom-slider" min="1" max="8" value="1" step="0.5">
+        <span id="zoomLabel" style="font-size:11px;font-family:monospace;color:#5f6b7a">1×</span>
+      </div>
+    </div>
+    <div class="clip-card-body">
+      <div id="loadingMsg" class="loading-msg">Loading audio...</div>
+      <div class="waveform-wrap" id="waveformWrap"
+           onmousedown="onWaveClick(event)" ontouchstart="onWaveTouch(event)">
+        <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
+        <div class="clip-excluded-l" id="exL" style="width:0%"></div>
+        <div class="clip-excluded-r" id="exR" style="width:0%"></div>
+        <div class="clip-region"    id="clipReg" style="left:0%;right:0%"></div>
+        <div class="handle" id="hStart" style="left:0%"
+             onmousedown="startDrag(event,'start')" ontouchstart="startDrag(event,'start')">
+          <div class="handle-bar"></div>
+          <div class="handle-label" id="lblStart">0:00</div>
+        </div>
+        <div class="handle" id="hEnd" style="left:100%"
+             onmousedown="startDrag(event,'end')" ontouchstart="startDrag(event,'end')">
+          <div class="handle-bar"></div>
+          <div class="handle-label" id="lblEnd">0:00</div>
+        </div>
+        <div class="playhead" id="playhead" style="left:0%"></div>
+      </div>
+      <div class="time-ruler" id="timeRuler"></div>
+
+      <div class="clip-info-bar">
+        <div class="cic"><div class="cic-label">Clip start</div><div class="cic-val" id="infoStart">0:00</div></div>
+        <div class="cic"><div class="cic-label">Clip duration</div><div class="cic-val hi" id="infoDur">—</div></div>
+        <div class="cic"><div class="cic-label">Clip end</div><div class="cic-val" id="infoEnd">—</div></div>
+      </div>
+
+      <div class="ctrl-strip">
+        <button class="c-btn icon" onclick="togglePlay()">
+          <svg id="playI"  width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <svg id="pauseI" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        </button>
+        <button class="c-btn sm accent" onclick="previewClip()">▶ Preview clip</button>
+        <button class="c-btn sm" onclick="previewFull()">Full song</button>
+        <div style="font-family:monospace;font-size:13px;color:#374151">
+          <span id="curTime">0:00</span> / <span id="totTime">—</span>
+        </div>
+        <button class="c-btn sm" onclick="resetHandles()">↺ Reset</button>
+        <div class="vol-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="0.8" oninput="audioEl.volume=this.value">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Clips list ── #}
+  <div class="clip-card">
+    <div class="clip-card-hd">
+      Clips for this song
+      <button class="btn btn-sm btn-primary" onclick="addNewClip()">+ New clip</button>
+    </div>
+    <div class="clip-card-body">
+      <div class="clips-list" id="clipsList">
+        {% for clip in audio_file.clips %}
+        <div class="clip-row {% if loop.first %}active{% endif %}"
+             id="cr-{{ clip.id }}"
+             onclick="selectClip({{ clip.id }}, '{{ clip.trim_start }}', '{{ clip.trim_end }}', '{{ clip.name }}')">
+          <div>
+            <div class="clip-row-name" id="cname-{{ clip.id }}" data-desc="{{ clip.description or '' }}">{{ clip.name }}</div>
+            <div class="clip-row-meta" id="cmeta-{{ clip.id }}">{{ clip.label }}</div>
+          </div>
+          <span class="clip-pill">{{ clip.duration_display }}</span>
+          <button class="c-btn sm" style="flex-shrink:0" onclick="event.stopPropagation();editClipName({{ clip.id }})">✏</button>
+          {% if not loop.first or audio_file.clips|length > 1 %}
+          <button class="c-btn sm" style="flex-shrink:0;color:#dc2626;border-color:#fca5a5"
+                  onclick="event.stopPropagation();deleteClip({{ clip.id }}, '{{ clip.name }}')">✕</button>
+          {% endif %}
+        </div>
+        {% else %}
+        <div style="text-align:center;color:#b0bec5;padding:20px">
+          No clips yet — click "+ New clip" to create one.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Trim inputs ── #}
+  <div class="clip-card" id="trimPanel">
+    <div class="clip-card-hd">
+      Set trim times — <span id="editingClipName" style="color:#3b82f6">select a clip above</span>
+    </div>
+    <div class="clip-card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:5px">Trim start (skip intro)</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="startInput" class="ti-input" value="0:00" placeholder="0:00">
+            <button class="c-btn sm" onclick="applyInput('start')">Set</button>
+          </div>
+          <div class="ti-quick">
+            <button class="ti-qbtn" onclick="quickStart(4)">+4s</button>
+            <button class="ti-qbtn" onclick="quickStart(6)">+6s</button>
+            <button class="ti-qbtn" onclick="quickStart(10)">+10s</button>
+            <button class="ti-qbtn" onclick="setPhTo('start')" style="color:#f97316;border-color:#fed7aa">⊙ Playhead</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:5px">Trim end (skip outro)</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="endInput" class="ti-input" value="" placeholder="full end">
+            <button class="c-btn sm" onclick="applyInput('end')">Set</button>
+          </div>
+          <div class="ti-quick">
+            <button class="ti-qbtn" onclick="quickEnd(-5)">-5s</button>
+            <button class="ti-qbtn" onclick="quickEnd(-10)">-10s</button>
+            <button class="ti-qbtn" onclick="quickEnd(-30)">-30s</button>
+            <button class="ti-qbtn" onclick="setPhTo('end')" style="color:#f97316;border-color:#fed7aa">⊙ Playhead</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:5px">Description <span style="font-weight:400;color:#9ca3af">(optional)</span></div>
+        <input type="text" id="clipDesc" class="ti-input" style="width:100%;text-align:left"
+               maxlength="200" placeholder="e.g. Full Song, Wedding intro, DJ outro...">
+      </div>
+      <div style="display:flex;gap:16px;padding:12px 0;border-top:1px solid #f0ede8;margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="fadeIn" style="accent-color:#1e3a52;width:14px;height:14px"> Fade in (1s)
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="fadeOut" checked style="accent-color:#1e3a52;width:14px;height:14px"> Fade out (2s)
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="normalize" style="accent-color:#1e3a52;width:14px;height:14px"> Normalize
+        </label>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="c-btn accent" onclick="saveClip()" id="saveBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Save clip
+        </button>
+        <button class="c-btn sm" onclick="previewClip()">▶ Preview</button>
+        <span id="saveStatus" style="font-size:12px;color:#6b7280;margin-left:auto"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<audio id="audioEl" src="{{ audio_url }}" preload="auto"></audio>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SONG_ID  = {{ audio_file.id }};
+const audioEl  = document.getElementById('audioEl');
+audioEl.volume = 0.8;
+
+let DUR = {{ audio_file.duration_s or 0 }};
+let startPct = 0, endPct = 100;
+let dragging  = null;
+let previewingClip = false;
+let activeClipId   = null;
+
+// ── Initial clip selection ────────────────────────────────────────────────────
+{% if audio_file.clips %}
+const firstClip = {{ audio_file.clips[0].id }};
+selectClip(
+  firstClip,
+  {{ audio_file.clips[0].trim_start | tojson | safe }},
+  {{ audio_file.clips[0].trim_end   | tojson | safe }},
+  {{ audio_file.clips[0].name       | tojson | safe }}
+);
+{% endif %}
+
+// ── Audio ready ───────────────────────────────────────────────────────────────
+function onAudioReady() {
+  if (!DUR && audioEl.duration && isFinite(audioEl.duration)) DUR = audioEl.duration;
+  if (!DUR || !isFinite(DUR)) return;
+  document.getElementById('loadingMsg').style.display = 'none';
+  document.getElementById('totalDurDisplay').textContent = fmt(DUR);
+  document.getElementById('totTime').textContent = fmt(DUR);
+  buildRuler();
+  updateAll();
+  drawWaveform();
+}
+audioEl.addEventListener('loadedmetadata', onAudioReady);
+audioEl.addEventListener('durationchange', onAudioReady);
+if (audioEl.readyState >= 1 && audioEl.duration) onAudioReady();
+audioEl.addEventListener('error', () => {
+  document.getElementById('loadingMsg').textContent = '⚠ Could not load audio — check file on pCloud';
+  document.getElementById('loadingMsg').style.color = '#dc2626';
+  document.getElementById('loadingMsg').style.display = 'block';
+});
+
+// ── Waveform ──────────────────────────────────────────────────────────────────
+function drawWaveform() {
+  const canvas = document.getElementById('waveformCanvas');
+  const wrap   = document.getElementById('waveformWrap');
+  const ctx    = canvas.getContext('2d');
+  canvas.width  = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  const w=canvas.width, h=canvas.height;
+  ctx.fillStyle='#0f1923'; ctx.fillRect(0,0,w,h);
+  const bars = Math.floor(w/3);
+  const seed = '{{ audio_file.orig_name }}'.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  for (let i=0;i<bars;i++) {
+    const t   = i/bars;
+    const amp = Math.max(0.05, Math.abs(Math.sin((i+seed)*0.37)*0.4+Math.sin((i+seed)*1.13)*0.3+0.3));
+    const bH  = Math.min(0.9,amp)*h*0.8;
+    const inC = t>=startPct/100 && t<=endPct/100;
+    ctx.fillStyle = inC ? 'rgba(59,130,246,0.7)' : 'rgba(255,255,255,0.15)';
+    ctx.fillRect(i*3,(h-bH)/2,2,bH);
+  }
+}
+function buildRuler() {
+  const r = document.getElementById('timeRuler');
+  r.innerHTML = '';
+  for (let i=0;i<=8;i++) {
+    const s=document.createElement('span');
+    s.textContent=fmt((DUR/8)*i);
+    r.appendChild(s);
+  }
+}
+function updateAll() {
+  if (!DUR) return;
+  const s=(startPct/100)*DUR, e=(endPct/100)*DUR, d=e-s;
+  document.getElementById('exL').style.width   = startPct+'%';
+  document.getElementById('exR').style.width   = (100-endPct)+'%';
+  document.getElementById('clipReg').style.left  = startPct+'%';
+  document.getElementById('clipReg').style.right = (100-endPct)+'%';
+  document.getElementById('hStart').style.left   = startPct+'%';
+  document.getElementById('hEnd').style.left     = endPct+'%';
+  document.getElementById('lblStart').textContent = fmt(s);
+  document.getElementById('lblEnd').textContent   = fmt(e);
+  document.getElementById('infoStart').textContent= fmt(s);
+  document.getElementById('infoEnd').textContent  = fmt(e);
+  document.getElementById('infoDur').textContent  = fmt(d);
+  document.getElementById('startInput').value     = fmt(s);
+  document.getElementById('endInput').value       = endPct>=99.9 ? '' : fmt(e);
+  drawWaveform();
+}
+
+// ── Drag handles ──────────────────────────────────────────────────────────────
+function startDrag(e,which){e.preventDefault();e.stopPropagation();dragging=which;document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});document.addEventListener('mouseup',endDrag);document.addEventListener('touchend',endDrag);}
+function onDrag(e){e.preventDefault();const wrap=document.getElementById('waveformWrap');const rect=wrap.getBoundingClientRect();const cx=(e.clientX??e.touches[0].clientX)-rect.left;const pct=Math.max(0,Math.min(100,(cx/rect.width)*100));if(dragging==='start')startPct=Math.min(pct,endPct-1);else endPct=Math.max(pct,startPct+1);updateAll();}
+function endDrag(){dragging=null;document.removeEventListener('mousemove',onDrag);document.removeEventListener('touchmove',onDrag);document.removeEventListener('mouseup',endDrag);document.removeEventListener('touchend',endDrag);}
+function onWaveClick(e){if(e.target.closest('.handle'))return;const rect=document.getElementById('waveformWrap').getBoundingClientRect();audioEl.currentTime=((e.clientX-rect.left)/rect.width)*DUR;}
+function onWaveTouch(e){if(e.target.closest('.handle'))return;const rect=document.getElementById('waveformWrap').getBoundingClientRect();audioEl.currentTime=((e.touches[0].clientX-rect.left)/rect.width)*DUR;}
+
+// ── Playback ──────────────────────────────────────────────────────────────────
+audioEl.addEventListener('timeupdate',()=>{
+  if(!DUR)return;
+  const pct=audioEl.currentTime/DUR*100;
+  document.getElementById('playhead').style.left=pct+'%';
+  document.getElementById('curTime').textContent=fmt(audioEl.currentTime);
+  if(previewingClip && audioEl.currentTime>=(endPct/100)*DUR){audioEl.pause();previewingClip=false;setPlayUI(false);}
+});
+audioEl.addEventListener('ended',()=>{setPlayUI(false);previewingClip=false;});
+audioEl.addEventListener('pause',()=>setPlayUI(false));
+audioEl.addEventListener('play', ()=>setPlayUI(true));
+function togglePlay(){audioEl.paused?audioEl.play():audioEl.pause();}
+function previewClip(){if(!DUR){alert('Audio not loaded yet.');return;}audioEl.currentTime=(startPct/100)*DUR;audioEl.play();previewingClip=true;}
+function previewFull(){previewingClip=false;audioEl.currentTime=0;audioEl.play();}
+function setPlayUI(pl){document.getElementById('playI').style.display=pl?'none':'block';document.getElementById('pauseI').style.display=pl?'block':'none';}
+function resetHandles(){startPct=0;endPct=100;updateAll();}
+
+// ── Time inputs ───────────────────────────────────────────────────────────────
+function applyInput(which){
+  if(!DUR){alert('Audio not loaded yet.');return;}
+  const val=document.getElementById(which==='start'?'startInput':'endInput').value.trim();
+  if(which==='end' && !val){endPct=100;updateAll();return;}
+  const t=parseTime(val);
+  if(isNaN(t)||t<0){alert('Invalid time. Use M:SS e.g. 0:06 or 1:23');return;}
+  if(which==='start') startPct=Math.min((t/DUR)*100,endPct-1);
+  else endPct=Math.max(Math.min((t/DUR)*100,100),startPct+1);
+  updateAll();
+}
+function quickStart(s){if(!DUR)return;startPct=Math.min((s/DUR)*100,endPct-1);updateAll();}
+function quickEnd(d){if(!DUR)return;const cur=(endPct/100)*DUR;const nT=Math.max((startPct/100)*DUR+1,Math.min(DUR,cur+d));endPct=(nT/DUR)*100;updateAll();}
+function setPhTo(which){if(!DUR)return;const t=audioEl.currentTime;if(which==='start')startPct=Math.min((t/DUR)*100,endPct-1);else endPct=Math.max((t/DUR)*100,startPct+1);updateAll();}
+
+// ── Clip management ───────────────────────────────────────────────────────────
+function selectClip(id, trimStart, trimEnd, name) {
+  activeClipId = id;
+  document.querySelectorAll('.clip-row').forEach(r=>r.classList.remove('active'));
+  document.getElementById('cr-'+id)?.classList.add('active');
+  document.getElementById('editingClipName').textContent = name;
+
+  if (!DUR) {
+    // Store for after audio loads
+    pendingClip = {id,trimStart,trimEnd};
+  } else {
+    applyClipToHandles(trimStart, trimEnd);
+  }
+  document.getElementById('startInput').value = trimStart || '0:00';
+  document.getElementById('endInput').value   = trimEnd   || '';
+  // Populate description from clip row
+  const descEl = document.querySelector('#cr-'+id+' [data-desc]');
+  document.getElementById('clipDesc').value = descEl ? descEl.dataset.desc : '';
+}
+
+let pendingClip = null;
+audioEl.addEventListener('loadedmetadata', () => {
+  if (pendingClip) { applyClipToHandles(pendingClip.trimStart, pendingClip.trimEnd); pendingClip=null; }
+});
+
+function applyClipToHandles(trimStart, trimEnd) {
+  if (!DUR) return;
+  if (trimStart) {
+    const t=parseTime(trimStart);
+    startPct = isFinite(t) ? Math.max(0,(t/DUR)*100) : 0;
+  } else startPct=0;
+  if (trimEnd) {
+    const t=parseTime(trimEnd);
+    endPct = isFinite(t) ? Math.min(100,(t/DUR)*100) : 100;
+  } else endPct=100;
+  updateAll();
+}
+
+function saveClip() {
+  if (!activeClipId) { alert('Select a clip first'); return; }
+  const startT = startPct < 0.5 ? '' : fmt((startPct/100)*DUR);
+  const endT   = endPct > 99.5  ? '' : fmt((endPct/100)*DUR);
+  const status = document.getElementById('saveStatus');
+  status.textContent = 'Saving...';
+  fetch('/audio/clips/'+activeClipId, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      trim_start:  startT, trim_end: endT,
+      description: document.getElementById('clipDesc').value.trim(),
+      fade_in:     document.getElementById('fadeIn').checked,
+      fade_out:    document.getElementById('fadeOut').checked,
+      normalize:   document.getElementById('normalize').checked,
+    })
+  }).then(r=>r.json()).then(d=>{
+    status.innerHTML='<span style="color:#059669;font-weight:600">✓ Saved</span>';
+    // Update clip row
+    const meta=document.getElementById('cmeta-'+activeClipId);
+    if(meta) meta.textContent=d.label;
+    const pill=document.querySelector('#cr-'+activeClipId+' .clip-pill');
+    if(pill) pill.textContent=d.duration_display;
+    setTimeout(()=>{status.textContent='';},2500);
+  }).catch(()=>{status.innerHTML='<span style="color:#dc2626">Save failed</span>';});
+}
+
+function addNewClip() {
+  // Name auto-generated as "Song Name - 01" etc. — user can rename after
+  fetch('/audio/'+SONG_ID+'/clips', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ trim_start:'', trim_end:'' })
+  }).then(r=>r.json()).then(d=>{
+    if (d.error) { alert(d.error); return; }
+    // Add row to list
+    const list = document.getElementById('clipsList');
+    const row  = document.createElement('div');
+    row.className='clip-row';
+    row.id='cr-'+d.id;
+    row.onclick=()=>selectClip(d.id,'','',d.name);
+    // Build clip row using DOM
+  var nameDiv = document.createElement('div');
+  var inner = document.createElement('div'); inner.className='clip-row-name'; inner.id='cname-'+d.id; inner.textContent=d.name;
+  var meta = document.createElement('div'); meta.className='clip-row-meta'; meta.id='cmeta-'+d.id; meta.textContent=d.label;
+  nameDiv.appendChild(inner); nameDiv.appendChild(meta);
+  var pill = document.createElement('span'); pill.className='clip-pill'; pill.textContent=d.duration_display;
+  var editBtn = document.createElement('button'); editBtn.className='c-btn sm'; editBtn.textContent='✏';
+  editBtn.onclick=(function(id){return function(e){e.stopPropagation();editClipName(id);};})(d.id);
+  var delBtn = document.createElement('button'); delBtn.className='c-btn sm'; delBtn.style.color='#dc2626'; delBtn.style.borderColor='#fca5a5'; delBtn.textContent='✕';
+  delBtn.onclick=(function(id,name){return function(e){e.stopPropagation();deleteClip(id,name);};})(d.id,d.name);
+  row.innerHTML='';
+  row.appendChild(nameDiv); row.appendChild(pill); row.appendChild(editBtn); row.appendChild(delBtn);
+    list.appendChild(row);
+    selectClip(d.id,'','',d.name);
+  });
+}
+
+function editClipName(id) {
+  const el   = document.getElementById('cname-'+id);
+  const name = prompt('Rename clip:', el?.textContent || '');
+  if (!name) return;
+  fetch('/audio/clips/'+id, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: name.trim()})
+  }).then(r=>r.json()).then(()=>{
+    if (el) el.textContent = name.trim();
+    if (activeClipId===id) document.getElementById('editingClipName').textContent=name.trim();
+  });
+}
+
+function deleteClip(id, name){
+  var row = document.querySelector('[data-clip-id="'+id+'"]') || document.getElementById('clip-row-'+id);
+  var target = row || document.getElementById('clipsTable');
+  inlineConfirm(target, 'Delete "'+name.substring(0,20)+'"?', function(){
+    fetch('/audio/clips/'+id, {method:'DELETE'})
+    .then(function(r){ return r.json(); })
+    .then(function(){ if(row) row.remove(); showToast('Deleted','success'); setTimeout(function(){ location.reload(); }, 600); })
+    .catch(function(){ showToast('Error','error'); });
+  });
+}
+function inlineConfirm(row, msg, onYes){
+  if(row.querySelector('.del-confirm')) return;
+  var bar = document.createElement('div');
+  bar.className='del-confirm';
+  bar.style.cssText='position:absolute;right:0;top:50%;transform:translateY(-50%);background:#dc2626;color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;z-index:10;display:flex;gap:8px;align-items:center;white-space:nowrap';
+  var yes = document.createElement('button');
+  yes.textContent='Yes'; yes.style.cssText='background:#fff;color:#dc2626;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700';
+  yes.onclick=function(){ bar.remove(); onYes(); };
+  var no = document.createElement('button');
+  no.textContent='No'; no.style.cssText='background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer';
+  no.onclick=function(){ bar.remove(); };
+  bar.appendChild(document.createTextNode(msg + ' '));
+  bar.appendChild(yes); bar.appendChild(no);
+  row.style.position='relative'; row.appendChild(bar);
+  setTimeout(function(){ if(bar.parentNode) bar.remove(); }, 5000);
+}
+
+
+// ── Keyboard ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(e.target.tagName))return;
+  if(e.key===' '){e.preventDefault();togglePlay();}
+  if(e.key==='ArrowLeft') audioEl.currentTime=Math.max(0,audioEl.currentTime-5);
+  if(e.key==='ArrowRight')audioEl.currentTime=Math.min(DUR||999,audioEl.currentTime+5);
+  if(e.key==='i')setPhTo('start');
+  if(e.key==='o')setPhTo('end');
+  if(e.key==='p')previewClip();
+  if(e.key==='s'&&(e.ctrlKey||e.metaKey)){e.preventDefault();saveClip();}
+});
+
+document.getElementById('zoomSlider').addEventListener('input',function(){
+  document.getElementById('zoomLabel').textContent=this.value+'×';
+});
+
+window.addEventListener('load',()=>{drawWaveform();window.addEventListener('resize',drawWaveform);});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(s){if(!isFinite(s)||s<0)s=0;s=Math.min(s,DUR||s);const m=Math.floor(s/60),sec=Math.floor(s%60);return m+':'+(sec<10?'0':'')+sec;}
+function parseTime(str){str=(str||'').trim();if(!str)return 0;const p=str.split(':');if(p.length===2)return parseInt(p[0])*60+parseFloat(p[1]);if(p.length===3)return parseInt(p[0])*3600+parseInt(p[1])*60+parseFloat(p[2]);return parseFloat(str)||0;}
+</script>
+{% endblock %}

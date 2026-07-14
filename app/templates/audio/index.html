@@ -1,0 +1,448 @@
+{% extends "shared/base.html" %}
+{% block title %}Audio — Song Library{% endblock %}
+{% block head %}
+<style>
+.audio-tabs{display:flex;gap:0;border-bottom:2px solid #e8e5e0;margin-bottom:20px}
+.audio-tab{padding:10px 20px;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;text-decoration:none;transition:.15s}
+.audio-tab:hover{color:#1e3a52}
+.audio-tab.active{color:#1e3a52;border-bottom-color:#1e3a52;font-weight:600}
+
+.audio-layout{display:grid;grid-template-columns:210px 1fr;gap:16px;align-items:start}
+
+/* Folder sidebar */
+.folder-sidebar{background:#fff;border:1px solid #e8e5e0;border-radius:10px;position:sticky;top:68px}
+.folder-sidebar-hd{padding:11px 14px;border-bottom:1px solid #f0ede8;display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px}
+.add-folder-btn{border:none;background:none;cursor:pointer;font-size:20px;color:#1e3a52;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;line-height:1}
+.add-folder-btn:hover{background:#f0ede8}
+.folder-item{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:12px;color:#374151;transition:.1s;border-left:3px solid transparent;user-select:none}
+.folder-item:hover{background:#f5f4f1}
+.folder-item.active{background:#e8f0f8;color:#1e3a52;font-weight:600;border-left-color:#1e3a52}
+.folder-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.folder-count{margin-left:auto;font-size:10px;color:#b0bec5;flex-shrink:0}
+.folder-acts{display:none;gap:2px;flex-shrink:0}
+.folder-item:hover .folder-acts{display:flex}
+.folder-act{border:none;background:none;cursor:pointer;padding:2px 4px;border-radius:3px;color:#9ca3af;font-size:11px}
+.folder-act:hover{color:#374151;background:#e8e5e0}
+.nf-form{padding:10px 14px;border-top:1px solid #f0ede8;display:none}
+.nf-input{width:100%;border:1px solid #e8e5e0;border-radius:5px;padding:5px 8px;font-size:12px;outline:none;margin-bottom:6px}
+.nf-input:focus{border-color:#1e3a52}
+.nf-colors{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.nf-color{width:17px;height:17px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.nf-color.sel{border-color:#000;transform:scale(1.15)}
+.nf-btns{display:flex;gap:5px}
+
+/* Song table */
+.song-tbl{background:#fff;border:1px solid #e8e5e0;border-radius:10px;overflow:hidden}
+.song-tbl-hd{display:grid;grid-template-columns:32px 1fr 80px 60px 80px 90px;
+  gap:8px;padding:8px 14px;border-bottom:1px solid #e8e5e0;
+  font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;
+  letter-spacing:.4px;background:#fafaf8;align-items:center}
+.song-row{display:grid;grid-template-columns:32px 1fr 80px 60px 100px 80px;
+  gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid #f5f4f1;transition:.1s}
+.song-row:last-child{border-bottom:none}
+.song-row:hover{background:#fafaf8}
+.song-row.playing{background:#ecfdf5}
+.play-btn{width:28px;height:28px;border:1px solid #e8e5e0;border-radius:50%;background:#fff;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s;flex-shrink:0}
+.play-btn:hover{background:#1e3a52;color:#fff;border-color:#1e3a52}
+.play-btn.active{background:#059669;color:#fff;border-color:#059669}
+.song-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.song-meta{font-size:10px;color:#9ca3af}
+.ra-btn{width:26px;height:26px;border:none;background:none;cursor:pointer;border-radius:5px;color:#9ca3af;display:flex;align-items:center;justify-content:center;text-decoration:none}
+.ra-btn.del{color:#dc2626;background:#fef2f2}
+.ra-btn:hover{background:#f0ede8;color:#374151}
+.ra-btn.del:hover{background:#fef2f2;color:#dc2626}
+.row-acts{display:flex;gap:3px;align-items:center;justify-content:flex-end}
+.folder-sel{border:1px solid #e8e5e0;border-radius:5px;padding:3px 6px;font-size:11px;background:#fff;outline:none;cursor:pointer;width:100%}
+.folder-sel:focus{border-color:#1e3a52}
+
+.player-bar{position:fixed;bottom:0;left:0;right:0;background:#1e3a52;color:#fff;padding:10px 24px;display:flex;align-items:center;gap:12px;z-index:200;box-shadow:0 -2px 16px rgba(0,0,0,.2);display:none}
+.pb-song{flex:1;min-width:0}
+.pb-sname{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pb-stime{font-size:10px;color:rgba(255,255,255,.55);font-family:monospace}
+.pb-btn{width:30px;height:30px;border:none;background:rgba(255,255,255,.15);border-radius:50%;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pb-btn:hover{background:rgba(255,255,255,.25)}
+.pb-btn.lg{width:36px;height:36px;background:#fff;color:#1e3a52}
+.pb-prog{flex:1;max-width:300px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;cursor:pointer}
+.pb-fill{height:100%;background:#fff;border-radius:2px;pointer-events:none}
+.up-prog{background:#fff;border:1px solid #e8e5e0;border-radius:8px;padding:14px;margin-top:12px;display:none}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:0">
+  <div class="page-header-left">
+    <h1>Audio</h1>
+    <div class="page-sub">{{ songs|length }} song{{ 's' if songs|length != 1 }} · {{ song_folders|length }} folder{{ 's' if song_folders|length != 1 }}</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-sm" onclick="scanDurations()">⏱ Scan durations</button>
+    <label class="btn btn-primary" style="cursor:pointer">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload songs
+      <input type="file" multiple accept="audio/*" style="display:none" onchange="uploadSongs(this.files)">
+    </label>
+  </div>
+</div>
+
+<div class="audio-tabs">
+  <a href="{{ url_for('audio.index') }}"       class="audio-tab active">🎵 Song library</a>
+  <a href="{{ url_for('audio.clips') }}"       class="audio-tab">✂ Clip library</a>
+  <a href="{{ url_for('audio.labels_page') }}" class="audio-tab">🏷 Labels</a>
+</div>
+
+<div class="audio-layout">
+
+  {# ── Folder sidebar ── #}
+  <div class="folder-sidebar">
+    <div class="folder-sidebar-hd">
+      <span>Song folders</span>
+      <button class="add-folder-btn" onclick="event.stopPropagation();toggleNF()" title="New folder">+</button>
+    </div>
+
+    <div class="folder-item active" id="fi-all" onclick="showFolder('all')">
+      <div class="folder-dot" style="background:#1e3a52"></div>
+      <span>All songs</span>
+      <span class="folder-count">{{ songs|length }}</span>
+    </div>
+    <div class="folder-item" id="fi-none" onclick="showFolder('none')">
+      <div class="folder-dot" style="background:#d1d5db;border:1px solid #e5e7eb"></div>
+      <span>Unorganised</span>
+      <span class="folder-count">{{ songs|selectattr('song_folder_id', 'none')|list|length }}</span>
+    </div>
+    {% for f in song_folders %}
+    <div class="folder-item" id="fi-{{ f.id }}" onclick="showFolder({{ f.id }})">
+      <div class="folder-dot" style="background:{{ f.color }}"></div>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
+      <span class="folder-count">{{ f.song_count }}</span>
+      <div class="folder-acts" onclick="event.stopPropagation()">
+        <button class="folder-act" onclick="editFolder({{ f.id }}, {{ f.name|tojson|safe }}, '{{ f.color }}')">✏</button>
+        <button class="folder-act" onclick="deleteFolder({{ f.id }}, {{ f.name|tojson|safe }})">🗑</button>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="nf-form" id="nfForm" style="display:none">
+      <input type="text" id="nfName" class="nf-input" placeholder="e.g. Bollywood" maxlength="100"
+             onkeydown="if(event.key==='Enter')saveNF()">
+      <div class="nf-colors" id="nfColors">
+        {% for c in ['#1e3a52','#6b4bb5','#059669','#d97706','#dc2626','#0891b2','#be185d','#374151','#0f766e'] %}
+        <div class="nf-color {% if loop.first %}sel{% endif %}" style="background:{{ c }}" data-c="{{ c }}"
+             onclick="pickC('{{ c }}',this,'nfColors','nf')"></div>
+        {% endfor %}
+      </div>
+      <div class="nf-btns">
+        <button class="btn btn-sm btn-primary" onclick="saveNF()">Create</button>
+        <button class="btn btn-sm" onclick="document.getElementById('nfForm').style.display='none'">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  {# ── Song table ── #}
+  <div>
+    {% if songs %}
+    <div class="song-tbl">
+      <div class="song-tbl-hd">
+        <span></span>
+        <span>Song</span>
+        <span>Duration</span>
+        <span>Clips</span>
+        <span>Folder</span>
+        <span></span>
+      </div>
+      {% for song in songs %}
+      <div class="song-row" id="sr-{{ song.id }}"
+           data-folder="{{ song.song_folder_id or 'none' }}">
+        <button class="play-btn" id="pb-{{ song.id }}" onclick="toggleSong({{ song.id }})">
+          <svg id="pi-{{ song.id }}" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <svg id="pa-{{ song.id }}" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        </button>
+        <div>
+          <div class="song-name">{{ song.orig_name }}</div>
+          <div class="song-meta">{{ (song.file_size/1048576)|round(1) }} MB</div>
+        </div>
+        <div style="font-size:12px;font-family:monospace" id="dur-{{ song.id }}">{{ song.duration_display }}</div>
+        <div style="font-size:12px;color:#374151">
+          <a href="{{ url_for('audio.clip_editor', song_id=song.id) }}"
+             style="color:#1e3a52;font-weight:500;text-decoration:none">
+            {{ song.clip_count }} clip{{ 's' if song.clip_count != 1 }}
+          </a>
+        </div>
+        <select class="folder-sel" onchange="assignFolder({{ song.id }}, this.value)">
+          <option value="">— none —</option>
+          {% for f in song_folders %}
+          <option value="{{ f.id }}" {% if song.song_folder_id == f.id %}selected{% endif %}>{{ f.name }}</option>
+          {% endfor %}
+        </select>
+        <div class="row-acts">
+          <a href="{{ url_for('audio.clip_editor', song_id=song.id) }}"
+             class="ra-btn" title="Clip editor" style="text-decoration:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          </a>
+          <button class="ra-btn del" title="Delete song and all clips"
+                  data-sid="{{ song.id }}" data-sname="{{ song.orig_name|e }}" onclick="deleteSong(this.dataset.sid, this.dataset.sname)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <p>No songs yet.</p>
+      <div class="empty-cta">
+        <label class="btn btn-primary" style="cursor:pointer">
+          Upload your first songs
+          <input type="file" multiple accept="audio/*" style="display:none" onchange="uploadSongs(this.files)">
+        </label>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div id="upProg" class="up-prog">
+  <div style="font-size:12px;font-weight:600;margin-bottom:8px">Uploading...</div>
+  <div id="upBars"></div>
+</div>
+
+{# Player #}
+<div id="playerBar" class="player-bar">
+  <button class="pb-btn" onclick="prevS()">⏮</button>
+  <button class="pb-btn lg" onclick="pbToggle()">
+    <svg id="pbPI" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    <svg id="pbPA" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+  </button>
+  <button class="pb-btn" onclick="nextS()">⏭</button>
+  <div class="pb-song">
+    <div class="pb-sname" id="pbName">—</div>
+    <div class="pb-stime"><span id="pbTime">0:00</span> / <span id="pbDur">—</span></div>
+  </div>
+  <div class="pb-prog" id="pbProg" onclick="pbSeek(event)">
+    <div class="pb-fill" id="pbFill" style="width:0%"></div>
+  </div>
+  <input type="range" min="0" max="1" step="0.05" value="0.8" style="width:70px;accent-color:#fff;cursor:pointer" oninput="audioEl.volume=this.value">
+  <button class="pb-btn" onclick="closePlayer()" style="opacity:.5">✕</button>
+</div>
+<audio id="audioEl" preload="auto"></audio>
+
+{# Edit folder modal #}
+<div class="modal-overlay" id="editFModal">
+  <div class="modal-box">
+    <div class="modal-title">Edit folder</div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Name</label>
+      <input type="text" id="efName" class="form-control" maxlength="100">
+    </div>
+    <div class="nf-colors" id="efColors" style="display:flex;gap:4px;flex-wrap:wrap;margin:8px 0">
+      {% for c in ['#1e3a52','#6b4bb5','#059669','#d97706','#dc2626','#0891b2','#be185d','#374151','#0f766e'] %}
+      <div class="nf-color" style="background:{{ c }}" data-c="{{ c }}"
+           onclick="pickC('{{ c }}',this,'efColors','ef')"></div>
+      {% endfor %}
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEF()">Save</button>
+      <button class="btn" onclick="closeModal('editFModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var activeFolder = "all";
+const SONGS = [
+  {% for s in songs %}
+  { id:{{ s.id }}, name:{{ s.orig_name|tojson|safe }},
+    url:'/api/v1/media/audio/{{ current_user.id }}/original/{{ s.filename }}',
+    dur:{{ s.duration_s or 0 }},
+    folder:{{ s.song_folder_id if s.song_folder_id else 'null' }} },
+  {% endfor %}
+];
+const audioEl = document.getElementById('audioEl');
+audioEl.volume = 0.8;
+let playlist = [...SONGS], playIdx = -1;
+let nfColor = '#1e3a52', efColor = '#1e3a52', efId = null;
+
+// ── Folder filter ─────────────────────────────────────────────────────────────
+function showFolder(id) {
+  activeFolder = id;
+  document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('fi-' + id)?.classList.add('active');
+  document.querySelectorAll('.song-row').forEach(row => {
+    const f = row.dataset.folder;
+    if (id === 'all') row.style.display = '';
+    else if (id === 'none') row.style.display = (!f || f === 'none') ? '' : 'none';
+    else row.style.display = String(f) === String(id) ? '' : 'none';
+  });
+  // Update playlist to visible songs only
+  const visible = [...document.querySelectorAll('.song-row')]
+    .filter(r => r.style.display !== 'none')
+    .map(r => SONGS.find(s => s.id === parseInt(r.id.replace('sr-','')))).filter(Boolean);
+  playlist = visible.length ? visible : [...SONGS];
+}
+
+// ── Folder CRUD ───────────────────────────────────────────────────────────────
+function toggleNF() {
+  const f = document.getElementById('nfForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') document.getElementById('nfName').focus();
+}
+function pickC(c, el, groupId, prefix) {
+  document.querySelectorAll('#'+groupId+' .nf-color').forEach(x => x.classList.remove('sel'));
+  el.classList.add('sel');
+  if (prefix === 'nf') nfColor = c; else efColor = c;
+}
+function saveNF() {
+  const name = document.getElementById('nfName').value.trim();
+  console.log('[saveNF] called, name:', name, 'color:', nfColor);
+  if (!name) return;
+  fetch('/audio/song-folders', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, color: nfColor})
+  }).then(r=>{
+    console.log('[saveNF] status:', r.status);
+    if (r.ok) {
+      showToast('Folder created!','success');
+      setTimeout(()=>window.location.href=window.location.href, 500);
+    } else {
+      r.json().then(d=>showToast(d.error||'Error','error'));
+    }
+  }).catch(e=>{
+    console.error('[saveNF] error:', e);
+    showToast('Request failed — try refreshing','error');
+  });
+}
+function editFolder(id, name, color) {
+  efId = id; efColor = color;
+  document.getElementById('efName').value = name;
+  document.querySelectorAll('#efColors .nf-color').forEach(el => el.classList.toggle('sel', el.dataset.c === color));
+  openModal('editFModal');
+}
+function saveEF() {
+  const name = document.getElementById('efName').value.trim();
+  if (!name) return;
+  fetch('/audio/song-folders/'+efId, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, color: efColor})
+  }).then(()=>{showToast('Updated','success');setTimeout(()=>location.reload(),400);});
+}
+function deleteFolder(id, name) {
+  if (!confirm('Delete folder "' + name + '"?\nSongs will move to Unorganised.')) return;
+  fetch('/audio/song-folders/'+id, {method:'DELETE'})
+  .then(()=>{showToast('Deleted','success');setTimeout(()=>location.reload(),400);});
+}
+function assignFolder(songId, folderId) {
+  fetch('/audio/'+songId+'/song-folder', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({folder_id: folderId ? parseInt(folderId) : null})
+  }).then(r=>r.json()).then(()=>{
+    const row = document.getElementById('sr-'+songId);
+    if (row) row.dataset.folder = folderId || 'none';
+    showToast('Moved to folder','success');
+  });
+}
+
+// ── Playback ──────────────────────────────────────────────────────────────────
+function playSongAt(i) {
+  if (playIdx >= 0) { if (playIdx < playlist.length) setUI(playlist[playIdx].id,false); }
+  playIdx = i;
+  if (i < 0 || i >= playlist.length) { closePlayer(); return; }
+  const s = playlist[i];
+  audioEl.src = s.url;
+  audioEl.play().catch(()=>showToast('Cannot play','error'));
+  setUI(s.id,true);
+  document.getElementById('pbName').textContent = s.name;
+  document.getElementById('pbDur').textContent  = fmt(s.dur);
+  document.getElementById('playerBar').style.display = 'flex';
+  setPbUI(true);
+}
+function setUI(id,pl){
+  document.getElementById('sr-'+id)?.classList.toggle('playing',pl);
+  const pi=document.getElementById('pi-'+id),pa=document.getElementById('pa-'+id),btn=document.getElementById('pb-'+id);
+  if(pi)pi.style.display=pl?'none':'block'; if(pa)pa.style.display=pl?'block':'none';
+  if(btn)btn.classList.toggle('active',pl);
+}
+function toggleSong(id){
+  const i=playlist.findIndex(s=>s.id===id);
+  if(i<0){playlist=[...SONGS];playSongAt(SONGS.findIndex(s=>s.id===id));return;}
+  if(playIdx===i){audioEl.paused?(audioEl.play(),setPbUI(true),setUI(id,true)):(audioEl.pause(),setPbUI(false),setUI(id,false));}
+  else playSongAt(i);
+}
+function prevS(){playSongAt(playIdx-1);}
+function nextS(){playSongAt(playIdx+1);}
+function pbToggle(){
+  if(audioEl.paused){audioEl.play();setPbUI(true);if(playIdx>=0)setUI(playlist[playIdx].id,true);}
+  else{audioEl.pause();setPbUI(false);if(playIdx>=0)setUI(playlist[playIdx].id,false);}
+}
+function setPbUI(pl){document.getElementById('pbPI').style.display=pl?'none':'block';document.getElementById('pbPA').style.display=pl?'block':'none';}
+function closePlayer(){
+  audioEl.pause();audioEl.src='';
+  if(playIdx>=0){if(playIdx<playlist.length)setUI(playlist[playIdx].id,false);}
+  playIdx=-1;document.getElementById('playerBar').style.display='none';
+}
+function pbSeek(e){if(!audioEl.duration)return;audioEl.currentTime=(e.offsetX/document.getElementById('pbProg').offsetWidth)*audioEl.duration;}
+audioEl.addEventListener('timeupdate',()=>{
+  if(!audioEl.duration)return;
+  document.getElementById('pbFill').style.width=(audioEl.currentTime/audioEl.duration*100)+'%';
+  document.getElementById('pbTime').textContent=fmt(audioEl.currentTime);
+});
+audioEl.addEventListener('loadedmetadata',()=>{
+  document.getElementById('pbDur').textContent=fmt(audioEl.duration);
+  if(playIdx>=0){const s=playlist[playIdx];if(!s.dur){s.dur=audioEl.duration;const el=document.getElementById('dur-'+s.id);if(el)el.textContent=fmt(audioEl.duration);}}
+});
+audioEl.addEventListener('ended',()=>{
+  if(playIdx>=0)setUI(playlist[playIdx].id,false);
+  if(playIdx+1<playlist.length)playSongAt(playIdx+1);else setPbUI(false);
+});
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+function uploadSongs(files){
+  if(!files.length) return;
+  // Determine upload folder
+  var folderId = (activeFolder && activeFolder !== 'all' && activeFolder !== 'none') ? activeFolder : null;
+  var folderName = folderId ? document.querySelector('#fi-' + folderId + ' span:not(.folder-count)')?.textContent : null;
+  if (folderId && folderName) {
+    if (!confirm('Upload ' + files.length + ' song(s) into folder "' + folderName + '"?\n\nClick Cancel to upload without a folder.')) {
+      folderId = null;
+    }
+  }
+  const prog=document.getElementById('upProg'),bars=document.getElementById('upBars');
+  prog.style.display='block';bars.innerHTML='';let done=0;
+  Array.from(files).forEach(file=>{
+    const sid=file.name.replace(/[^a-z0-9]/gi,'_');
+    const row=document.createElement('div');row.style.cssText='margin-bottom:7px;font-size:12px';
+    row.innerHTML='<div style="margin-bottom:3px">'+file.name+'</div><div class="progress"><div class="progress-bar" id="bar-'+sid+'" style="width:0%"></div></div>';
+    bars.appendChild(row);
+    const fd=new FormData();fd.append('audio',file);if(folderId)fd.append('folder_id',folderId);
+    const xhr=new XMLHttpRequest();
+    xhr.upload.onprogress=e=>{if(e.lengthComputable)document.getElementById('bar-'+sid).style.width=Math.round(e.loaded/e.total*100)+'%';};
+    xhr.onload=()=>{done++;showToast(xhr.status===200?file.name+' uploaded':file.name+' failed',xhr.status===200?'success':'error');if(done===files.length)setTimeout(()=>location.reload(),700);};
+    xhr.open('POST','/audio/upload');xhr.send(fd);
+  });
+}
+function deleteSong(id,name){
+  // Show inline confirm instead of browser dialog (Brave blocks confirm())
+  var row = document.getElementById('sr-'+id);
+  if(!row) return;
+  // Check if already showing confirm
+  if(row.querySelector('.del-confirm')) return;
+  var bar = document.createElement('div');
+  bar.className='del-confirm';
+  bar.style.cssText='position:absolute;right:0;top:0;background:#dc2626;color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;z-index:10;display:flex;gap:8px;align-items:center;white-space:nowrap';
+  bar.innerHTML='Delete "'+name.substring(0,20)+'"? <button onclick="doDeleteSong('+id+',this.closest(\'.song-row\'))" style="background:#fff;color:#dc2626;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700">Yes</button> <button onclick="this.closest(\'.del-confirm\').remove()" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">No</button>';
+  row.style.position='relative';
+  row.appendChild(bar);
+  setTimeout(function(){ if(bar.parentNode) bar.remove(); }, 5000);
+}
+function doDeleteSong(id, row){
+  if(row) row.remove();
+  fetch('/audio/'+id+'/delete',{method:'POST'}).then(function(){showToast('Deleted','success');});
+}
+function scanDurations(){
+  showToast('Scanning...','info');
+  fetch('/audio/scan-durations',{method:'POST'}).then(r=>r.json()).then(d=>{showToast('Updated '+d.updated+' songs','success');setTimeout(()=>location.reload(),600);});
+}
+function fmt(s){if(!s||!isFinite(s))return'--:--';const m=Math.floor(s/60),sec=Math.floor(s%60);return m+':'+(sec<10?'0':'')+sec;}
+</script>
+{% endblock %}

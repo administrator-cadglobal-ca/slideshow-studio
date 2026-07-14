@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ project.name }} — Slideshow</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* Header */
+.hdr{background:#1e293b;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:1px solid #334155}
+.hdr-title{font-size:15px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-label select{background:#334155;border:1px solid #475569;color:#fff;border-radius:6px;padding:4px 10px;font-size:12px;outline:none}
+.hdr-label label{font-size:11px;color:#94a3b8;margin-right:4px}
+
+/* Stage */
+.stage{flex:1;position:relative;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
+.stage-img{max-width:100%;max-height:100%;object-fit:contain;transition:opacity .4s}
+.stage-img.fade-out{opacity:0}
+
+/* Controls bar */
+.ctrl-bar{background:#1e293b;border-top:1px solid #334155;padding:10px 16px;flex-shrink:0}
+.ctrl-row{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap}
+.ctrl-btn{background:#334155;border:none;color:#fff;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.ctrl-btn:hover{background:#475569}
+.ctrl-btn.primary{background:#1d4ed8;width:46px;height:46px;font-size:20px}
+.ctrl-btn.primary:hover{background:#2563eb}
+.ctrl-sep{width:1px;height:32px;background:#334155;margin:0 4px}
+.song-name{font-size:12px;color:#94a3b8;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:200px}
+.counter{font-size:11px;color:#64748b;white-space:nowrap}
+.prog-bar{width:100%;height:3px;background:#334155;border-radius:2px;margin-bottom:8px;cursor:pointer}
+.prog-fill{height:100%;background:#1d4ed8;border-radius:2px;width:0%;transition:width .3s}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div class="hdr-title">{{ project.name }}</div>
+  {% if all_labels %}
+  <div class="hdr-label">
+    <label>🎵</label>
+    <select id="labelSel" onchange="switchLabel(this.value)">
+      <option value="">No music</option>
+      {% for label in all_labels %}
+      <option value="{{ label.id }}" {% if project_label and label.id == project_label.id %}selected{% endif %}>
+        {{ label.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <button class="ctrl-btn" onclick="toggleFs()" title="Fullscreen" style="width:32px;height:32px;font-size:14px">⛶</button>
+</div>
+
+<!-- Stage -->
+<div class="stage" id="stage">
+  <img id="stageImg" class="stage-img" alt="" src="">
+</div>
+
+<!-- Controls -->
+<div class="ctrl-bar">
+  <div class="prog-bar" id="slideProgBar" onclick="slideSeek(event, this)">
+    <div class="prog-fill" id="slideProgFill"></div>
+  </div>
+  <div class="ctrl-row">
+    <!-- Photo controls -->
+    <span class="counter" id="photoCounter">1 / 1</span>
+    <button class="ctrl-btn" onclick="prevPhoto()" title="Prev photo">◀</button>
+    <button class="ctrl-btn primary" id="playBtn" onclick="togglePlay()" title="Play/Pause">▶</button>
+    <button class="ctrl-btn" onclick="nextPhoto()" title="Next photo">▶</button>
+
+    <div class="ctrl-sep"></div>
+
+    <!-- Audio controls -->
+    <button class="ctrl-btn" onclick="prevSong()" title="Prev clip">⏮</button>
+    <button class="ctrl-btn" id="audioBtn" onclick="toggleAudio()" title="Play/Pause audio" style="font-size:13px">🔇</button>
+    <button class="ctrl-btn" onclick="nextSong()" title="Next clip">⏭</button>
+    <span class="song-name" id="songName">—</span>
+  </div>
+</div>
+
+<audio id="audioEl"></audio>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+var TOKEN   = '{{ token.token }}';
+var VERSION = '{{ default_version }}';
+var PROC_IMAGES = {{ processed_images | tojson | safe }};
+var USER_ID = {{ user_id }};
+var PROJ_ID = '{{ project.id }}';
+
+// Build image list
+var images = [];
+{% if processed_versions %}
+var imgs = PROC_IMAGES[VERSION] || [];
+imgs.forEach(function(f){
+  images.push({
+    url:  '/s/' + TOKEN + '/media/' + VERSION + '/' + f,
+    name: f
+  });
+});
+{% else %}
+{% for photo in photos %}
+images.push({
+  url:  '/s/' + TOKEN + '/source/{{ photo.filename }}',
+  name: '{{ photo.orig_name }}'
+});
+{% endfor %}
+{% endif %}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+var imgIndex  = 0;
+var playing   = false;
+var slideTimer = null;
+var SLIDE_DUR  = 4000;
+var SONGS      = [];
+var songIndex  = 0;
+var audioEl    = document.getElementById('audioEl');
+
+// ── Photo display ─────────────────────────────────────────────────────────────
+function showImg(idx){
+  if(!images.length) return;
+  idx = Math.max(0, Math.min(idx, images.length-1));
+  imgIndex = idx;
+  var el = document.getElementById('stageImg');
+  el.classList.add('fade-out');
+  setTimeout(function(){
+    el.src = images[idx].url;
+    el.classList.remove('fade-out');
+  }, 200);
+  document.getElementById('photoCounter').textContent = (idx+1) + ' / ' + images.length;
+  var pct = images.length > 1 ? (idx/(images.length-1))*100 : 0;
+  document.getElementById('slideProgFill').style.width = pct + '%';
+}
+
+function prevPhoto(){ showImg(imgIndex-1); if(playing) resetTimer(); }
+function nextPhoto(){
+  if(imgIndex+1 >= images.length){ if(playing) stopPlay(); return; }
+  showImg(imgIndex+1);
+  if(playing) resetTimer();
+}
+
+function togglePlay(){
+  playing ? stopPlay() : startPlay();
+}
+function startPlay(){
+  playing = true;
+  document.getElementById('playBtn').textContent = '⏸';
+  resetTimer();
+}
+function stopPlay(){
+  playing = false;
+  document.getElementById('playBtn').textContent = '▶';
+  clearTimeout(slideTimer);
+}
+function resetTimer(){
+  clearTimeout(slideTimer);
+  slideTimer = setTimeout(function(){
+    if(imgIndex+1 < images.length) nextPhoto();
+    else stopPlay();
+  }, SLIDE_DUR);
+}
+function slideSeek(e, bar){
+  var pct = e.offsetX / bar.offsetWidth;
+  showImg(Math.round(pct * (images.length-1)));
+}
+
+// ── Audio ─────────────────────────────────────────────────────────────────────
+function switchLabel(labelId){
+  if(!labelId){ SONGS=[]; songIndex=0; audioEl.pause(); audioEl.src=''; updateSongName(); return; }
+  fetch('/s/' + TOKEN + '/clips/' + labelId)
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    SONGS = d.clips || [];
+    songIndex = 0;
+    if(SONGS.length) loadSong(0);
+    else { audioEl.src=''; updateSongName(); }
+  });
+}
+
+function loadSong(idx){
+  if(!SONGS.length) return;
+  idx = Math.max(0, Math.min(idx, SONGS.length-1));
+  songIndex = idx;
+  var s = SONGS[idx];
+  audioEl.src = s.url;
+  audioEl.currentTime = s.start || 0;
+  updateSongName();
+}
+
+function toggleAudio(){
+  if(!SONGS.length) return;
+  if(audioEl.paused){
+    audioEl.play();
+    document.getElementById('audioBtn').textContent = '🔊';
+  } else {
+    audioEl.pause();
+    document.getElementById('audioBtn').textContent = '🔇';
+  }
+}
+
+function prevSong(){
+  if(!SONGS.length) return;
+  loadSong(songIndex-1);
+  if(!audioEl.paused) audioEl.play();
+}
+function nextSong(){
+  if(!SONGS.length) return;
+  loadSong(songIndex+1 < SONGS.length ? songIndex+1 : 0);
+  if(!audioEl.paused) audioEl.play();
+}
+
+function updateSongName(){
+  var el = document.getElementById('songName');
+  if(SONGS.length && SONGS[songIndex]){
+    el.textContent = '♪ ' + (SONGS[songIndex].name || '');
+  } else {
+    el.textContent = '—';
+  }
+}
+
+audioEl.addEventListener('ended', function(){
+  if(songIndex+1 < SONGS.length){ loadSong(songIndex+1); audioEl.play(); }
+  else { loadSong(0); } // loop
+});
+
+audioEl.addEventListener('timeupdate', function(){
+  var s = SONGS[songIndex];
+  if(s && s.end && audioEl.currentTime >= s.end){
+    audioEl.pause();
+    if(songIndex+1 < SONGS.length){ loadSong(songIndex+1); audioEl.play(); }
+    else { loadSong(0); }
+  }
+});
+
+// ── Fullscreen ────────────────────────────────────────────────────────────────
+function toggleFs(){
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if(images.length) showImg(0);
+
+// Auto-load default label
+var labelSel = document.getElementById('labelSel');
+if(labelSel && labelSel.value) switchLabel(labelSel.value);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e){
+  if(e.key === 'ArrowRight') nextPhoto();
+  else if(e.key === 'ArrowLeft') prevPhoto();
+  else if(e.key === ' '){ e.preventDefault(); togglePlay(); }
+  else if(e.key === 'f') toggleFs();
+});
+</script>
+</body>
+</html>

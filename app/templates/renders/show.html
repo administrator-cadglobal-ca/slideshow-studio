@@ -1,0 +1,149 @@
+{% extends "shared/base.html" %}
+{% block title %}Render — {{ job.project.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <div style="font-size:12px;color:#8a9bb0;margin-bottom:4px">
+      <a href="{{ url_for('projects.index') }}" style="color:#8a9bb0">Projects</a>
+      <span style="margin:0 6px">›</span>
+      <a href="{{ url_for('projects.show', project_id=job.project.id) }}" style="color:#8a9bb0">{{ job.project.name }}</a>
+      <span style="margin:0 6px">›</span>
+      Render
+    </div>
+    <h1>{{ 'Render in progress' if job.is_active else 'Render ' + job.status }}</h1>
+    <div class="page-sub">
+      {{ job.project.name }} · {{ job.mode|capitalize }} mode
+      · Started {{ job.created_at | naturaltime }}
+      {% if job.duration_s %}· Took {{ job.duration_s|round(0)|int }}s{% endif %}
+    </div>
+  </div>
+  {% if job.is_active %}
+  <button class="btn btn-danger" onclick="cancelRender()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    Cancel
+  </button>
+  {% endif %}
+</div>
+
+{# ── Overall progress ── #}
+<div class="card-padded" style="margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div>
+      <span style="font-size:15px;font-weight:600" id="currentVersion">
+        {{ job.current_version.upper() if job.current_version else 'Queued' }}
+      </span>
+      <span style="font-size:12px;color:#8a9bb0;margin-left:8px" id="currentStep">
+        {{ job.current_step or '' }}
+      </span>
+    </div>
+    <span style="font-size:20px;font-weight:700;color:#1e3a52" id="progressPct">
+      {{ job.progress_pct|round(0)|int }}%
+    </span>
+  </div>
+  <div class="progress" style="height:8px">
+    <div class="progress-bar {% if job.status=='complete' %}success{% elif job.status=='failed' %}danger{% else %}warn{% endif %}"
+         id="progressBar" style="width:{{ job.progress_pct or 0 }}%"></div>
+  </div>
+
+  {# Version list #}
+  {% if job.versions %}
+  <div style="margin-top:16px;display:flex;flex-direction:column;gap:0">
+    {% for ver in job.versions %}
+    <div class="render-version-row">
+      <div class="rv-icon {% if 'phone' in ver.version_key %}rv-port{% else %}rv-land{% endif %}">
+        {{ '📱' if 'phone' in ver.version_key else '🎬' }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500">{{ ver.label }} — {{ ver.resolution }}</div>
+        <div class="progress" style="margin-top:5px;height:4px">
+          <div class="progress-bar {% if ver.status=='complete' %}success{% elif ver.status=='running' %}warn{% endif %}"
+               style="width:{{ ver.progress_pct or 0 }}%"></div>
+        </div>
+      </div>
+      <span class="pill {% if ver.status=='complete' %}pill-success{% elif ver.status=='running' %}pill-warning{% elif ver.status=='failed' %}pill-danger{% else %}pill-gray{% endif %}">
+        {{ ver.status }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{# ── Live log ── #}
+<div class="section-hd" style="margin-bottom:8px">
+  <div class="section-title">Render log</div>
+  <button class="btn btn-xs" onclick="scrollLog()">Scroll to bottom</button>
+</div>
+<div class="render-log" id="renderLog">{{ job.log_text or 'Waiting to start...' }}</div>
+
+{# ── Output files (when complete) ── #}
+{% if job.outputs %}
+<div style="margin-top:20px">
+  <div class="section-hd"><div class="section-title">Output files</div></div>
+  <div class="card">
+    {% for out in job.outputs %}
+    <div class="output-item">
+      <div class="output-icon" style="background:{{ '#dde8f5' if 'phone' not in out.version_key else '#ede8ff' }}">
+        {{ '📱' if 'phone' in out.version_key else '🎬' }}
+      </div>
+      <div class="output-info">
+        <div class="output-name">{{ out.filename }}</div>
+        <div class="output-meta">{{ out.resolution }} · {{ out.file_size_mb }} MB</div>
+      </div>
+      <div class="output-actions">
+        <a href="{{ output_url(job.project.user_id, job.project.id, out.filename) }}"
+           class="btn btn-sm" download>Download</a>
+        {% if not out.youtube_video_id and current_user.google_connected %}
+        <button class="btn btn-sm" onclick="uploadYouTube({{ out.id }})">YouTube</button>
+        {% elif out.youtube_video_id %}
+        <a href="https://youtube.com/watch?v={{ out.youtube_video_id }}" target="_blank"
+           class="btn btn-sm btn-success">View on YouTube ↗</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if job.is_active %}
+startProgressStream('{{ job.id }}');
+{% endif %}
+
+function scrollLog() {
+  const log = document.getElementById('renderLog');
+  log.scrollTop = log.scrollHeight;
+}
+scrollLog();
+
+function cancelRender() {
+  if (!confirm('Cancel this render?')) return;
+  fetch('/api/v1/renders/{{ job.id }}/cancel', { method:'POST' })
+  .then(() => { showToast('Render cancelled', 'info'); setTimeout(() => location.reload(), 800); });
+}
+
+function uploadYouTube(outputId) {
+  const title   = prompt('Video title:', '{{ job.project.name }}');
+  if (!title) return;
+  const privacy = prompt('Privacy:', 'unlisted');
+  if (!privacy) return;
+  showToast('Uploading to YouTube...', 'info');
+  fetch(`/api/v1/outputs/${outputId}/upload/youtube`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ title, privacy })
+  })
+  .then(r => r.json())
+  .then(d => {
+    showToast('Uploaded to YouTube!', 'success');
+    setTimeout(() => location.reload(), 1000);
+  })
+  .catch(() => showToast('Upload failed', 'error'));
+}
+</script>
+{% endblock %}

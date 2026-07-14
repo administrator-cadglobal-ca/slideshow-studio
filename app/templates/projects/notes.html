@@ -1,0 +1,371 @@
+{% extends "shared/base.html" %}
+{% block title %}Captions — {{ project.name }}{% endblock %}
+
+{% block head %}
+<style>
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.note-card{background:#fff;border:1px solid #e8e5e0;border-radius:10px;overflow:hidden;transition:.15s}
+.note-card:hover{border-color:#c8c4be;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.note-card.has-note{border-color:#1e3a52;border-width:1.5px}
+.note-card.skipped{opacity:.45}
+
+.nc-thumb{position:relative;aspect-ratio:4/3;background:#f0ede8;overflow:hidden}
+.nc-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.nc-num{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.45);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px}
+.nc-meta-icons{position:absolute;top:6px;right:6px;display:flex;gap:3px}
+.nc-meta-icon{font-size:10px;background:rgba(0,0,0,.4);padding:1px 5px;border-radius:20px}
+
+/* Two-line caption preview */
+.nc-caption-preview{position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(transparent,rgba(0,0,0,.78));padding:18px 8px 7px;display:none}
+.note-card.has-note .nc-caption-preview{display:block}
+.nc-cap-line1{color:#fff;font-size:10px;font-weight:600;line-height:1.4;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.nc-cap-line2{color:rgba(255,255,255,.6);font-size:9px;margin-top:1px;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+.nc-body{padding:10px}
+.nc-filename{font-size:10px;color:#9ca3af;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nc-chips{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px;min-height:16px}
+.nc-chip{display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:2px 5px;border-radius:20px;background:#f0ede8;color:#5f6b7a;font-weight:500;white-space:nowrap}
+.nc-chip.gps{background:#ecfdf5;color:#065f46}
+.nc-chip.date{background:#eff6ff;color:#1e40af}
+.nc-chip.cam{background:#f0ebff;color:#6b4bb5}
+
+.nc-textarea{width:100%;border:1px solid #e8e5e0;border-radius:6px;padding:7px 10px;
+  font-size:12px;resize:none;outline:none;line-height:1.5;color:#1a1a18;
+  font-family:inherit;background:#fafaf8;transition:.15s}
+.nc-textarea:focus{border-color:#1e3a52;background:#fff;box-shadow:0 0 0 3px rgba(30,58,82,.07)}
+.nc-textarea::placeholder{color:#c8c4be;font-style:italic}
+
+.nc-l2-preview{font-size:10px;color:#6b7280;margin-top:4px;min-height:14px;
+  display:flex;align-items:center;gap:4px;overflow:hidden}
+.nc-l2-badge{font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;
+  letter-spacing:.3px;white-space:nowrap;flex-shrink:0}
+.nc-l2-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5f6b7a;font-style:italic}
+
+.nc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:5px}
+.nc-char{font-size:10px;color:#c8c4be}
+.nc-char.near{color:#d97706}
+.nc-char.full{color:#dc2626}
+.nc-dot{width:7px;height:7px;border-radius:50%;background:#e8e5e0;transition:.3s}
+.nc-dot.saving{background:#d97706;animation:blink .6s infinite}
+.nc-dot.saved{background:#059669}
+
+/* Style panel */
+.style-panel{background:#fff;border:1px solid #e8e5e0;border-radius:10px;padding:16px 20px;margin-bottom:16px}
+.style-panel-title{font-size:12px;font-weight:600;color:#374151;margin-bottom:12px}
+.style-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.style-field label{display:block;font-size:11px;font-weight:600;color:#5f6b7a;margin-bottom:4px}
+.style-select{width:100%;border:1px solid #e8e5e0;border-radius:6px;padding:6px 9px;font-size:12px;background:#fff;outline:none}
+.style-select:focus{border-color:#1e3a52}
+
+.l2-opt-label{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.l2-options{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.l2-opt{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;
+  border:1px solid #e8e5e0;background:#fff;color:#5f6b7a;cursor:pointer;transition:.12s}
+.l2-opt:hover{background:#f5f4f1}
+.l2-opt.active{background:#1e3a52;color:#fff;border-color:#1e3a52}
+
+/* Live preview */
+.cap-preview-box{background:#111;border-radius:8px;overflow:hidden;position:relative;height:80px;display:flex;align-items:flex-end}
+.cap-preview-grad{position:absolute;inset:0;background:linear-gradient(transparent 20%,rgba(0,0,0,.82))}
+.cap-preview-text{position:relative;padding:8px 14px 10px;width:100%}
+.cap-prev-line1{color:#fff;font-weight:600;line-height:1.4;font-size:14px}
+.cap-prev-line2{color:rgba(255,255,255,.6);margin-top:2px;font-size:12px}
+
+/* Toolbar */
+.notes-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.search-in{border:1px solid #e8e5e0;border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:200px}
+.search-in:focus{border-color:#1e3a52}
+.notes-stats{display:flex;gap:14px;font-size:11px;color:#6b7280;margin-bottom:12px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@media(max-width:640px){.notes-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:12px">
+  <div class="page-header-left">
+    <div style="font-size:11px;color:#8a9bb0;margin-bottom:3px">
+      <a href="{{ url_for('projects.show', project_id=project.id) }}" style="color:#8a9bb0">{{ project.name }}</a>
+      <span style="margin:0 5px">›</span> Photo captions
+    </div>
+    <h1 style="font-size:18px">Photo captions</h1>
+  </div>
+  <a href="{{ url_for('projects.show', project_id=project.id) }}" class="btn btn-sm">← Back</a>
+</div>
+
+<div class="notes-stats">
+  <span>{{ photos|length }} photos</span> <span>·</span>
+  <span><strong>{{ photos|selectattr('has_note')|list|length }}</strong> with captions</span> <span>·</span>
+  <span>{{ photos|selectattr('has_gps')|list|length }} with GPS 📍</span> <span>·</span>
+  <span>{{ photos|selectattr('exif_date')|list|length }} with date 📅</span>
+</div>
+
+{# ── Caption style panel ── #}
+<div class="style-panel">
+  <div class="style-panel-title">Caption appearance — preview player and rendered MP4</div>
+
+  <div class="l2-opt-label">Second line — auto-filled from photo metadata</div>
+  <div class="l2-options">
+    {% for val, label in [
+      ('none','None'),('date','📅 Date taken'),('location','📍 Location'),
+      ('date_location','📅 Date  +  📍 Location'),('location_date','📍 Location  +  📅 Date'),
+      ('camera','📷 Camera'),('date_camera','📅 Date  +  📷 Camera'),
+      ('location_camera','📍 Location  +  📷 Camera'),('all','📅 + 📍 + 📷 All'),
+    ] %}
+    <button class="l2-opt {% if (project.caption_line2 or 'date_location') == val %}active{% endif %}"
+            data-val="{{ val }}" onclick="setLine2('{{ val }}',this)">{{ label }}</button>
+    {% endfor %}
+  </div>
+
+  <div class="style-grid">
+    <div class="style-field">
+      <label>Text colour</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="color" id="capColor" value="#ffffff"
+               style="width:34px;height:32px;border:1px solid #d1cdc7;border-radius:6px;padding:2px;cursor:pointer"
+               oninput="saveStyle()">
+        <span style="font-size:11px;color:#6b7280">White recommended</span>
+      </div>
+    </div>
+    <div class="style-field">
+      <label>Background</label>
+      <select class="style-select" id="capBg" onchange="saveStyle()">
+        <option value="gradient" selected>Dark gradient</option>
+        <option value="solid">Solid bar</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+    <div class="style-field">
+      <label>Font size</label>
+      <select class="style-select" id="capSize" onchange="saveStyle()">
+        <option value="small">Small</option>
+        <option value="medium" selected>Medium</option>
+        <option value="large">Large</option>
+      </select>
+    </div>
+    <div class="style-field">
+      <label>Burn into MP4</label>
+      <label style="display:flex;align-items:center;gap:7px;margin-top:6px;cursor:pointer;font-size:12px">
+        <input type="checkbox" id="burnCaptions" checked style="width:15px;height:15px;accent-color:#1e3a52" onchange="saveStyle()">
+        Yes — overlay on video
+      </label>
+    </div>
+  </div>
+
+  <div class="cap-preview-box">
+    <div class="cap-preview-grad"></div>
+    <div class="cap-preview-text">
+      <div class="cap-prev-line1" id="prevLine1">Jun 15, 2026  ·  Calgary, AB, Canada</div>
+      <div class="cap-prev-line2" id="prevLine2">Krish with his graduation cap 🎓</div>
+    </div>
+  </div>
+  <div style="font-size:10px;color:#9ca3af;margin-top:6px">
+    Line 1 = auto metadata (top)  &nbsp;·&nbsp;  Line 2 = your description (bottom, always visible)
+  </div>
+</div>
+
+{# ── Toolbar ── #}
+<div class="notes-toolbar">
+  <input type="text" class="search-in" placeholder="Search photos or captions..." id="searchInput" oninput="filterNotes(this.value)">
+  <button class="btn btn-sm" onclick="showAll()">All</button>
+  <button class="btn btn-sm" onclick="showWithNotes()">With captions</button>
+  <button class="btn btn-sm" onclick="showWithoutNotes()">Without</button>
+  <button class="btn btn-sm" onclick="showWithGPS()">📍 Has GPS</button>
+  <span style="margin-left:auto;font-size:11px;color:#9ca3af">Auto-saved</span>
+</div>
+
+{# ── Grid ── #}
+{% if photos %}
+<div class="notes-grid" id="notesGrid">
+  {% for photo in photos %}
+  {% set l2 = photo.auto_line2(project.caption_line2 or 'date_location') %}
+  <div class="note-card {% if photo.has_note %}has-note{% endif %} {% if photo.skipped %}skipped{% endif %}"
+       id="nc-{{ photo.id }}"
+       data-has-note="{{ '1' if photo.has_note else '0' }}"
+       data-has-gps="{{ '1' if photo.has_gps else '0' }}"
+       data-name="{{ photo.orig_name | lower }}"
+       data-l2="{{ l2 }}">
+
+    <div class="nc-thumb">
+      <img src="{{ thumb_url(project.user_id, project.id, photo.filename) }}"
+           alt="{{ photo.orig_name }}" onerror="this.style.display='none'">
+      <span class="nc-num">{{ loop.index }}</span>
+      <div class="nc-meta-icons">
+        {% if photo.has_gps %}<span class="nc-meta-icon" title="{{ photo.gps_location or 'GPS' }}">📍</span>{% endif %}
+        {% if photo.exif_date %}<span class="nc-meta-icon" title="{{ photo.exif_date_str }}">📅</span>{% endif %}
+        {% if photo.camera_model %}<span class="nc-meta-icon" title="{{ photo.camera_display }}">📷</span>{% endif %}
+      </div>
+      <div class="nc-caption-preview">
+        <div class="nc-cap-line1" id="prev1-{{ photo.id }}">{{ l2 }}</div>
+        <div class="nc-cap-line2" id="prev2-{{ photo.id }}">{{ photo.note or '' }}</div>
+      </div>
+    </div>
+
+    <div class="nc-body">
+      <div class="nc-filename" title="{{ photo.orig_name }}">{{ photo.orig_name }}</div>
+
+      {# Metadata chips #}
+      <div class="nc-chips">
+        {% if photo.exif_date %}
+          <span class="nc-chip date">📅 {{ photo.exif_date | dateformat }}</span>
+        {% endif %}
+        {% if photo.gps_place or photo.gps_location %}
+          <span class="nc-chip gps">📍 {{ (photo.gps_place or photo.gps_location or '')[:22] }}</span>
+        {% endif %}
+        {% if photo.camera_model %}
+          {% set m = photo.camera_model %}
+          {% if photo.camera_make and m.startswith(photo.camera_make) %}{% set m = m[photo.camera_make|length:].strip() %}{% endif %}
+          <span class="nc-chip cam">{{ '📱' if photo.camera_make == 'Apple' else '📷' }} {{ m[:16] }}</span>
+        {% endif %}
+      </div>
+
+      {# Line 1 — user types this #}
+      <textarea class="nc-textarea" id="note-{{ photo.id }}" rows="2" maxlength="200"
+                placeholder="Your description..."
+                oninput="onNoteInput(this,{{ photo.id }})"
+                onblur="saveNote({{ photo.id }})">{{ photo.note or '' }}</textarea>
+
+      {# Line 2 — auto from metadata #}
+      <div class="nc-l2-preview">
+        <span class="nc-l2-badge">Auto line 1 ↑</span>
+        <span class="nc-l2-val" id="l2v-{{ photo.id }}">{{ l2 or '—' }}</span>
+      </div>
+
+      <div class="nc-footer">
+        <span class="nc-char" id="cc-{{ photo.id }}">{{ (photo.note or '')|length }}/200</span>
+        <span class="nc-dot" id="dot-{{ photo.id }}"></span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <p>No photos yet.</p>
+  <div class="empty-cta"><a href="{{ url_for('projects.show', project_id=project.id) }}" class="btn btn-primary">Go to project</a></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROJECT_ID = '{{ project.id }}';
+const L2_MODE    = { v: '{{ project.caption_line2 or "date_location" }}' };
+const PHOTO_META = {
+  {% for photo in photos %}
+  {{ photo.id }}: {
+    date:     {{ (photo.exif_date | dateformat if photo.exif_date else '') | tojson }},
+    location: {{ (photo.gps_location or photo.gps_place or '') | tojson }},
+    camera:   {{ ((photo.camera_model or '').replace((photo.camera_make or '') + ' ', '', 1) if photo.camera_model else '') | tojson }},
+  },
+  {% endfor %}
+};
+let saveTimers = {};
+
+function buildL2(meta, mode) {
+  const sep = '  ·  ';
+  const d=meta.date||'', l=meta.location||'', c=meta.camera||'';
+  return ({
+    none:'', date:d, location:l, camera:c,
+    date_location:   [d,l].filter(Boolean).join(sep),
+    location_date:   [l,d].filter(Boolean).join(sep),
+    date_camera:     [d,c].filter(Boolean).join(sep),
+    location_camera: [l,c].filter(Boolean).join(sep),
+    all:             [d,l,c].filter(Boolean).join(sep),
+  })[mode] ?? [d,l].filter(Boolean).join(sep);
+}
+
+function setLine2(mode, btn) {
+  L2_MODE.v = mode;
+  document.querySelectorAll('.l2-opt').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.note-card').forEach(card => {
+    const pid  = card.id.replace('nc-','');
+    const meta = PHOTO_META[pid]; if(!meta) return;
+    const l2   = buildL2(meta, mode);
+    const p1v  = document.getElementById(`prev1-${pid}`);
+    const v    = document.getElementById(`l2v-${pid}`);
+    if(p1v) p1v.textContent = l2;
+    if(v)   v.textContent   = l2 || '—';
+    card.dataset.l2 = l2;
+  });
+  updatePreviewBox();
+  saveStyle();
+}
+
+function saveStyle() {
+  const vals = {
+    color:         document.getElementById('capColor').value,
+    background:    document.getElementById('capBg').value,
+    size:          document.getElementById('capSize').value,
+    burn_captions: document.getElementById('burnCaptions').checked,
+    line2:         L2_MODE.v,
+  };
+  fetch(`/api/v1/projects/${PROJECT_ID}/caption-style`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(vals)
+  });
+  updatePreviewBox();
+}
+
+function updatePreviewBox() {
+  const sizes = {small:'12px', medium:'14px', large:'17px'};
+  const sz    = document.getElementById('capSize').value;
+  const color = document.getElementById('capColor').value;
+  document.getElementById('prevLine1').style.fontSize = (parseInt(sizes[sz])-2)+'px';
+  document.getElementById('prevLine2').style.fontSize = sizes[sz]||'14px';
+  document.getElementById('prevLine2').style.color    = color;
+  // Sample from first card
+  const first = document.querySelector('.note-card');
+  if(first){
+    const pid = first.id.replace('nc-','');
+    const meta = PHOTO_META[pid];
+    if(meta) document.getElementById('prevLine1').textContent = buildL2(meta, L2_MODE.v) || 'Jun 15, 2026  ·  Calgary, AB';
+  }
+}
+
+function onNoteInput(el, pid) {
+  const val = el.value, len = val.length;
+  const cc   = document.getElementById(`cc-${pid}`);
+  const card = document.getElementById(`nc-${pid}`);
+  cc.textContent = `${len}/200`;
+  cc.className   = 'nc-char'+(len>180?' full':len>150?' near':'');
+  const p2 = document.getElementById(`prev2-${pid}`);
+  if(p2) p2.textContent = val;
+  card.classList.toggle('has-note', !!val.trim());
+  card.dataset.hasNote = val.trim() ? '1' : '0';
+  const dot = document.getElementById(`dot-${pid}`);
+  dot.className = 'nc-dot saving';
+  clearTimeout(saveTimers[pid]);
+  saveTimers[pid] = setTimeout(()=>saveNote(pid), 900);
+}
+
+function saveNote(pid) {
+  const val = document.getElementById(`note-${pid}`)?.value||'';
+  const dot = document.getElementById(`dot-${pid}`);
+  clearTimeout(saveTimers[pid]);
+  fetch(`/api/v1/projects/${PROJECT_ID}/photos/${pid}/note`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({note:val})
+  }).then(r=>{
+    dot.className = r.ok ? 'nc-dot saved' : 'nc-dot';
+    if(r.ok) setTimeout(()=>{dot.className='nc-dot';},2000);
+  }).catch(()=>{dot.className='nc-dot';});
+}
+
+function filterNotes(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.note-card').forEach(c=>{
+    const name=(c.dataset.name||''), ta=(c.querySelector('textarea')?.value||'').toLowerCase(), l2=(c.dataset.l2||'').toLowerCase();
+    c.style.display=(!q||name.includes(q)||ta.includes(q)||l2.includes(q))?'':'none';
+  });
+}
+function showAll()          { document.querySelectorAll('.note-card').forEach(c=>c.style.display=''); }
+function showWithNotes()    { document.querySelectorAll('.note-card').forEach(c=>{ c.style.display=c.dataset.hasNote==='1'?'':'none'; }); }
+function showWithoutNotes() { document.querySelectorAll('.note-card').forEach(c=>{ c.style.display=c.dataset.hasNote==='0'?'':'none'; }); }
+function showWithGPS()      { document.querySelectorAll('.note-card').forEach(c=>{ c.style.display=c.dataset.hasGps==='1'?'':'none'; }); }
+
+document.addEventListener('DOMContentLoaded', updatePreviewBox);
+</script>
+{% endblock %}

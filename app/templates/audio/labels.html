@@ -1,0 +1,259 @@
+{% extends "shared/base.html" %}
+{% block title %}Audio — Labels{% endblock %}
+{% block head %}
+<style>
+.audio-tabs{display:flex;gap:0;border-bottom:2px solid #e8e5e0;margin-bottom:20px}
+.audio-tab{padding:10px 20px;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;text-decoration:none;transition:.15s}
+.audio-tab:hover{color:#1e3a52}
+.audio-tab.active{color:#1e3a52;border-bottom-color:#1e3a52;font-weight:600}
+.labels-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.label-card{background:#fff;border:1px solid #e8e5e0;border-radius:10px;overflow:hidden}
+.label-card-hd{padding:12px 16px;display:flex;align-items:center;gap:10px}
+.label-color-bar{width:4px;height:32px;border-radius:2px;flex-shrink:0}
+.label-card-name{font-size:14px;font-weight:600;flex:1}
+.label-card-meta{font-size:11px;color:#6b7280}
+.label-card-badge{font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid #e8e5e0;color:#6b7280}
+.label-card-body{padding:10px 16px;border-top:1px solid #f0ede8;font-size:12px;color:#374151;min-height:40px}
+.label-card-clips{display:flex;flex-wrap:wrap;gap:4px}
+.lcc{font-size:10px;background:#f0ede8;padding:2px 7px;border-radius:10px;color:#374151;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.label-card-footer{padding:8px 16px;border-top:1px solid #f0ede8;display:flex;align-items:center;gap:6px}
+
+.new-label-card{background:#fafaf8;border:1px dashed #d1cdc7;border-radius:10px;
+  padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;cursor:pointer;min-height:120px;transition:.15s}
+.new-label-card:hover{border-color:#1e3a52;background:#f0f6ff}
+.nf-input{width:100%;border:1px solid #e8e5e0;border-radius:6px;padding:6px 10px;font-size:13px;outline:none}
+.nf-input:focus{border-color:#1e3a52}
+.nf-colors{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}
+.nf-color{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.nf-color.sel{border-color:#000;transform:scale(1.15)}
+.import-btn{font-size:11px;color:#6b7280;background:none;border:1px solid #e8e5e0;
+  border-radius:5px;padding:3px 8px;cursor:pointer}
+.import-btn:hover{background:#f5f4f1}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:0">
+  <div class="page-header-left">
+    <h1>Audio</h1>
+    <div class="page-sub">{{ labels|length }} label{{ 's' if labels|length != 1 }}</div>
+  </div>
+</div>
+
+<div class="audio-tabs">
+  <a href="{{ url_for('audio.index') }}"       class="audio-tab">🎵 Song library</a>
+  <a href="{{ url_for('audio.clips') }}"       class="audio-tab">✂ Clip library</a>
+  <a href="{{ url_for('audio.labels_page') }}" class="audio-tab active">🏷 Labels</a>
+</div>
+
+<div class="labels-grid" id="labelsGrid">
+
+  {# Existing labels #}
+  {% for label in labels %}
+  <div class="label-card">
+    <div class="label-card-hd">
+      <div class="label-color-bar" style="background:{{ label.color }}"></div>
+      <div>
+        <div class="label-card-name">{{ label.name }}</div>
+        <div class="label-card-meta">
+          {{ label.clip_count }} clip{{ 's' if label.clip_count != 1 }}
+          {% if label.total_duration_display != '--:--' %}· {{ label.total_duration_display }} total{% endif %}
+          {% if label.is_project_label %} · 📁 Project label{% endif %}
+        </div>
+      </div>
+      {% if not label.is_project_label %}
+      <span class="label-card-badge">Manual</span>
+      {% else %}
+      <span class="label-card-badge" style="border-color:#a7f3d0;color:#059669">Project</span>
+      {% endif %}
+    </div>
+    <div class="label-card-body">
+      <div class="label-card-clips">
+        {% for clip in label.clips[:6] %}
+        <span class="lcc">{{ clip.display_name }}</span>
+        {% endfor %}
+        {% if label.clip_count > 6 %}
+        <span class="lcc" style="color:#9ca3af">+{{ label.clip_count - 6 }} more</span>
+        {% endif %}
+        {% if not label.clips %}
+        <span style="color:#b0bec5;font-size:11px;font-style:italic">No clips yet — add from Clip library</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="label-card-footer">
+      <button class="import-btn" onclick="showImport({{ label.id }}, '{{ label.name }}')">
+        ⬇ Import from label
+      </button>
+      {% if not label.is_project_label %}
+      <button class="import-btn" onclick="editLabel({{ label.id }}, '{{ label.name }}', '{{ label.color }}')">✏</button>
+      <button class="import-btn" style="color:#dc2626"
+              onclick="deleteLabel({{ label.id }}, '{{ label.name }}')">🗑</button>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+  {# New label card #}
+  <div class="label-card" id="newLabelCard">
+    <div class="label-card-hd" style="cursor:pointer" onclick="toggleNewLabel()">
+      <div style="width:32px;height:32px;border-radius:50%;background:#f0ede8;
+        display:flex;align-items:center;justify-content:center;font-size:18px;color:#9ca3af">+</div>
+      <div style="font-size:13px;font-weight:500;color:#6b7280">Create new label</div>
+    </div>
+    <div id="newLabelForm" style="display:none;padding:12px 16px;border-top:1px solid #f0ede8">
+      <input type="text" id="newLabelName" class="nf-input" placeholder="Label name e.g. Bollywood Hits"
+             maxlength="100" onkeydown="if(event.key==='Enter')saveNewLabel()">
+      <div class="nf-colors" id="nlColors">
+        {% for c in ['#1e3a52','#6b4bb5','#059669','#d97706','#dc2626','#0891b2','#be185d','#374151','#0f766e','#b45309'] %}
+        <div class="nf-color {% if loop.first %}sel{% endif %}" style="background:{{ c }}" data-c="{{ c }}"
+             onclick="pickNLColor('{{ c }}',this)"></div>
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-sm btn-primary" onclick="saveNewLabel()">Create label</button>
+        <button class="btn btn-sm" onclick="toggleNewLabel()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Import modal #}
+<div class="modal-overlay" id="importModal">
+  <div class="modal-box">
+    <div class="modal-title">Import clips into <span id="importTargetName"></span></div>
+    <div style="font-size:12px;color:#6b7280;margin:8px 0 14px">
+      Select a label to copy all its clips here. Duplicates are skipped.
+    </div>
+    <div id="importSources" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('importModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+{# Edit label modal #}
+<div class="modal-overlay" id="editLabelModal">
+  <div class="modal-box">
+    <div class="modal-title">Edit label</div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Name</label>
+      <input type="text" id="elName" class="form-control" maxlength="100">
+    </div>
+    <div class="nf-colors" id="elColors" style="margin:8px 0">
+      {% for c in ['#1e3a52','#6b4bb5','#059669','#d97706','#dc2626','#0891b2','#be185d','#374151','#0f766e','#b45309'] %}
+      <div class="nf-color" style="background:{{ c }}" data-c="{{ c }}" onclick="pickELColor('{{ c }}',this)"></div>
+      {% endfor %}
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEditLabel()">Save</button>
+      <button class="btn" onclick="closeModal('editLabelModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ALL_LABELS = [
+  {% for l in labels %}
+  { id:{{ l.id }}, name:{{ l.name|tojson|safe }}, color:'{{ l.color }}',
+    isProject:{{ 'true' if l.is_project_label else 'false' }} },
+  {% endfor %}
+];
+let nlColor = '#1e3a52', elColor = '#1e3a52', editLabelId = null, importTargetId = null;
+
+// ── New label ─────────────────────────────────────────────────────────────────
+function toggleNewLabel() {
+  const f = document.getElementById('newLabelForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') document.getElementById('newLabelName').focus();
+}
+function pickNLColor(c,el){nlColor=c;document.querySelectorAll('#nlColors .nf-color').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');}
+function saveNewLabel() {
+  const name = document.getElementById('newLabelName').value.trim();
+  if (!name) return;
+  fetch('/audio/labels', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, color: nlColor})
+  }).then(r=>r.json()).then(d=>{
+    if(d.error){showToast(d.error,'error');return;}
+    showToast('Label created!','success');
+    setTimeout(()=>location.reload(),400);
+  });
+}
+
+// ── Edit label ────────────────────────────────────────────────────────────────
+function editLabel(id,name,color){
+  editLabelId=id; elColor=color;
+  document.getElementById('elName').value=name;
+  document.querySelectorAll('#elColors .nf-color').forEach(el=>el.classList.toggle('sel',el.dataset.c===color));
+  openModal('editLabelModal');
+}
+function pickELColor(c,el){elColor=c;document.querySelectorAll('#elColors .nf-color').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');}
+function saveEditLabel(){
+  const name=document.getElementById('elName').value.trim();
+  if(!name)return;
+  fetch('/audio/labels/'+editLabelId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,color:elColor})})
+  .then(()=>{showToast('Updated','success');setTimeout(()=>location.reload(),400);});
+}
+function deleteLabel(id,name){
+  var row = document.getElementById('label-row-'+id) || document.querySelector('[data-label-id="'+id+'"]');
+  var target = row || document.body;
+  inlineConfirm(target, 'Delete "'+name+'"?', function(){
+    fetch('/audio/labels/'+id, {method:'DELETE'})
+    .then(function(){ showToast('Label deleted','success'); setTimeout(function(){ location.reload(); }, 500); })
+    .catch(function(){ showToast('Error','error'); });
+  });
+}
+function inlineConfirm(row, msg, onYes){
+  if(row.querySelector('.del-confirm')) return;
+  var bar = document.createElement('div');
+  bar.className='del-confirm';
+  bar.style.cssText='position:absolute;right:0;top:50%;transform:translateY(-50%);background:#dc2626;color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;z-index:10;display:flex;gap:8px;align-items:center;white-space:nowrap';
+  var yes = document.createElement('button');
+  yes.textContent='Yes'; yes.style.cssText='background:#fff;color:#dc2626;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700';
+  yes.onclick=function(){ bar.remove(); onYes(); };
+  var no = document.createElement('button');
+  no.textContent='No'; no.style.cssText='background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer';
+  no.onclick=function(){ bar.remove(); };
+  bar.appendChild(document.createTextNode(msg + ' '));
+  bar.appendChild(yes); bar.appendChild(no);
+  row.style.position='relative'; row.appendChild(bar);
+  setTimeout(function(){ if(bar.parentNode) bar.remove(); }, 5000);
+}
+
+
+// ── Import ────────────────────────────────────────────────────────────────────
+function showImport(targetId, targetName) {
+  importTargetId = targetId;
+  document.getElementById('importTargetName').textContent = '"' + targetName + '"';
+  const sources = document.getElementById('importSources');
+  sources.innerHTML = '';
+  ALL_LABELS.filter(l => l.id !== targetId).forEach(l => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #e8e5e0;border-radius:7px;background:#fff;cursor:pointer;text-align:left;width:100%;transition:.1s;font-size:12px';
+    btn.onmouseenter = () => btn.style.background='#f5f4f1';
+    btn.onmouseleave = () => btn.style.background='#fff';
+    btn.innerHTML = `<span style="width:12px;height:12px;border-radius:50%;background:${l.color};flex-shrink:0"></span>
+      <span style="flex:1;font-weight:500">${l.name}</span>
+      <span style="color:#9ca3af">${l.isProject?'📁 Project':'Manual'}</span>`;
+    btn.onclick = () => importFromLabel(l.id, l.name, btn);
+    sources.appendChild(btn);
+  });
+  openModal('importModal');
+}
+function importFromLabel(sourceId, sourceName, btn) {
+  btn.textContent = 'Importing...';
+  btn.disabled = true;
+  fetch('/audio/labels/' + importTargetId + '/import/' + sourceId + '?dry=0', {method:'POST'})
+  .then(r=>r.json()).then(d=>{
+    showToast('Imported ' + d.added + ' clips from "' + sourceName + '"', 'success');
+    btn.textContent = '✓ ' + d.added + ' clips imported';
+    btn.style.color = '#059669';
+    setTimeout(()=>location.reload(),1000);
+  });
+}
+</script>
+{% endblock %}

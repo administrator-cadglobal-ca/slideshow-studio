@@ -1,0 +1,1247 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ project.name }} — Slideshow Studio{% endblock %}
+
+{% block head %}
+<style>
+/* ── Tab structure ── */
+.tab-bar{display:flex;align-items:center;gap:2px;border-bottom:1px solid #e8e5e0;margin-bottom:18px;padding-bottom:0;overflow-x:auto}
+.tab-btn{padding:8px 14px;font-size:12px;font-weight:500;color:#6b7280;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:.15s}
+.tab-btn.active,.tab-btn:hover{color:#1e3a52}
+.tab-btn.active{border-bottom-color:#1e3a52;font-weight:600}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.note-card{background:#fff;border:1px solid #e8e5e0;border-radius:10px;overflow:hidden;transition:.15s}
+.note-card:hover{border-color:#c8c4be;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.note-card.has-note{border-color:#1e3a52;border-width:1.5px}
+.note-card.skipped{opacity:.45}
+
+.nc-thumb{position:relative;aspect-ratio:4/3;background:#f0ede8;overflow:hidden}
+.nc-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.nc-num{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.45);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px}
+.nc-meta-icons{position:absolute;top:6px;right:6px;display:flex;gap:3px}
+.nc-meta-icon{font-size:10px;background:rgba(0,0,0,.4);padding:1px 5px;border-radius:20px}
+
+/* Two-line caption preview */
+.nc-caption-preview{position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(transparent,rgba(0,0,0,.78));padding:18px 8px 7px;display:none}
+.note-card.has-note .nc-caption-preview{display:block}
+.nc-cap-line1{color:#fff;font-size:10px;font-weight:600;line-height:1.4;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.nc-cap-line2{color:rgba(255,255,255,.6);font-size:9px;margin-top:1px;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+.nc-body{padding:10px}
+.nc-filename{font-size:10px;color:#9ca3af;margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nc-chips{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px;min-height:16px}
+.nc-chip{display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:2px 5px;border-radius:20px;background:#f0ede8;color:#5f6b7a;font-weight:500;white-space:nowrap}
+.nc-chip.gps{background:#ecfdf5;color:#065f46}
+.nc-chip.date{background:#eff6ff;color:#1e40af}
+.nc-chip.cam{background:#f0ebff;color:#6b4bb5}
+
+.nc-textarea{width:100%;border:1px solid #e8e5e0;border-radius:6px;padding:7px 10px;
+  font-size:12px;resize:none;outline:none;line-height:1.5;color:#1a1a18;
+  font-family:inherit;background:#fafaf8;transition:.15s}
+.nc-textarea:focus{border-color:#1e3a52;background:#fff;box-shadow:0 0 0 3px rgba(30,58,82,.07)}
+.nc-textarea::placeholder{color:#c8c4be;font-style:italic}
+
+.nc-l2-preview{font-size:10px;color:#6b7280;margin-top:4px;min-height:14px;
+  display:flex;align-items:center;gap:4px;overflow:hidden}
+.nc-l2-badge{font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;
+  letter-spacing:.3px;white-space:nowrap;flex-shrink:0}
+.nc-l2-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5f6b7a;font-style:italic}
+
+.nc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:5px}
+.nc-char{font-size:10px;color:#c8c4be}
+.nc-char.near{color:#d97706}
+.nc-char.full{color:#dc2626}
+.nc-dot{width:7px;height:7px;border-radius:50%;background:#e8e5e0;transition:.3s}
+.nc-dot.saving{background:#d97706;animation:blink .6s infinite}
+.nc-dot.saved{background:#059669}
+
+/* Style panel */
+.style-panel{background:#fff;border:1px solid #e8e5e0;border-radius:10px;padding:16px 20px;margin-bottom:16px}
+.style-panel-title{font-size:12px;font-weight:600;color:#374151;margin-bottom:12px}
+.style-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.style-field label{display:block;font-size:11px;font-weight:600;color:#5f6b7a;margin-bottom:4px}
+.style-select{width:100%;border:1px solid #e8e5e0;border-radius:6px;padding:6px 9px;font-size:12px;background:#fff;outline:none}
+.style-select:focus{border-color:#1e3a52}
+
+.l2-opt-label{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.l2-options{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.l2-opt{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;
+  border:1px solid #e8e5e0;background:#fff;color:#5f6b7a;cursor:pointer;transition:.12s}
+.l2-opt:hover{background:#f5f4f1}
+.l2-opt.active{background:#1e3a52;color:#fff;border-color:#1e3a52}
+
+/* Live preview */
+.cap-preview-box{background:#111;border-radius:8px;overflow:hidden;position:relative;height:80px;display:flex;align-items:flex-end}
+.cap-preview-grad{position:absolute;inset:0;background:linear-gradient(transparent 20%,rgba(0,0,0,.82))}
+.cap-preview-text{position:relative;padding:8px 14px 10px;width:100%}
+.cap-prev-line1{color:#fff;font-weight:600;line-height:1.4;font-size:14px}
+.cap-prev-line2{color:rgba(255,255,255,.6);margin-top:2px;font-size:12px}
+
+/* Toolbar */
+.notes-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.search-in{border:1px solid #e8e5e0;border-radius:6px;padding:6px 10px;font-size:12px;outline:none;width:200px}
+.search-in:focus{border-color:#1e3a52}
+.notes-stats{display:flex;gap:14px;font-size:11px;color:#6b7280;margin-bottom:12px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@media(max-width:640px){.notes-grid{grid-template-columns:repeat(2,1fr)}}
+
+</style>
+{% endblock %}
+
+{% block content %}
+{# ── Project header ── #}
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+  <div>
+    <div style="font-size:12px;color:#9ca3af;margin-bottom:2px">
+      <a href="{{ url_for('projects.index') }}" style="color:#9ca3af;text-decoration:none">Projects</a>
+      <span style="margin:0 5px">›</span>
+      <span style="color:#374151">{{ project.name }}</span>
+    </div>
+    <h1 style="font-size:22px;font-weight:700;color:#1a1a18;margin:0">{{ project.name }}</h1>
+    <div style="font-size:12px;color:#9ca3af;margin-top:3px">
+      {{ project.photo_count }} photo{{ 's' if project.photo_count != 1 }}
+      · {{ project.selected_songs|length if project.selected_songs else 0 }} songs
+      {% if project.render_versions_list %}· {{ project.render_versions_list|join(', ') }}{% endif %}
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a href="{{ url_for('projects.preview', project_id=project.id) }}" class="btn btn-sm">▶ Preview</a>
+    <button class="btn btn-sm" id="shareModalBtn" onclick="openModal('shareModal')">🔗 Share</button>
+    <button class="btn btn-sm btn-primary" onclick="openModal('renderModal')">▷ Render</button>
+    <a href="{{ url_for('projects.settings', project_id=project.id) }}" class="btn btn-sm" title="Settings">⚙</a>
+  </div>
+</div>
+
+{# ── Tab bar ── #}
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="photos"   onclick="switchTab('photos')">
+    📷 Photos ({{ project.photo_count }})
+  </button>
+  <button class="tab-btn" data-tab="audio" onclick="switchTab('audio');onAudioTab();">🎵 Audio</button>
+  <button class="tab-btn" data-tab="captions"  onclick="switchTab('captions')">
+    💬 Captions
+    {% set note_count = project.photos | selectattr('has_note') | list | length %}
+    {% if note_count %}<span style="background:#1e3a52;color:#fff;font-size:9px;padding:1px 5px;border-radius:20px;margin-left:3px">{{ note_count }}</span>{% endif %}
+  </button>
+  <button class="tab-btn" data-tab="processed" onclick="switchTab('processed');">🖼 Processed Photos</button>
+  <button class="tab-btn" data-tab="output"    onclick="switchTab('output')">🎬 Output</button>
+  <button class="tab-btn" data-tab="log"       onclick="switchTab('log')">📋 Log</button>
+</div>
+
+{# ═══════════════════════════════════════════════════════ #}
+{# PHOTOS TAB                                              #}
+{# ═══════════════════════════════════════════════════════ #}
+<div class="tab-panel active" id="photos">
+
+  {# Upload zone #}
+  <label id="uploadZone" class="upload-zone" data-project="{{ project.id }}" style="cursor:pointer;display:block">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <p>Drag photos here or click to browse</p>
+    <small>JPG, PNG, HEIC supported · Max {{ max_upload_mb }} MB per file</small>
+    <div style="margin-top:10px"><span class="btn btn-sm btn-primary" style="pointer-events:none">📁 Choose photos</span></div>
+    <input type="file" id="photoInput" multiple accept="image/*" onchange="handlePhotoUpload(this)" style="position:absolute;opacity:0;width:0;height:0">
+  </label>
+
+  {# Process panel #}
+  {% if project.photos %}
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin:12px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="font-size:11px;font-weight:700;color:#166534;letter-spacing:.5px">⚙ PROCESS:</span>
+    {% for res in ['SD','HD','2K','4K'] %}
+    <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer">
+      <input type="checkbox" class="proc-res-chk" value="{{ res|lower }}" {% if res=='HD' %}checked{% endif %} style="accent-color:#059669"> {{ res }}
+    </label>
+    {% endfor %}
+    <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer;border-left:1px solid #bbf7d0;padding-left:10px">
+      <input type="checkbox" id="proc_upscale" style="accent-color:#059669"> Upscale
+    </label>
+    <button id="processBtn" onclick="processPhotos()"
+      style="background:#059669;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer">
+      ⚙ Process photos
+    </button>
+  </div>
+
+  {# Photo grid #}
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px">
+    <div style="font-size:12px;color:#8a9bb0">{{ project.photo_count }} photo{{ 's' if project.photo_count != 1 }} · Drag to reorder</div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <a href="{{ url_for('projects.preview', project_id=project.id) }}#source"
+         class="btn btn-sm btn-primary" style="text-decoration:none">
+        ▶ Slideshow
+      </a>
+      <button class="btn btn-xs" onclick="sortPhotos('exif')">Sort by date taken</button>
+      <button class="btn btn-xs" onclick="sortPhotos('name')">Sort by filename</button>
+      <button class="btn btn-xs" style="color:#dc2626;border-color:#fca5a5" onclick="deleteAllPhotos()">🗑 Delete all</button>
+    </div>
+  </div>
+  <div class="photo-grid" id="photoGrid">
+    {% for photo in project.photos %}
+    <div class="photo-thumb {% if photo.skipped %}skipped{% endif %}" data-id="{{ photo.id }}" draggable="true">
+      <img src="{{ thumb_url(current_user.id, project.id, photo.filename) }}" alt="{{ photo.orig_name }}" onerror="this.style.display='none'">
+      <div class="thumb-overlay">
+        <button class="btn-icon" style="width:24px;height:24px;font-size:10px;border:none" onclick="skipPhoto({{ photo.id }})" title="{{ 'Include' if photo.skipped else 'Skip' }}">
+          {{ '✓' if photo.skipped else '⊘' }}
+        </button>
+        <button class="btn-icon" style="width:24px;height:24px;font-size:11px;border:none;" onclick="deletePhoto({{ photo.id }}, this)" title="Delete photo">🗑</button>
+      </div>
+      <span class="thumb-badge">{{ '📱' if photo.is_portrait else '🖥' }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:32px">
+    <p>No photos yet — drag some above to get started.</p>
+  </div>
+  {% endif %}
+
+</div>{# /photos #}
+
+{# ═══════════════════════════════════════════════════════ #}
+{# AUDIO TAB                                               #}
+{# ═══════════════════════════════════════════════════════ #}
+<div class="tab-panel" id="audio">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div class="section-title">Audio label for this project</div>
+    <div style="display:flex;gap:8px">
+      <a href="{{ url_for('audio.labels_page') }}" class="btn btn-sm">Manage labels</a>
+      <a href="{{ url_for('audio.clips') }}" class="btn btn-sm">Manage clips</a>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <label style="font-size:12px;font-weight:600;color:#374151">Label:</label>
+    <select id="projectLabelSel" onchange="loadLabelClips(this.value)"
+      style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:13px;outline:none;min-width:200px">
+      <option value="">— Select a label —</option>
+      {% for label in all_labels %}
+      <option value="{{ label.id }}" {% if project_label and label.id == project_label.id %}selected{% endif %}>
+        {{ label.name }} ({{ label.clip_count }} clips)
+      </option>
+      {% endfor %}
+    </select>
+    <button onclick="saveProjectLabel()" class="btn btn-sm btn-primary">Set as default</button>
+  </div>
+
+  {# Mini player #}
+  <div id="clipPlayer" style="display:none;background:#1e3a52;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+    <button onclick="clipToggle()" id="clipPlayBtn" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:14px;cursor:pointer">▶</button>
+    <div style="flex:1;min-width:0">
+      <div id="clipPlayerName" style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+      <div style="height:3px;background:rgba(255,255,255,.2);border-radius:2px;margin-top:5px;cursor:pointer" onclick="clipSeek(event,this)">
+        <div id="clipPlayerBar" style="height:100%;width:0%;background:#fff;border-radius:2px;transition:width .3s"></div>
+      </div>
+    </div>
+    <div id="clipPlayerTime" style="font-size:11px;opacity:.7;white-space:nowrap">0:00</div>
+    <button onclick="clipNext()" style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;opacity:.7">⏭</button>
+    <button onclick="stopClip()" style="background:none;border:none;color:#fff;font-size:14px;cursor:pointer;opacity:.7">✕</button>
+  </div>
+  <audio id="clipAudio"></audio>
+
+  <div id="projectClipsList">
+    <div class="empty-state">
+      <p style="color:#b0bec5">Select a label above to see its clips.</p>
+    </div>
+  </div>
+
+</div>{# /audio #}
+
+{# ═══════════════════════════════════════════════════════ #}
+{# CAPTIONS TAB                                            #}
+{# ═══════════════════════════════════════════════════════ #}
+<div class="tab-panel" id="captions">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div>
+      <div class="section-title">Photo captions</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:2px">
+        {% set note_count = project.photos|selectattr('has_note')|list|length %}
+        {{ note_count }} caption{{ 's' if note_count != 1 }} added
+      </div>
+    </div>
+    <a href="{{ url_for('projects.notes', project_id=project.id) }}"
+       class="btn btn-sm btn-primary" style="text-decoration:none">
+      ✏ Edit captions
+    </a>
+  </div>
+  <div class="notes-grid">
+    {% for photo in project.photos %}
+    <div class="note-card {% if photo.has_note %}has-note{% endif %}">
+      <div class="nc-thumb">
+        <img src="{{ thumb_url(project.user_id, project.id, photo.filename) }}" alt="{{ photo.orig_name }}" onerror="this.style.display='none'">
+        <div class="nc-num">{{ loop.index }}</div>
+        {% if photo.has_note %}
+        <div class="nc-caption-preview">
+          <div class="nc-cap-line1">{{ photo.note or '' }}</div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="nc-body">
+        <div class="nc-filename">{{ photo.orig_name }}</div>
+        {% if photo.note %}<div style="font-size:11px;color:#374151;margin-top:3px">{{ photo.note }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>{# /captions #}
+
+{# ═══════════════════════════════════════════════════════ #}
+{# PROCESSED FRAMES TAB                                    #}
+{# ═══════════════════════════════════════════════════════ #}
+<div class="tab-panel" id="processed">
+
+  {% if processed_versions %}
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <label style="font-size:12px;font-weight:600;color:#374151">Resolution:</label>
+    <select id="procResSel" onchange="showProcVersion(this.value)"
+      style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:13px;outline:none;min-width:220px">
+      <option value="">— Select resolution —</option>
+      {% for ver in processed_versions %}
+      <option value="{{ ver }}">{{ ver | upper | replace('-', ' ') }} — {{ processed_images[ver] | length }} frames</option>
+      {% endfor %}
+    </select>
+    <button onclick="location.reload()" class="btn btn-sm">↻ Refresh</button>
+    <span id="procResCount" style="font-size:11px;color:#9ca3af"></span>
+  </div>
+  <div id="procFramesGrid">
+    <p style="color:#b0bec5;padding:20px;text-align:center;font-size:13px">Select a resolution above to view frames.</p>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p style="color:#b0bec5">No processed frames yet. Use ⚙ Process photos in the Photos tab.</p>
+  </div>
+  {% endif %}
+
+</div>{# /processed #}
+
+{# ═══════════════════════════════════════════════════════ #}
+{# OUTPUT TAB                                              #}
+{# ═══════════════════════════════════════════════════════ #}
+<div class="tab-panel" id="output">
+
+  {# ── Render controls ── #}
+  <div style="background:#f8f9fa;border:1px solid #e8e5e0;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:12px">🎬 Render to MP4</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+
+      <div>
+        <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Version</label>
+        <select id="renderVersion" style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:12px;outline:none">
+          {% for ver in processed_versions %}
+          <option value="{{ ver }}">{{ ver | upper | replace('-',' ') }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Audio label</label>
+        <select id="renderLabel" style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:12px;outline:none">
+          <option value="">— No audio —</option>
+          {% for label in all_labels %}
+          <option value="{{ label.id }}" {% if project_label and label.id == project_label.id %}selected{% endif %}>
+            {{ label.name }} ({{ label.clip_count }} clips)
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:11px;color:#6b7280;display:block;margin-bottom:4px">Secs per photo</label>
+        <input type="number" id="renderDuration" value="4" min="1" max="30" step="0.5"
+          style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:12px;width:70px;outline:none">
+      </div>
+
+      <button id="renderBtn" onclick="startRenderMp4()"
+        style="background:#1e3a52;color:#fff;border:none;border-radius:7px;padding:7px 18px;font-size:12px;font-weight:600;cursor:pointer">
+        ▷ Render MP4
+      </button>
+    </div>
+  </div>
+
+  {# ── Output files list ── #}
+  <div id="outputFilesList">
+    <div style="padding:16px;text-align:center;color:#b0bec5;font-size:13px">Loading output files...</div>
+  </div>
+
+</div>{# /output #}
+
+{# ═══════════════════════════════════════════════════════ #}
+{# LOG TAB                                                 #}
+{# ═══════════════════════════════════════════════════════ #}
+<div class="tab-panel" id="log">
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+    <span style="font-size:12px;font-weight:600;color:#374151">Processing log</span>
+    <button onclick="refreshProcessLog()" class="btn btn-sm" style="font-size:11px">↻ Refresh</button>
+    <span id="logStatus" style="font-size:11px;color:#6b7280"></span>
+  </div>
+  <div id="processLogBox" style="background:#0f172a;color:#94a3b8;font-family:monospace;font-size:11px;padding:14px;border-radius:8px;min-height:400px;max-height:80vh;overflow-y:auto;white-space:pre-wrap">No processing log yet. Run ⚙ Process photos to start.</div>
+  {% if project.latest_job and project.latest_job.log_text %}
+  <div style="margin-top:16px;font-size:12px;font-weight:600;color:#374151">Last render log</div>
+  <div class="render-log" style="margin-top:8px">{{ project.latest_job.log_text }}</div>
+  {% endif %}
+</div>{# /log #}
+
+{# ═══════════════════════════════════════════════════════ #}
+{# SHARE MODAL                                             #}
+{# ═══════════════════════════════════════════════════════ #}
+<div class="modal-overlay" id="shareModal">
+  <div class="modal-box" style="width:480px;max-width:95vw">
+    <div class="modal-title" style="font-size:16px;font-weight:700;margin-bottom:4px">🔗 Share Slideshow</div>
+    <div class="modal-sub" style="font-size:12px;color:#9ca3af;margin-bottom:18px">Anyone with the link can view and play this slideshow.</div>
+
+    {# Share type tabs #}
+    <div style="display:flex;gap:0;border:1px solid #e8e5e0;border-radius:8px;overflow:hidden;margin-bottom:16px">
+      <button id="shareTabLocal" onclick="setShareTab('local')"
+        style="flex:1;padding:8px;font-size:12px;font-weight:600;border:none;background:#f8f9fa;color:#6b7280;cursor:pointer">
+        🔒 Local link
+      </button>
+      <button id="shareTabCloud" onclick="setShareTab('cloud')"
+        style="flex:1;padding:8px;font-size:12px;font-weight:600;border:none;background:#1e3a52;color:#fff;cursor:pointer">
+        ☁ Cloudflare (fast)
+      </button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Description (shown in copy message)</label>
+        <input type="text" id="shareDescription" class="form-control" placeholder="{{ project.name }}" value="{{ project.name }}">
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 12px;font-size:12px;color:#166534">
+        ✓ All {{ processed_versions|length }} version(s) will be uploaded:
+        <strong>{{ processed_versions | join(', ') | upper }}</strong>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Password (optional)</label>
+        <input type="password" id="sharePassword" class="form-control" placeholder="Default: WELCOME if not provided">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Link expires</label>
+        <select id="shareExpiry" class="form-control">
+          <option value="">Never</option>
+          <option value="7">7 days</option>
+          <option value="30">30 days</option>
+          <option value="90">90 days</option>
+          <option value="365">1 year</option>
+        </select>
+      </div>
+      <div id="shareCloudNote" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px;font-size:11px;color:#1e40af">
+        ☁ Frames will be uploaded to Cloudflare R2. Guests get blazing-fast global delivery with zero load on your server.
+        Make sure <code>CF_ACCOUNT_ID</code>, <code>CF_API_TOKEN</code>, <code>CF_D1_ID</code> are set in <code>.env</code>
+      </div>
+    </div>
+
+    <div id="shareResult" style="display:none;margin-top:14px">
+      <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Share link ready</label>
+      <div style="display:flex;gap:6px">
+        <input id="shareLinkInput" type="text" readonly class="form-control"
+          style="font-size:12px;background:#f8f9fa;flex:1">
+        <button class="btn btn-sm" onclick="copyShareLink()">🔗 Copy link</button>
+      </div>
+      <button onclick="copyShareMessage()" class="btn btn-sm btn-primary" style="width:100%;margin-top:8px;padding:8px">
+        📋 Copy message for WhatsApp / Email
+      </button>
+      <div id="shareUploadStatus" style="margin-top:8px;font-size:11px;color:#6b7280"></div>
+    </div>
+
+    <div id="existingShares" style="margin-top:14px"></div>
+
+    <div class="modal-actions" style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('shareModal')">Close</button>
+      <button class="btn btn-primary" id="shareSubmitBtn" onclick="submitShare()">☁ Upload and share</button>
+    </div>
+  </div>
+</div>
+
+{# ═══════════════════════════════════════════════════════ #}
+{# RENDER MODAL                                            #}
+{# ═══════════════════════════════════════════════════════ #}
+<div class="modal-overlay" id="renderModal">
+  <div class="modal-box" style="background:#fff;border-radius:14px;padding:24px;width:440px;max-width:95vw">
+    <div class="modal-title" style="font-size:16px;font-weight:700;margin-bottom:4px">🎬 Render to MP4</div>
+    <div class="modal-sub" style="font-size:12px;color:#9ca3af;margin-bottom:18px">{{ project.name }}</div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Resolution / Version</label>
+        <select id="modalRenderVersion" class="form-control">
+          {% if processed_versions %}
+            {% for ver in processed_versions %}
+            <option value="{{ ver }}">{{ ver | upper | replace('-',' ') }}</option>
+            {% endfor %}
+          {% else %}
+          <option value="">— Process photos first —</option>
+          {% endif %}
+        </select>
+        {% if not processed_versions %}
+        <div style="font-size:11px;color:#f59e0b;margin-top:4px">⚠ No processed frames yet. Go to Photos tab → ⚙ Process photos first.</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Audio Label</label>
+        <select id="modalRenderLabel" class="form-control">
+          <option value="">— No audio —</option>
+          {% for label in all_labels %}
+          <option value="{{ label.id }}" {% if project_label and label.id == project_label.id %}selected{% endif %}>
+            {{ label.name }} ({{ label.clip_count }} clips)
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Seconds per photo</label>
+          <input type="number" id="modalRenderDuration" value="4" min="1" max="30" step="0.5" class="form-control">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Estimated length</label>
+          <div id="modalEstDuration" style="padding:8px 10px;background:#f8f9fa;border-radius:7px;font-size:12px;color:#6b7280;margin-top:0">
+            —
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('renderModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="startRenderFromModal()" id="modalRenderBtn">▷ Render MP4</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+const PROJECT_PHOTO_COUNT = {{ project.photo_count }};
+const PROJECT_ID = '{{ project.id }}';
+
+
+
+function startRender() {
+  openModal('renderModal');
+}
+
+var _shareTab = 'cloud';
+// Set initial button text for cloud tab
+document.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('shareSubmitBtn');
+  if(btn) btn.textContent = '☁ Upload and share';
+});
+
+function setShareTab(tab){
+  _shareTab = tab;
+  var local = document.getElementById('shareTabLocal');
+  var cloud = document.getElementById('shareTabCloud');
+  var note  = document.getElementById('shareCloudNote');
+  if(tab === 'cloud'){
+    cloud.style.background='#1e3a52'; cloud.style.color='#fff';
+    local.style.background='#f8f9fa'; local.style.color='#6b7280';
+    note.style.display='block';
+    document.getElementById('shareSubmitBtn').textContent='☁ Upload and share';
+  } else {
+    local.style.background='#1e3a52'; local.style.color='#fff';
+    cloud.style.background='#f8f9fa'; cloud.style.color='#6b7280';
+    note.style.display='none';
+    document.getElementById('shareSubmitBtn').textContent='Generate link';
+  }
+}
+
+function submitShare(){
+  console.log('[Share] tab=', _shareTab);
+  _shareTab === 'cloud' ? createCloudShare() : createShareLink();
+}
+
+function createShareLink(){
+  var ver = document.getElementById('shareVersion').value;
+  var exp = document.getElementById('shareExpiry').value;
+  fetch('/projects/{{ project.id }}/share', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({expires_days: exp ? parseInt(exp) : null, password: document.getElementById('sharePassword').value || null, description: document.getElementById('shareDescription').value || ''})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.ok){
+      var url = window.location.origin + d.url;
+      document.getElementById('shareLinkInput').value = url;
+      document.getElementById('shareResult').style.display = 'block';
+      document.getElementById('shareUploadStatus').textContent = 'Local link — served through your server';
+      loadExistingShares();
+    }
+  });
+}
+
+function createCloudShare(){
+  console.log('[Cloud] starting upload...');
+  var exp = document.getElementById('shareExpiry').value;
+  var btn = document.getElementById('shareSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Uploading to R2...';
+  document.getElementById('shareUploadStatus').textContent = 'Uploading frames to Cloudflare R2... check Log tab for progress';
+  fetch('/projects/{{ project.id }}/share-cloud', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({expires_days: exp ? parseInt(exp) : null, password: document.getElementById('sharePassword').value || null, description: document.getElementById('shareDescription').value || ''})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.ok){
+      document.getElementById('shareLinkInput').value = d.url;
+      document.getElementById('shareResult').style.display = 'block';
+      document.getElementById('shareUploadStatus').textContent =
+        'Uploading ' + d.frames + ' frames + ' + d.audio_files + ' audio files in background. Link active when done!';
+      btn.disabled = false;
+      btn.textContent = '☁ Upload and share';
+      switchTab('log');
+      startProcessLog();
+    } else {
+      alert(d.error || 'Error');
+      btn.disabled = false;
+      btn.textContent = '☁ Upload and share';
+    }
+  });
+}
+
+function copyShareLink(){
+  var input = document.getElementById('shareLinkInput');
+  input.select();
+  document.execCommand('copy');
+  showToast('Link copied!', 'success');
+}
+
+function copyShareMessage(){
+  var link = document.getElementById('shareLinkInput').value;
+  var desc = document.getElementById('shareDescription').value;
+  var pwd  = document.getElementById('sharePassword').value;
+  var msg  = buildShareMessage(desc || '{{ project.name }}', link, pwd);
+  navigator.clipboard.writeText(msg).then(function(){
+    showToast('Message copied! Paste in WhatsApp or email.', 'success');
+  }).catch(function(){
+    var ta = document.createElement('textarea');
+    ta.value = msg; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Message copied!', 'success');
+  });
+}
+
+function copyTokenMessage(t){
+  var link = 'https://share.calgarydhamaka.com/s/' + t.token;
+  var msg  = buildShareMessage(t.description || '{{ project.name }}', link, t.plain_password);
+  navigator.clipboard.writeText(msg).then(function(){
+    showToast('Message copied!', 'success');
+  }).catch(function(){
+    var ta = document.createElement('textarea');
+    ta.value = msg; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Message copied!', 'success');
+  });
+}
+
+var SHARE_USER_NAME  = '{{ current_user.full_name }}';
+var SHARE_USER_EMAIL = '{{ current_user.email }}';
+
+function buildShareMessage(desc, link, pwd){
+  var lines = [];
+  lines.push('🎉 ' + desc);
+  lines.push('');
+  lines.push('View the slideshow here:');
+  lines.push(link);
+  if(pwd){
+    lines.push('');
+    lines.push('🔒 Password: ' + pwd);
+  }
+  lines.push('');
+  lines.push('You can choose HD, 2K or 4K quality and switch between music playlists.');
+  lines.push('For best viewing, choose Landscape mode on TV/desktop or Portrait mode on mobile phone.');
+  lines.push('Enjoy! 🙏');
+  lines.push('');
+  lines.push('With best compliments,');
+  lines.push(SHARE_USER_NAME);
+  lines.push(SHARE_USER_EMAIL);
+  return lines.join('\n');
+}
+
+function loadExistingShares(){
+  fetch('/projects/{{ project.id }}/share')
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var el = document.getElementById('existingShares');
+    if(!d.tokens || !d.tokens.length){
+      el.innerHTML = '<div style="font-size:11px;color:#9ca3af;margin-top:8px;padding:10px;background:#f8f9fa;border-radius:6px;text-align:center">No active links yet. Click Upload and share to create one.</div>';
+      return;
+    }
+    var html = '<div style="font-size:11px;font-weight:600;color:#374151;margin-bottom:6px;margin-top:12px">Active links</div>';
+    html += '<div style="max-height:250px;overflow-y:auto;border:1px solid #e8e5e0;border-radius:8px">';
+    d.tokens.forEach(function(t){
+      html += '<div style="padding:10px 12px;border-bottom:1px solid #f0ede8">';
+      if(t.description) html += '<div style="font-size:12px;font-weight:600;color:#1e3a52;margin-bottom:3px">' + t.description + '</div>';
+      var shareUrl = 'https://share.calgarydhamaka.com/s/' + t.token;
+      html += '<div style="font-size:11px;color:#6b7280;margin-bottom:2px;word-break:break-all">' + shareUrl + '</div>';
+      html += '<div style="font-size:11px;color:#9ca3af;margin-bottom:6px">';
+      html += (t.plain_password ? '🔒 ' + t.plain_password : 'No password') + ' · ';
+      html += t.created_at + ' · ' + t.use_count + ' views</div>';
+      html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+      var encT = encodeURIComponent(JSON.stringify(t));
+      html += '<button data-tok="' + encT + '" onclick="copyTokenMessage(JSON.parse(decodeURIComponent(this.dataset.tok)))" class="btn btn-sm btn-primary" style="font-size:11px;padding:3px 10px">📋 Copy message</button>';
+      html += '<button data-tok="' + t.token + '" onclick="showChangePwd(this.dataset.tok)" class="btn btn-sm" style="font-size:11px;padding:3px 10px">🔑 Change password</button>';
+      html += '<button data-token="' + t.token + '" onclick="revokeShare(this.dataset.token)" class="btn btn-sm" style="font-size:11px;padding:3px 10px;color:#dc2626;border-color:#fca5a5">Revoke</button>';
+      html += '</div>';
+      html += '<div id="pwd-row-' + t.token + '" style="display:none;margin-top:6px">';
+      html += '<div style="display:flex;gap:6px">';
+      html += '<input type="text" id="pwd-input-' + t.token + '" placeholder="New password" class="form-control" style="font-size:12px;flex:1">';
+      html += '<button data-tok="' + t.token + '" onclick="saveNewPwd(this.dataset.tok)" class="btn btn-sm btn-primary" style="font-size:11px">Save</button>';
+      html += '</div></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+function showChangePwd(token){
+  var row = document.getElementById('pwd-row-' + token);
+  if(!row) return;
+  row.style.display = (row.style.display === 'none' || row.style.display === '') ? 'block' : 'none';
+  var inp = document.getElementById('pwd-input-' + token);
+  if(inp && row.style.display === 'block') inp.focus();
+}
+
+function saveNewPwd(token){
+  var inp = document.getElementById('pwd-input-' + token);
+  var pwd = inp ? inp.value.trim() : '';
+  if(!pwd){ inp.value = 'WELCOME'; pwd = 'WELCOME'; }
+  fetch('/projects/{{ project.id }}/share/' + token + '/password', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({password: pwd})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.ok){
+      showToast('Password updated to: ' + pwd, 'success');
+      document.getElementById('pwd-row-' + token).style.display = 'none';
+      loadExistingShares();
+    } else {
+      showToast(d.error || 'Error', 'error');
+    }
+  });
+}
+
+function revokeShare(token){
+  fetch('/projects/{{ project.id }}/share/' + token, {method:'DELETE'})
+  .then(function(){ loadExistingShares(); showToast('Link revoked', 'success'); });
+}
+
+// Load existing shares and set default tab when modal opens
+document.getElementById('shareModalBtn').addEventListener('click', function(){
+  setTimeout(function(){
+    setShareTab('cloud');
+    loadExistingShares();
+  }, 100);
+});
+
+function startRenderFromModal(){
+  var ver = document.getElementById('modalRenderVersion').value;
+  var labelId = document.getElementById('modalRenderLabel').value;
+  var dur = parseFloat(document.getElementById('modalRenderDuration').value) || 4;
+  if(!ver){ alert('No processed version available. Process photos first.'); return; }
+  closeModal('renderModal');
+  var ov = document.getElementById('renderVersion');
+  var ol = document.getElementById('renderLabel');
+  var od = document.getElementById('renderDuration');
+  if(ov) ov.value = ver;
+  if(ol) ol.value = labelId;
+  if(od) od.value = dur;
+  switchTab('output');
+  startRenderMp4();
+}
+
+function updateEstDuration(){
+  var ver = document.getElementById('modalRenderVersion').value;
+  var dur = parseFloat(document.getElementById('modalRenderDuration').value) || 4;
+  var frames = PROC_IMAGES[ver] ? PROC_IMAGES[ver].length : 0;
+  var total = frames * dur;
+  var mins = Math.floor(total/60), secs = Math.round(total%60);
+  var el = document.getElementById('modalEstDuration');
+  if(el) el.textContent = frames ? frames + ' frames - ' + mins + 'm ' + secs + 's' : 'No frames';
+}
+
+function deletePhoto(photoId, btn) {
+  if (!confirm('Delete this photo? This removes the file from pCloud.')) return;
+  btn.disabled = true;
+  fetch('/api/v1/projects/' + PROJECT_ID + '/photos/' + photoId + '/delete', { method: 'POST' })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      const thumb = document.querySelector('[data-id="' + photoId + '"]');
+      if (thumb) thumb.remove();
+      showToast('Photo deleted', 'success');
+    } else {
+      showToast('Delete failed', 'error');
+      btn.disabled = false;
+    }
+  })
+  .catch(() => { showToast('Delete failed', 'error'); btn.disabled = false; });
+}
+function deleteAllPhotos() {
+  if (!confirm('Delete ALL ' + PROJECT_PHOTO_COUNT + ' photos from this project?\n\nThis removes files from pCloud and cannot be undone.')) return;
+  fetch('/api/v1/projects/' + PROJECT_ID + '/photos/delete-all', { method: 'POST' })
+  .then(r => r.json())
+  .then(d => {
+    showToast('Deleted ' + d.deleted + ' photos', 'success');
+    setTimeout(() => location.reload(), 700);
+  })
+  .catch(() => showToast('Delete failed', 'error'));
+}
+function skipPhoto(photoId) {
+  fetch('/api/v1/projects/' + PROJECT_ID + '/photos/' + photoId + '/skip', { method:'POST' })
+  .then(r => r.json())
+  .then(d => {
+    const el = document.querySelector('[data-id="' + photoId + '"]');
+    if (el) el.classList.toggle('skipped', d.skipped);
+  });
+}
+
+function toggleSong(projectId, songId, checked) {
+  fetch('/api/v1/projects/' + projectId + '/songs/' + songId + '/', {
+    method: checked ? 'POST' : 'DELETE'
+  });
+}
+
+function showProcessedVersion(btn, ver) {
+  document.querySelectorAll('[id^="proc-"]').forEach(el => el.style.display='none');
+  document.getElementById('proc-' + ver).style.display = 'block';
+  btn.closest('div').querySelectorAll('.btn').forEach(b => {
+    b.classList.remove('btn-primary');
+    b.classList.add('btn');
+  });
+  btn.classList.add('btn-primary');
+}
+
+function uploadYouTube(outputId, title) {
+  const privacy = prompt('Privacy setting:', 'unlisted');
+  if (!privacy) return;
+  fetch('/api/v1/outputs/' + outputId + '/upload/youtube', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ title, privacy })
+  })
+  .then(r => r.json())
+  .then(d => { showToast('Uploaded to YouTube!', 'success'); setTimeout(() => location.reload(), 1000); })
+  .catch(() => showToast('YouTube upload failed', 'error'));
+}
+
+// ── Processed frames viewer ──────────────────────────────────────────────────
+var PROC_IMAGES   = {{ processed_images | tojson | safe }};
+var PROC_USER_ID  = {{ current_user.id }};
+var PROC_PROJ_ID  = '{{ project.id }}';
+
+function showProcVersion(ver){
+  var grid = document.getElementById('procFramesGrid');
+  var count = document.getElementById('procResCount');
+  if(!ver){ grid.innerHTML=''; return; }
+  var frames = PROC_IMAGES[ver] || [];
+  if(count) count.textContent = frames.length + ' frames';
+  if(!frames.length){
+    grid.innerHTML = '<p style="color:#b0bec5;padding:20px;text-align:center">No frames found for ' + ver + '</p>';
+    return;
+  }
+  var html = '<div class="photo-grid">';
+  frames.forEach(function(f){
+    var thumbUrl = '/api/v1/media/processed/' + PROC_USER_ID + '/' + PROC_PROJ_ID + '/' + ver + '/thumbs/' + f;
+    var fullUrl  = '/api/v1/media/processed/' + PROC_USER_ID + '/' + PROC_PROJ_ID + '/' + ver + '/' + f;
+    html += '<div class="photo-thumb">';
+    html += '<img src="' + thumbUrl + '" loading="lazy" data-full="' + fullUrl + '" onerror="this.src=this.dataset.full" style="width:100%;height:100%;object-fit:cover">';
+    html += '<div class="thumb-overlay"><a href="' + fullUrl + '" target="_blank" style="font-size:14px;color:#fff;text-decoration:none">⤢</a></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  grid.innerHTML = html;
+}
+
+function startRenderMp4(){
+  var btn = document.getElementById('renderBtn');
+  var ver = document.getElementById('renderVersion').value;
+  var labelId = document.getElementById('renderLabel').value;
+  var dur = parseFloat(document.getElementById('renderDuration').value) || 4;
+  if(!ver){ alert('Select a version first'); return; }
+  btn.disabled = true;
+  btn.textContent = '⏳ Rendering...';
+  fetch('/projects/{{ project.id }}/render-mp4', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({version: ver, label_id: labelId||null, duration: dur})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.ok){
+      showToast('Render started — ' + d.frames + ' frames × ' + d.duration + 's', 'success');
+      switchTab('log');
+      startProcessLog();
+      // Poll for output file
+      var poll = setInterval(function(){
+        loadOutputFiles();
+        fetch('/projects/{{ project.id }}/process/log')
+        .then(function(r){ return r.json(); })
+        .then(function(l){
+          if(l.log && (l.log.includes('DONE') || l.log.includes('FAILED'))){
+            clearInterval(poll);
+            btn.disabled = false;
+            btn.textContent = '▷ Render MP4';
+            loadOutputFiles();
+          }
+        });
+      }, 3000);
+      setTimeout(function(){ clearInterval(poll); btn.disabled=false; btn.textContent='▷ Render MP4'; }, 3600000);
+    } else {
+      alert(d.error || 'Render failed');
+      btn.disabled = false;
+      btn.textContent = '▷ Render MP4';
+    }
+  })
+  .catch(function(e){
+    alert('Error: ' + e);
+    btn.disabled = false;
+    btn.textContent = '▷ Render MP4';
+  });
+}
+
+function loadOutputFiles(){
+  fetch('/projects/{{ project.id }}/output-files')
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var el = document.getElementById('outputFilesList');
+    if(!el) return;
+    if(!d.files || !d.files.length){
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:#b0bec5;font-size:13px">No rendered files yet. Set up a version and audio label above, then click ▷ Render MP4.</div>';
+      return;
+    }
+    var html = '<div class="card">';
+    d.files.forEach(function(f){
+      html += '<div class="audio-row">';
+      html += '<div style="font-size:24px">🎬</div>';
+      html += '<div class="audio-info"><div class="audio-name">' + f.name + '</div>';
+      html += '<div class="audio-dur">' + f.size_mb + ' MB</div></div>';
+      html += '<a href="' + f.url + '" class="btn btn-sm btn-primary" download style="text-decoration:none">⬇ Download</a>';
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+// Load output files when Output tab clicked
+document.querySelector('[data-tab="output"]').addEventListener('click', loadOutputFiles);
+
+function onAudioTab(){
+  var s = document.getElementById('projectLabelSel');
+  var list = document.getElementById('projectClipsList');
+  if(s && s.value && list && !list.querySelector('.audio-row')){
+    loadLabelClips(s.value);
+  }
+}
+
+var _clips = [];
+var _clipIdx = -1;
+var _clipAudio = null;
+
+function loadLabelClips(labelId) {
+  var list = document.getElementById('projectClipsList');
+  if (!labelId) {
+    list.innerHTML = '<div class="empty-state"><p>Select a label to see its clips.</p></div>';
+    if(typeof stopClip === 'function') stopClip();
+    return;
+  }
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:#b0bec5">Loading...</div>';
+  console.log('[Audio] Fetching clips for label', labelId);
+  fetch('/api/v1/labels/' + labelId + '/clips')
+  .then(function(r){ console.log('[Audio] Response status:', r.status); return r.json(); })
+  .then(function(d){
+    console.log('[Audio] Got clips:', d.count, d.clips && d.clips.length);
+    if(!d.clips || !d.clips.length){
+      list.innerHTML = '<div class="empty-state"><p>No clips in this label.</p></div>';
+      return;
+    }
+    _clips = d.clips;
+    var html = '<div class="card">';
+    d.clips.forEach(function(c, i){
+      html += '<div class="audio-row" id="cliprow-' + i + '" style="cursor:pointer" onclick="playClip(' + i + ')">';
+      html += '<button class="play-btn" id="clipbtn-' + i + '" style="width:28px;height:28px;border-radius:50%;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:11px;flex-shrink:0" onclick="event.stopPropagation();playClip(' + i + ')">▶</button>';
+      html += '<div class="audio-info">';
+      html += '<div class="audio-name">' + (c.name||c.display_name||'') + '</div>';
+      html += '<div class="audio-dur">' + (c.dur||c.duration_display||'') + '</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div style="margin-top:8px;display:flex;gap:8px">';
+    html += '<button class="btn btn-sm btn-primary" onclick="playAllClips()">▶ Play all in sequence</button>';
+    html += '<button class="btn btn-sm" onclick="stopClip()">■ Stop</button>';
+    html += '</div>';
+    console.log('[Audio] Setting innerHTML, html length:', html.length, 'list el:', list ? list.id : 'NULL');
+    list.innerHTML = html;
+    console.log('[Audio] Done, rows now:', list.querySelectorAll('.audio-row').length);
+  });
+}
+
+function playClip(idx){
+  if(!_clips.length) return;
+  _clipIdx = idx;
+  if(!_clipAudio) _clipAudio = document.getElementById('clipAudio');
+  var c = _clips[idx];
+
+  // Update row highlighting
+  document.querySelectorAll('.audio-row').forEach(function(r,i){
+    r.style.background = i===idx ? '#f0f7ff' : '';
+  });
+  document.querySelectorAll('[id^="clipbtn-"]').forEach(function(b,i){
+    b.textContent = i===idx ? '⏸' : '▶';
+  });
+
+  // Show player bar
+  var player = document.getElementById('clipPlayer');
+  if(player){ player.style.display='flex'; }
+  var nameEl = document.getElementById('clipPlayerName');
+  if(nameEl) nameEl.textContent = c.name || c.display_name || '';
+
+  // Play with trim points
+  _clipAudio.src = c.url;
+  _clipAudio.currentTime = c.start || c.start_s || 0;
+  _clipAudio.play();
+  document.getElementById('clipPlayBtn').textContent = '⏸';
+
+  // Stop at end time if set
+  _clipAudio.ontimeupdate = function(){
+    var end = c.end || c.end_s;
+    if(end && _clipAudio.currentTime >= end){
+      _clipAudio.pause();
+      clipEnded();
+      return;
+    }
+    var start = c.start || c.start_s || 0;
+    var dur = end ? (end - start) : _clipAudio.duration;
+    var pct = dur > 0 ? ((_clipAudio.currentTime - start) / dur * 100) : 0;
+    var bar = document.getElementById('clipPlayerBar');
+    if(bar) bar.style.width = Math.min(100,pct) + '%';
+    var elapsed = Math.max(0, _clipAudio.currentTime - start);
+    var timeEl = document.getElementById('clipPlayerTime');
+    if(timeEl) timeEl.textContent = fmt(elapsed) + (dur ? ' / ' + fmt(dur) : '');
+  };
+  _clipAudio.onended = clipEnded;
+}
+
+function clipEnded(){
+  document.getElementById('clipPlayBtn').textContent = '▶';
+  // Auto-advance to next
+  if(_clipIdx + 1 < _clips.length){ playClip(_clipIdx + 1); }
+  else { stopClip(); }
+}
+
+function clipToggle(){
+  if(!_clipAudio || !_clipAudio.src) return;
+  if(_clipAudio.paused){ _clipAudio.play(); document.getElementById('clipPlayBtn').textContent='⏸'; }
+  else { _clipAudio.pause(); document.getElementById('clipPlayBtn').textContent='▶'; }
+}
+
+function clipNext(){
+  if(_clipIdx + 1 < _clips.length) playClip(_clipIdx + 1);
+}
+
+function clipSeek(e, bar){
+  if(!_clipAudio || !_clipAudio.src) return;
+  var c = _clips[_clipIdx];
+  var start = c ? (c.start||c.start_s||0) : 0;
+  var end = c ? (c.end||c.end_s) : null;
+  var dur = end ? (end-start) : _clipAudio.duration;
+  var pct = e.offsetX / bar.offsetWidth;
+  _clipAudio.currentTime = start + pct * dur;
+}
+
+function stopClip(){
+  if(_clipAudio){ _clipAudio.pause(); _clipAudio.src=''; }
+  _clipIdx = -1;
+  var player = document.getElementById('clipPlayer');
+  if(player) player.style.display='none';
+  document.querySelectorAll('.audio-row').forEach(function(r){ r.style.background=''; });
+  document.querySelectorAll('[id^="clipbtn-"]').forEach(function(b){ b.textContent='▶'; });
+}
+
+function playAllClips(){ if(_clips.length) playClip(0); }
+
+function fmt(s){ if(!s||!isFinite(s))return'0:00'; var m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+(sec<10?'0':'')+sec; }
+
+function saveProjectLabel() {
+  var labelId = document.getElementById('projectLabelSel').value;
+  var btn = document.querySelector('[onclick="saveProjectLabel()"]');
+  fetch('/api/v1/projects/{{ project.id }}/label', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({label_id: labelId ? parseInt(labelId) : null})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(btn){ var t=btn.textContent; btn.textContent='✓ Saved'; setTimeout(function(){btn.textContent=t;},1500); }
+  })
+  .catch(function(){
+    if(btn){ var t=btn.textContent; btn.textContent='✗ Error'; setTimeout(function(){btn.textContent=t;},1500); }
+  });
+}
+
+function refreshProcessedFrames(){
+  fetch('/projects/{{ project.id }}/process/frames')
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var el = document.getElementById('procFramesContent');
+    if(!el) return;
+    if(!d.versions || !Object.keys(d.versions).length){
+      el.innerHTML = '<div class="empty-state"><p>No processed frames yet.</p></div>';
+      return;
+    }
+    var html = '<div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap" id="procVerBtns">';
+    var firstVer = null;
+    var resOrder = ['SD','HD','2K','4K'];
+    var resMap = {'sd':'SD','hd':'HD','2k':'2K','4k':'4K'};
+    resOrder.forEach(function(res){
+      var vers = Object.keys(d.versions).filter(function(v){ return v.startsWith(res.toLowerCase()); });
+      if(!vers.length) return;
+      html += '<div style="display:flex;gap:4px;align-items:center;background:#f0f0f0;border-radius:8px;padding:4px 8px">';
+      html += '<span style="font-size:10px;font-weight:700;color:#6b7280">' + res + '</span>';
+      vers.forEach(function(ver, vi){
+        var lbl = ver.includes('-') ? ver.split('-')[1].charAt(0).toUpperCase()+ver.split('-')[1].slice(1) : ver;
+        if(!firstVer) firstVer = ver;
+        var isPrimary = (vi===0 && res===resOrder[0]);
+        html += '<button class="btn btn-sm' + (isPrimary?' btn-primary':'') + '" ';
+        html += 'data-ver="' + ver + '" onclick="showProcVer(this,this.dataset.ver)" style="font-size:11px;padding:2px 8px">' + lbl + '</button>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+    // Slideshow buttons per resolution group
+    var resShown = {};
+    Object.keys(d.versions).forEach(function(ver){
+      var res = ver.split('-')[0].toUpperCase();
+      if(!resShown[res]){
+        resShown[res] = true;
+        var url = '/projects/' + d.project_id + '/preview#' + ver;
+        html += '<a href="' + url + '" class="btn btn-sm btn-primary" style="text-decoration:none;margin-right:6px;margin-bottom:8px">▶ ' + res + ' Slideshow</a>';
+      }
+    });
+    // Add frame grids
+    Object.entries(d.versions).forEach(function(kv, idx){
+      var ver = kv[0], frames = kv[1];
+      html += '<div id="proc-' + ver + '" style="' + (idx>0?'display:none':'') + '">';
+      html += '<div class="photo-grid">';
+      frames.forEach(function(f){
+        var url = '/api/v1/media/processed/' + d.user_id + '/' + d.project_id + '/' + ver + '/' + f;
+        html += '<div class="photo-thumb"><img src="' + url + '" loading="lazy" alt="' + f + '">';
+        html += '<div class="thumb-overlay"><a href="' + url + '" target="_blank" class="btn-icon" style="width:24px;height:24px;border:none;font-size:12px">⤢</a></div></div>';
+      });
+      html += '</div></div>';
+    });
+    el.innerHTML = html;
+  });
+}
+
+var _logPollInterval = null;
+
+function refreshProcessLog(){
+  fetch('/projects/{{ project.id }}/process/log')
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var box = document.getElementById('processLogBox');
+    var status = document.getElementById('logStatus');
+    if(!box) return;
+    if(d.log){
+      box.textContent = d.log;
+      box.scrollTop = box.scrollHeight;
+      if(status) status.textContent = 'Updated ' + new Date().toLocaleTimeString();
+    } else {
+      box.innerHTML = '<span style="color:#475569">No processing log yet.</span>';
+    }
+    // Refresh processed frames if processing is done
+    if(d.done) {
+      refreshProcessedFrames();
+      if(_logPollInterval){ clearInterval(_logPollInterval); _logPollInterval = null; }
+      if(status) status.textContent = '✅ Complete — ' + new Date().toLocaleTimeString();
+    }
+  });
+}
+
+function startProcessLog(){
+  refreshProcessLog();
+  if(_logPollInterval) clearInterval(_logPollInterval);
+  _logPollInterval = setInterval(function(){
+    refreshProcessLog();
+  }, 2000);
+  // Stop after 30 minutes max
+  setTimeout(function(){
+    if(_logPollInterval){ clearInterval(_logPollInterval); _logPollInterval = null; }
+  }, 1800000);
+}
+
+
+
+// Load processed frames on page load
+document.addEventListener('DOMContentLoaded', function(){
+  // Render modal listeners
+  var mv = document.getElementById('modalRenderVersion');
+  var md = document.getElementById('modalRenderDuration');
+  if(mv) mv.addEventListener('change', updateEstDuration);
+  if(md) md.addEventListener('input', updateEstDuration);
+  // Auto-select first processed version if any
+  var sel = document.getElementById('procResSel');
+  if(sel && sel.options.length > 1){ sel.selectedIndex = 1; showProcVersion(sel.value); }
+  // Auto-load clips for the project's default label
+  setTimeout(function(){
+    var sel = document.getElementById('projectLabelSel');
+    if(sel && sel.value) loadLabelClips(sel.value);
+  }, 100);
+});
+
+function processPhotos(){
+  var selected = Array.from(document.querySelectorAll('.proc-res-chk:checked')).map(function(el){ return el.value; });
+  if(!selected.length){ alert('Select at least one resolution'); return; }
+  var btn = document.getElementById('processBtn');
+  var upscale = document.getElementById('proc_upscale').checked;
+  btn.disabled = true;
+  btn.textContent = '⚙ Submitting...';
+  fetch('/projects/{{ project.id }}/process', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({resolutions: selected, allow_upscale: upscale})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.ok){
+      // Uncheck all resolution checkboxes
+      document.querySelectorAll('.proc-res-chk').forEach(function(cb){ cb.checked = false; });
+      document.getElementById('proc_upscale').checked = false;
+      btn.disabled = false;
+      btn.textContent = '⚙ Process photos';
+      // Show note and switch to log tab
+      showToast('Batch submitted — check Log tab for details', 'success');
+      switchTab('log');
+      // Start live log polling
+      startProcessLog();
+    } else {
+      alert(d.error || 'Error');
+      btn.disabled = false;
+      btn.textContent = '⚙ Process photos';
+    }
+  })
+  .catch(function(e){
+    alert('Error: ' + e);
+    btn.disabled = false;
+    btn.textContent = '⚙ Process photos';
+  });
+}
+</script>
+
+
+
+
+{% endblock %}

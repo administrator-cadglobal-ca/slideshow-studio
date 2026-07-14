@@ -1,0 +1,40 @@
+{% extends "shared/base.html" %}
+{% block title %}Renders — Slideshow Studio{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Renders</h1>
+    <div class="page-sub">{{ jobs|length }} render{{ 's' if jobs|length != 1 }}</div>
+  </div>
+</div>
+{% if jobs %}
+<div class="card">
+  <table class="data-table">
+    <thead><tr><th>Project</th><th>Mode</th><th>Status</th><th>Started</th><th>Duration</th><th>Outputs</th><th></th></tr></thead>
+    <tbody>
+    {% for job in jobs %}
+    <tr>
+      <td><a href="{{ url_for('projects.show', project_id=job.project_id) }}" style="font-weight:500">{{ job.project.name }}</a></td>
+      <td><span class="pill pill-gray">{{ job.mode }}</span></td>
+      <td>
+        {% if job.status == 'complete' %}<span class="pill pill-success">✓ Complete</span>
+        {% elif job.status == 'running' %}<span class="pill pill-warning">Running</span>
+        {% elif job.status == 'failed'  %}<span class="pill pill-danger">Failed</span>
+        {% else %}<span class="pill pill-gray">{{ job.status }}</span>{% endif %}
+      </td>
+      <td style="font-size:11px;color:#8a9bb0">{{ job.created_at | naturaltime }}</td>
+      <td style="font-size:11px;color:#8a9bb0">{{ job.duration_s|round(0)|int }}s if job.duration_s else '—' }}</td>
+      <td style="font-size:11px">{{ job.output_count }} file{{ 's' if job.output_count != 1 }}</td>
+      <td><a href="{{ url_for('renders.show', job_id=job.id) }}" class="btn btn-sm">View</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+  <p>No renders yet.</p>
+</div>
+{% endif %}
+{% endblock %}

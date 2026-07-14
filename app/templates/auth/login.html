@@ -1,0 +1,33 @@
+{% extends "shared/base.html" %}
+{% block title %}Sign in — Slideshow Studio{% endblock %}
+{% block main_class %}{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      </div>
+      <span class="auth-logo-text">Slideshow Studio</span>
+    </div>
+    <div class="auth-title">Sign in</div>
+    <div class="auth-sub">Enter your email — a one-time code will be sent to your phone.</div>
+    <form method="POST" action="{{ url_for('auth.login') }}">
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input type="email" name="email" class="form-control"
+               value="{{ email or '' }}" placeholder="gurmeet@cadglobal.ca"
+               required autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary"
+              style="width:100%;justify-content:center;padding:10px;margin-top:4px">
+        Send login code
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </form>
+    <div class="auth-footer">
+      Don't have an account? <a href="{{ url_for('auth.register') }}">Request access</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
