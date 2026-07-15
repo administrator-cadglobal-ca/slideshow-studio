@@ -15,7 +15,7 @@
       <h1 class="text-h1">Audio library</h1>
       <p class="text-small text-ink-soft mt-1">
         {{ songs|length }} song{{ 's' if songs|length != 1 }} &middot;
-        {{ song_folders|length }} folder{{ 's' if song_folders|length != 1 }}
+        {{ libraries|length }} folder{{ 's' if libraries|length != 1 }}y' if libraries|length == 1 else 'ies'
       </p>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
@@ -121,15 +121,15 @@
       {#  Folder sidebar  #}
       <aside class="space-y-1">
         <div class="flex items-center justify-between px-2 mb-1">
-          <p class="text-caption text-ink-faint uppercase tracking-wider">Song folders</p>
+          <p class="text-caption text-ink-faint uppercase tracking-wider">Libraries</p>
           <button type="button" @click="folderDialog = { open: true, mode: 'create', id: null, name: '', color: '#2E3271' }"
                   class="text-ink-faint hover:text-indigo text-body leading-none px-1"
-                  title="New folder">+</button>
+                  title="New library">+</button>
         </div>
 
         <button type="button"
-                @click="activeFolder = 'all'"
-                :class="activeFolder === 'all' ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
+                @click="activeLibrary = 'all'"
+                :class="activeLibrary === 'all' ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
                 class="w-full flex items-center gap-2 px-3 py-2 rounded-standard text-small text-left">
           <span class="w-2.5 h-2.5 rounded-full bg-ink-faint"></span>
           <span class="flex-1">All songs</span>
@@ -137,23 +137,23 @@
         </button>
 
         <button type="button"
-                @click="activeFolder = 'none'"
-                :class="activeFolder === 'none' ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
+                @click="activeLibrary = 'none'"
+                :class="activeLibrary === 'none' ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
                 class="w-full flex items-center gap-2 px-3 py-2 rounded-standard text-small text-left">
           <span class="w-2.5 h-2.5 rounded-full border border-line"></span>
-          <span class="flex-1">Unorganised</span>
-          <span class="text-caption tabular-nums">{{ songs | rejectattr("song_folder_id") | list | length }}</span>
+          <span class="flex-1">Unsorted</span>
+          <span class="text-caption tabular-nums">{{ songs | rejectattr("library_id") | list | length }}</span>
         </button>
 
-        {% for f in song_folders %}
+        {% for f in libraries %}
         <div class="group flex items-center gap-1">
           <button type="button"
-                  @click="activeFolder = {{ f.id }}"
-                  :class="activeFolder === {{ f.id }} ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
+                  @click="activeLibrary = {{ f.id }}"
+                  :class="activeLibrary === {{ f.id }} ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
                   class="flex-1 flex items-center gap-2 px-3 py-2 rounded-standard text-small text-left min-w-0">
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {{ f.color }}"></span>
             <span class="flex-1 truncate">{{ f.name }}</span>
-            <span class="text-caption tabular-nums">{{ songs | selectattr("song_folder_id", "equalto", f.id) | list | length }}</span>
+            <span class="text-caption tabular-nums">{{ songs | selectattr("library_id", "equalto", f.id) | list | length }}</span>
           </button>
           <button type="button"
                   @click="folderDialog = { open: true, mode: 'edit', id: {{ f.id }}, name: '{{ f.name|e }}', color: '{{ f.color }}' }"
@@ -178,7 +178,7 @@
         <div class="card overflow-hidden">
           {% for song in songs %}
           <div class="border-b border-line last:border-b-0"
-               x-show="matchesFolder({{ song.song_folder_id or 'null' }})"
+               x-show="matchesLibrary({{ song.library_id or 'null' }})"
                x-data="{ playing: false, currentTime: 0, duration: {{ song.duration_s or 0 }} }">
 
             {#  Row body  #}
@@ -209,16 +209,16 @@
                 <button type="button"
                         @click.stop="open = !open"
                         class="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded-standard text-caption text-ink-soft hover:bg-line">
-                  {% if song.song_folder_id %}
-                    {% for f in song_folders %}
-                      {% if f.id == song.song_folder_id %}
+                  {% if song.library_id %}
+                    {% for f in libraries %}
+                      {% if f.id == song.library_id %}
                         <span class="w-2 h-2 rounded-full" style="background-color: {{ f.color }}"></span>
                         <span>{{ f.name }}</span>
                       {% endif %}
                     {% endfor %}
                   {% else %}
                     <span class="w-2 h-2 rounded-full border border-line"></span>
-                    <span>No folder</span>
+                    <span>No library</span>
                   {% endif %}
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-0.5">
                     <polyline points="6 9 12 15 18 9"></polyline>
@@ -227,14 +227,14 @@
                 <div x-show="open" x-cloak
                      @click.outside="open = false"
                      class="absolute right-0 top-full mt-1 w-48 bg-paper-raised border border-line rounded-comfortable shadow-lift overflow-hidden z-20 max-h-64 overflow-y-auto">
-                  <form method="POST" action="{{ url_for('audio.assign_song_folder', song_id=song.id) }}">
+                  <form method="POST" action="{{ url_for('audio.assign_song_library', song_id=song.id) }}">
                     {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
-                    <button type="submit" name="folder_id" value="" class="w-full text-left px-3 py-2 text-small hover:bg-line-soft flex items-center gap-2">
+                    <button type="submit" name="library_id" value="" class="w-full text-left px-3 py-2 text-small hover:bg-line-soft flex items-center gap-2">
                       <span class="w-2 h-2 rounded-full border border-line"></span>
                       No folder
                     </button>
-                    {% for f in song_folders %}
-                    <button type="submit" name="folder_id" value="{{ f.id }}" class="w-full text-left px-3 py-2 text-small hover:bg-line-soft flex items-center gap-2">
+                    {% for f in libraries %}
+                    <button type="submit" name="library_id" value="{{ f.id }}" class="w-full text-left px-3 py-2 text-small hover:bg-line-soft flex items-center gap-2">
                       <span class="w-2 h-2 rounded-full" style="background-color: {{ f.color }}"></span>
                       {{ f.name }}
                     </button>
@@ -288,14 +288,14 @@
          class="w-full max-w-md bg-paper-raised border border-line rounded-comfortable shadow-lift p-6">
       <h3 class="text-h3 mb-4" x-text="folderDialog.mode === 'edit' ? 'Edit folder' : 'New folder'"></h3>
       <form method="POST"
-            :action="folderDialog.mode === 'edit' ? '/audio/song-folders/' + folderDialog.id : '/audio/song-folders'"
+            :action="folderDialog.mode === 'edit' ? '/audio/libraries/' + folderDialog.id : '/audio/song-folders'"
             x-data="{}"
             @submit="if (folderDialog.mode === 'edit') { $event.target.querySelector('input[name=_method]').value = 'PUT'; }">
         {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
         <input type="hidden" name="_method" value="POST">
 
-        <label class="label">Folder name</label>
-        <input type="text" name="name" x-model="folderDialog.name" required autofocus class="input mb-4" placeholder="e.g. Bhangra hits">
+        <label class="label">Library name</label>
+        <input type="text" name="name" x-model="folderDialog.name" required autofocus class="input mb-4" placeholder="e.g. Arijit Singh - Vol 1">
 
         <label class="label">Color</label>
         <div class="flex flex-wrap gap-2 mb-6">
@@ -314,7 +314,7 @@
             <template x-if="folderDialog.mode === 'edit'">
               <button type="button"
                       @click="deleteFolder(folderDialog.id)"
-                      class="text-small text-danger hover:underline">Delete folder</button>
+                      class="text-small text-danger hover:underline">Delete library</button>
             </template>
           </div>
           <div class="flex gap-2">
@@ -331,7 +331,7 @@
 <script>
 function audioLibrary() {
   return {
-    activeFolder: 'all',
+    activeLibrary: 'all',
     uploading: false,
     uploadedCount: 0,
     uploadTotal: 0,
@@ -348,10 +348,10 @@ function audioLibrary() {
       });
     },
 
-    matchesFolder(songFolderId) {
-      if (this.activeFolder === 'all') return true;
-      if (this.activeFolder === 'none') return songFolderId === null;
-      return songFolderId === this.activeFolder;
+    matchesLibrary(songLibraryId) {
+      if (this.activeLibrary === 'all') return true;
+      if (this.activeLibrary === 'none') return songFolderId === null;
+      return songLibraryId === this.activeLibrary;
     },
 
     fmtTime(secs) {
@@ -436,11 +436,11 @@ function audioLibrary() {
     },
 
     deleteFolder(id) {
-      if (!confirm('Delete this folder? Songs in it will become Unorganised.')) return;
+      if (!confirm('Delete this library? Songs in it will become Unsorted. Playlists tied to it will also be removed.')) return;
       const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
       const fd = new FormData();
       if (csrf) fd.append('csrf_token', csrf);
-      fetch('/audio/song-folders/' + id, {
+      fetch('/audio/libraries/' + id, {
         method: 'DELETE',
         headers: csrf ? { 'X-CSRFToken': csrf } : {}
       }).then(() => window.location.reload());
