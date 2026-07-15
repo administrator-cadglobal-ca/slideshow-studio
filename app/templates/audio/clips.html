@@ -153,9 +153,17 @@
                        @loadedmetadata="if (!songDuration) songDuration = $event.target.duration"
                        @ended="playing = false"></audio>
                 <span class="text-caption tabular-nums text-ink-soft w-14 text-right" x-text="fmtTime(currentTime)"></span>
-                <div class="flex-1 h-1.5 bg-line rounded-full cursor-pointer relative"
-                     @click="seek($event, $refs.audio)">
-                  <div class="h-full bg-indigo rounded-full" :style="'width: ' + progressPct + '%'"></div>
+                <div class="flex-1 group relative py-3 cursor-pointer"
+                     @click="seek($event, $refs.audio)"
+                     @mousedown="scrubbing = true"
+                     @mousemove.window="if (scrubbing) seek($event, $refs.audio)"
+                     @mouseup.window="scrubbing = false">
+                  <div class="h-2 bg-line rounded-full overflow-hidden relative group-hover:h-3 transition-all">
+                    <div class="h-full bg-indigo rounded-full transition-none"
+                         :style="'width: ' + progressPct + '%'"></div>
+                  </div>
+                  <div class="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-indigo shadow border-2 border-white -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                       :style="'left: ' + progressPct + '%'"></div>
                 </div>
                 <span class="text-caption tabular-nums text-ink-soft w-14" x-text="fmtTime(displayEnd)"></span>
               </div>
@@ -235,6 +243,7 @@ function clipRow(clipId, songId, songDuration, trimStartInit, trimEndInit) {
     songDuration,      // seconds
     expanded: false,
     playing: false,
+    scrubbing: false,
     currentTime: 0,
     trimStart: trimStartInit,
     trimEnd: trimEndInit,
