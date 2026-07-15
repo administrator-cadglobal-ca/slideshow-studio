@@ -1,0 +1,240 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ user.full_name }} - Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6 space-y-6">
+
+  <div>
+    <a href="{{ url_for('admin.users_list') }}" class="inline-flex items-center gap-1 text-caption text-ink-soft hover:text-ink mb-3">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+      Back to users
+    </a>
+    <div class="flex items-start gap-4 flex-wrap">
+      <div class="avatar-lg flex-shrink-0" style="background-color: {{ user.avatar_color }}; color: white">
+        {{ user.initials }}
+      </div>
+      <div class="min-w-0 flex-1">
+        <h1 class="text-h1">{{ user.full_name }}</h1>
+        <p class="text-small text-ink-soft font-mono">{{ user.email }}</p>
+        <div class="mt-2 flex items-center gap-2 flex-wrap">
+          {% if user.status == 'active' %}<span class="badge-success">Active</span>
+          {% elif user.status == 'pending' %}<span class="badge-caution">Pending</span>
+          {% elif user.status == 'suspended' %}<span class="badge-danger">Suspended</span>
+          {% elif user.status == 'deactivated' %}<span class="badge-neutral">Deactivated</span>
+          {% endif %}
+          {% if user.role in ('admin', 'super_admin') %}
+            <span class="badge-indigo">{{ user.role | replace('_', ' ') | title }}</span>
+          {% endif %}
+          {% if user.id == current_user.id %}<span class="badge-neutral">You</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="card card-body">
+    <h2 class="text-h3 mb-4">Details</h2>
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <dt class="text-caption text-ink-faint uppercase tracking-wider">Phone</dt>
+        <dd class="text-small font-mono mt-1">{% if user.phone %}{{ user.phone }}{% else %}<span class="text-ink-faint italic">No phone provided</span>{% endif %}</dd>
+      </div>
+      <div>
+        <dt class="text-caption text-ink-faint uppercase tracking-wider">Role</dt>
+        <dd class="text-small mt-1">{{ user.role | replace('_', ' ') | title }}</dd>
+      </div>
+      <div>
+        <dt class="text-caption text-ink-faint uppercase tracking-wider">Created</dt>
+        <dd class="text-small mt-1">{% if user.created_at %}{{ user.created_at.strftime("%b %-d, %Y") }} <span class="text-ink-soft">({{ user.created_at | naturaltime }})</span>{% else %}<span class="text-ink-faint italic">unknown</span>{% endif %}</dd>
+      </div>
+      <div>
+        <dt class="text-caption text-ink-faint uppercase tracking-wider">Last login</dt>
+        <dd class="text-small mt-1">{% if user.last_login %}{{ user.last_login | naturaltime }}{% else %}<span class="text-ink-faint italic">never</span>{% endif %}</dd>
+      </div>
+      {% if user.last_login_ip %}
+      <div>
+        <dt class="text-caption text-ink-faint uppercase tracking-wider">Last IP</dt>
+        <dd class="text-small font-mono mt-1">{{ user.last_login_ip }}</dd>
+      </div>
+      {% endif %}
+      {% if user.suspended_at %}
+      <div class="sm:col-span-2">
+        <dt class="text-caption text-ink-faint uppercase tracking-wider">Suspended</dt>
+        <dd class="text-small mt-1">
+          {{ user.suspended_at | naturaltime }}
+          {% if user.suspension_reason %}<div class="text-caption text-ink-soft mt-1 italic">Reason: {{ user.suspension_reason }}</div>{% endif %}
+        </dd>
+      </div>
+      {% endif %}
+    </dl>
+  </section>
+
+  <section class="card card-body">
+    <h2 class="text-h3 mb-4">Storage</h2>
+    <div class="mb-3">
+      <div class="flex items-baseline justify-between mb-1">
+        <span class="text-small text-ink-soft">{{ user.storage_used_display }} used</span>
+        <span class="text-small text-ink-soft">of {{ user.quota_display }}</span>
+      </div>
+      <div class="w-full h-2 bg-line rounded-full overflow-hidden">
+        <div class="h-full {% if user.storage_pct >= 90 %}bg-danger{% elif user.storage_pct >= 70 %}bg-caution{% else %}bg-indigo{% endif %}" style="width: {{ user.storage_pct }}%"></div>
+      </div>
+    </div>
+    {% if user.id != current_user.id %}
+    <form method="POST" action="{{ url_for('admin.user_change_quota', user_id=user.id) }}" class="flex items-end gap-3 mt-4 flex-wrap">
+      <div>
+        <label class="label" for="quota_gb">Adjust quota (GB)</label>
+        <input type="number" id="quota_gb" name="quota_gb" step="1" min="1" max="10000"
+               value="{{ (user.quota_bytes / (1024**3)) | round | int }}"
+               class="input w-32">
+      </div>
+      <button type="submit" class="btn-secondary">Update quota</button>
+    </form>
+    {% endif %}
+  </section>
+
+  {% if user.id != current_user.id %}
+  <section class="card card-body">
+    <h2 class="text-h3 mb-4">Edit profile</h2>
+    <form method="POST" action="{{ url_for('admin.user_edit_profile', user_id=user.id) }}" class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="first_name" class="label">First name</label>
+          <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}" class="input">
+        </div>
+        <div>
+          <label for="last_name" class="label">Last name</label>
+          <input type="text" id="last_name" name="last_name" value="{{ user.last_name }}" class="input">
+        </div>
+      </div>
+      <div>
+        <label for="email" class="label">Email</label>
+        <input type="email" id="email" name="email" value="{{ user.email }}" class="input">
+      </div>
+      <div>
+        <label for="phone" class="label">Phone</label>
+        <input type="tel" id="phone" name="phone" value="{{ user.phone or '' }}" class="input">
+      </div>
+      <div>
+        <label for="admin_notes" class="label">Admin notes</label>
+        <textarea id="admin_notes" name="admin_notes" rows="3" class="textarea" placeholder="Private notes visible only to admins.">{{ user.admin_notes or '' }}</textarea>
+      </div>
+      <button type="submit" class="btn-primary">Save changes</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if user.id != current_user.id %}
+  <section class="card card-body">
+    <h2 class="text-h3 mb-4">Actions</h2>
+    <div class="flex flex-wrap gap-3">
+
+      <form method="POST" action="{{ url_for('admin.user_reset_otp', user_id=user.id) }}"
+            onsubmit="return confirm('Invalidate all pending OTP codes for {{ user.full_name }}?');">
+        <button type="submit" class="btn-secondary">Reset OTP codes</button>
+      </form>
+
+      {% if user.role == 'admin' %}
+      <form method="POST" action="{{ url_for('admin.user_change_role', user_id=user.id) }}"
+            onsubmit="return confirm('Change {{ user.full_name }} back to a regular user? They will lose admin access.');">
+        <input type="hidden" name="role" value="user">
+        <button type="submit" class="btn-secondary">Make regular user</button>
+      </form>
+      {% else %}
+      <form method="POST" action="{{ url_for('admin.user_change_role', user_id=user.id) }}"
+            onsubmit="return confirm('Promote {{ user.full_name }} to admin?');">
+        <input type="hidden" name="role" value="admin">
+        <button type="submit" class="btn-secondary">Make admin</button>
+      </form>
+      {% endif %}
+
+      {% if user.status == 'active' %}
+      <form method="POST" action="{{ url_for('admin.user_suspend', user_id=user.id) }}"
+            onsubmit="var r = prompt('Reason for suspension (optional):'); if (r === null) return false; this.querySelector('input[name=reason]').value = r; return true;">
+        <input type="hidden" name="reason" value="">
+        <button type="submit" class="btn-secondary">Suspend</button>
+      </form>
+      {% elif user.status == 'suspended' %}
+      <form method="POST" action="{{ url_for('admin.user_reactivate', user_id=user.id) }}"
+            onsubmit="return confirm('Reactivate {{ user.full_name }}?');">
+        <button type="submit" class="btn-secondary">Reactivate</button>
+      </form>
+      {% endif %}
+
+      {% if user.status not in ('deactivated', 'suspended') %}
+      <form method="POST" action="{{ url_for('admin.user_deactivate', user_id=user.id) }}"
+            onsubmit="return confirm('Deactivate {{ user.full_name }}? This is different from suspend - deactivated accounts stay in the system but cannot log in.');">
+        <button type="submit" class="btn-secondary">Deactivate</button>
+      </form>
+      {% endif %}
+
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card card-body">
+    <h2 class="text-h3 mb-4">Recent admin activity</h2>
+    {% if recent_audit %}
+      <ul class="divide-y divide-line">
+        {% for entry in recent_audit %}
+        <li class="py-3 first:pt-0 last:pb-0">
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="min-w-0 flex-1">
+              <p class="text-small font-medium">{{ entry.action | replace('_', ' ') | title }}</p>
+              {% if entry.payload %}
+                <p class="text-caption text-ink-soft font-mono mt-1 truncate">{{ entry.payload }}</p>
+              {% endif %}
+              {% if entry.ip %}
+                <p class="text-caption text-ink-faint mt-1">from {{ entry.ip }}</p>
+              {% endif %}
+            </div>
+            <span class="text-caption text-ink-faint flex-shrink-0">{{ entry.created_at | naturaltime }}</span>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-small text-ink-soft italic">No admin actions on this account yet.</p>
+    {% endif %}
+  </section>
+
+  {% if user.id != current_user.id %}
+  <section x-data="{ open: false, typed: '' }">
+    <button type="button" @click="open = !open"
+            class="w-full text-left flex items-center justify-between p-3 rounded-standard hover:bg-line-soft transition-colors border border-line">
+      <span class="text-small font-medium text-danger">Danger zone</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint" :class="open ? 'rotate-180' : ''">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </button>
+
+    <div x-show="open" x-cloak class="mt-3 card card-body border-danger">
+      <h3 class="text-body font-medium mb-2 text-danger">Delete account permanently</h3>
+      <p class="text-small text-ink-soft mb-4">
+        This deletes {{ user.full_name }}'s account and wipes all their storage.
+        This cannot be undone. Type their email address to confirm.
+      </p>
+      <form method="POST" action="{{ url_for('admin.user_delete', user_id=user.id) }}" class="space-y-3">
+        <div>
+          <label for="confirm_email" class="label">Confirm by typing: <span class="font-mono">{{ user.email }}</span></label>
+          <input type="text" id="confirm_email" name="confirm_email"
+                 x-model="typed"
+                 autocomplete="off"
+                 class="input font-mono"
+                 placeholder="{{ user.email }}">
+        </div>
+        <button type="submit"
+                :disabled="typed !== '{{ user.email }}'"
+                :class="typed === '{{ user.email }}' ? 'bg-danger text-white hover:bg-danger/90' : 'bg-line text-ink-faint cursor-not-allowed'"
+                class="px-4 py-2 rounded-standard text-small font-medium transition-colors">
+          Delete permanently
+        </button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}
