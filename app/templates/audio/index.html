@@ -142,7 +142,7 @@
                 class="w-full flex items-center gap-2 px-3 py-2 rounded-standard text-small text-left">
           <span class="w-2.5 h-2.5 rounded-full border border-line"></span>
           <span class="flex-1">Unorganised</span>
-          <span class="text-caption tabular-nums">{{ folder_songs.get(None, [])|length }}</span>
+          <span class="text-caption tabular-nums">{{ songs | rejectattr("song_folder_id") | list | length }}</span>
         </button>
 
         {% for f in folders %}
@@ -153,7 +153,7 @@
                   class="flex-1 flex items-center gap-2 px-3 py-2 rounded-standard text-small text-left min-w-0">
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {{ f.color }}"></span>
             <span class="flex-1 truncate">{{ f.name }}</span>
-            <span class="text-caption tabular-nums">{{ folder_songs.get(f.id, [])|length }}</span>
+            <span class="text-caption tabular-nums">{{ songs | selectattr("song_folder_id", "equalto", f.id) | list | length }}</span>
           </button>
           <button type="button"
                   @click="folderDialog = { open: true, mode: 'edit', id: {{ f.id }}, name: '{{ f.name|e }}', color: '{{ f.color }}' }"
