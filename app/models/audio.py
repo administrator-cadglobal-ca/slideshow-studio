@@ -23,7 +23,7 @@ class Library(db.Model):
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user     = db.relationship("User", backref=db.backref("libraries", lazy="dynamic"))
+    user     = db.relationship("User")
     songs    = db.relationship("AudioFile", backref="library", lazy="dynamic",
                                foreign_keys="AudioFile.library_id")
     playlists = db.relationship("Playlist", backref="library", lazy="dynamic",
@@ -52,7 +52,7 @@ class AudioFile(db.Model):
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     library_id  = db.Column(db.Integer, db.ForeignKey("libraries.id"))
 
-    user  = db.relationship("User", backref=db.backref("audio_files", lazy="dynamic"))
+    user  = db.relationship("User", back_populates="audio_files")
     clips = db.relationship("AudioClip", backref="song", lazy="dynamic",
                             cascade="all, delete-orphan")
 
@@ -101,7 +101,7 @@ class Playlist(db.Model):
     is_default = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user  = db.relationship("User", backref=db.backref("playlists", lazy="dynamic"))
+    user  = db.relationship("User")
     clips = db.relationship("AudioClip",
                             secondary="playlist_clips",
                             order_by="PlaylistClip.sort_order",
@@ -139,7 +139,7 @@ class AudioLabel(db.Model):
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user    = db.relationship("User", backref=db.backref("audio_labels", lazy="dynamic"))
+    user    = db.relationship("User")
     project = db.relationship("Project", back_populates="audio_label",
                               foreign_keys=[project_id])
     clips   = db.relationship("AudioClip",
