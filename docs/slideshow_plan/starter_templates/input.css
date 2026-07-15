@@ -1,0 +1,278 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────
+   Font faces — self-hosted from app/static/fonts/
+   ───────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'Inter Tight';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/static/fonts/InterTight-Variable.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('/static/fonts/JetBrainsMono-Variable.woff2') format('woff2-variations');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Base overrides — applied to every page
+   ───────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    color-scheme: light dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    /* Prevent iOS bounce from showing another background color */
+    overscroll-behavior-y: none;
+  }
+
+  html.dark body {
+    background-color: #14162A;
+    color: #F1EEE6;
+  }
+
+  /* Focus ring — visible on every focusable element */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-indigo ring-offset-2 ring-offset-paper;
+  }
+
+  html.dark *:focus-visible {
+    --tw-ring-offset-color: #14162A;
+  }
+
+  /* Respect user motion preferences globally */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Better default heading margins */
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+  }
+
+  /* Prevent long words from breaking layouts */
+  p, li, td, span {
+    text-wrap: pretty;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Component classes — reusable across templates
+   Use with @apply so we stay consistent even when hand-writing.
+   ───────────────────────────────────────────────────────────── */
+
+@layer components {
+
+  /* Buttons ────────────────────────────────────────────────── */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-standard
+           font-medium transition-colors duration-quick ease-standard
+           disabled:opacity-50 disabled:cursor-not-allowed
+           select-none;
+    min-height: 44px;    /* Mobile tap target */
+    padding: 0 1rem;
+  }
+
+  .btn-sm { @apply text-small; min-height: 36px; padding: 0 0.75rem; }
+  .btn-lg { @apply text-body; min-height: 52px; padding: 0 1.5rem; }
+
+  .btn-primary {
+    @apply btn bg-indigo text-white hover:bg-indigo-deep;
+  }
+
+  .btn-secondary {
+    @apply btn bg-paper-raised text-ink border border-line
+           hover:bg-line-soft hover:border-line;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-ink hover:bg-line-soft;
+  }
+
+  .btn-destructive {
+    @apply btn bg-danger text-white hover:opacity-90;
+  }
+
+  /* Icon buttons ───────────────────────────────────────────── */
+
+  .btn-icon {
+    @apply inline-flex items-center justify-center rounded-standard
+           text-ink hover:bg-line-soft
+           transition-colors duration-quick;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Inputs ─────────────────────────────────────────────────── */
+
+  .input {
+    @apply block w-full rounded-standard border border-line
+           bg-paper-raised px-3 text-body text-ink
+           placeholder:text-ink-faint
+           focus:border-indigo focus:ring-2 focus:ring-indigo/20
+           disabled:bg-line-soft disabled:text-ink-faint
+           transition-colors duration-quick;
+    height: 44px;
+  }
+
+  .textarea {
+    @apply input py-3;
+    height: auto;
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  .label {
+    @apply block text-small font-medium text-ink mb-1;
+  }
+
+  .hint {
+    @apply block text-caption text-ink-soft mt-1;
+  }
+
+  .field-error {
+    @apply block text-caption text-danger mt-1;
+  }
+
+  /* Cards ──────────────────────────────────────────────────── */
+
+  .card {
+    @apply rounded-comfortable bg-paper-raised border border-line
+           shadow-raise
+           transition-shadow duration-standard;
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer hover:shadow-lift focus-visible:shadow-lift;
+  }
+
+  .card-body {
+    @apply p-4 md:p-5;
+  }
+
+  /* Badges ─────────────────────────────────────────────────── */
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-tight px-2 py-0.5
+           text-caption font-medium;
+  }
+
+  .badge-success  { @apply badge bg-success-soft text-success; }
+  .badge-danger   { @apply badge bg-danger-soft text-danger; }
+  .badge-caution  { @apply badge bg-caution-soft text-caution; }
+  .badge-indigo   { @apply badge bg-indigo-soft text-indigo; }
+  .badge-neutral  { @apply badge bg-line-soft text-ink-soft; }
+
+  /* Status dot (paired with label) ─────────────────────────── */
+
+  .status-dot {
+    @apply inline-block rounded-full;
+    width: 8px;
+    height: 8px;
+  }
+
+  .status-active    { @apply status-dot bg-success; }
+  .status-pending   { @apply status-dot bg-caution; }
+  .status-suspended { @apply status-dot bg-danger; }
+  .status-inactive  { @apply status-dot bg-ink-faint; }
+
+  /* Avatars ────────────────────────────────────────────────── */
+
+  .avatar {
+    @apply inline-flex items-center justify-center rounded-full
+           font-medium text-white select-none flex-shrink-0;
+  }
+
+  .avatar-sm { @apply avatar text-caption; width: 24px; height: 24px; }
+  .avatar-md { @apply avatar text-small; width: 32px; height: 32px; }
+  .avatar-lg { @apply avatar text-h3; width: 44px; height: 44px; }
+  .avatar-xl { @apply avatar text-h1; width: 72px; height: 72px; }
+
+  /* Bottom sheets ──────────────────────────────────────────── */
+
+  .bottom-sheet {
+    @apply fixed inset-x-0 bottom-0 z-50
+           rounded-t-comfortable bg-paper-raised shadow-lift
+           transition-transform duration-comfortable ease-emphasized;
+    padding-bottom: env(safe-area-inset-bottom);
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+
+  .bottom-sheet-handle {
+    @apply mx-auto mt-3 mb-2 h-1 w-10 rounded-full bg-ink-faint/40;
+  }
+
+  .backdrop {
+    @apply fixed inset-0 z-40 bg-ink/40
+           transition-opacity duration-comfortable;
+  }
+
+  /* Toasts ─────────────────────────────────────────────────── */
+
+  .toast {
+    @apply fixed left-4 right-4 bottom-4 md:left-auto md:right-6 md:bottom-6 md:w-96
+           z-[60] rounded-comfortable shadow-lift px-4 py-3
+           flex items-center gap-3;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .toast-success { @apply toast bg-success text-white; }
+  .toast-error   { @apply toast bg-danger text-white; }
+  .toast-info    { @apply toast bg-ink text-white; }
+
+  /* HTMX loading indicator ─────────────────────────────────── */
+
+  .htmx-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    background: theme(colors.indigo.DEFAULT);
+    width: 0;
+    transition: width 0.3s ease-out;
+    z-index: 100;
+  }
+
+  .htmx-request .htmx-indicator {
+    width: 100%;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Custom utilities not covered by Tailwind
+   ───────────────────────────────────────────────────────────── */
+
+@layer utilities {
+
+  /* Truncate to N lines */
+  .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* iOS scroll momentum */
+  .scroll-touch { -webkit-overflow-scrolling: touch; }
+
+  /* Hide scrollbars but keep scroll functionality */
+  .scrollbar-hidden::-webkit-scrollbar { display: none; }
+  .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }
+}

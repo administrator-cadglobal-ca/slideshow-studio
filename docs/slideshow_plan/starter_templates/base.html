@@ -1,0 +1,124 @@
+{# ─────────────────────────────────────────────────────────────────────────
+   Slideshow Studio — Base layout
+   Replaces app/templates/shared/base.html
+
+   Blocks available to children:
+     title           — <title> content
+     meta            — additional <meta> tags
+     head_extras     — additional <link> or <script> tags
+     page_class      — extra classes on <body>
+     header          — replaces default page header (rarely overridden)
+     content         — main content area (required)
+     bottom_nav      — replaces default mobile bottom nav (usually not overridden)
+     scripts         — page-specific <script> tags at end of body
+   ───────────────────────────────────────────────────────────────────────── #}
+<!DOCTYPE html>
+<html lang="en" class="{% block html_class %}{% endblock %}"
+      x-data="{ theme: localStorage.getItem('theme') || 'auto' }"
+      x-init="
+        const applyTheme = (t) => {
+          const dark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+        };
+        applyTheme(theme);
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(theme));
+        $watch('theme', v => { localStorage.setItem('theme', v); applyTheme(v); });
+      ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF9F4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14162A" media="(prefers-color-scheme: dark)">
+  <meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+  {% block meta %}{% endblock %}
+
+  <title>{% block title %}Slideshow Studio{% endblock %}</title>
+
+  {# Preload critical fonts to reduce FOUT #}
+  <link rel="preload" href="{{ url_for('static', filename='fonts/InterTight-Variable.woff2') }}"
+        as="font" type="font/woff2" crossorigin>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+
+  {% block head_extras %}{% endblock %}
+</head>
+
+<body class="min-h-screen-dvh flex flex-col md:flex-row {% block page_class %}{% endblock %}">
+
+  {# ── HTMX loading indicator (thin bar at top) ──────────────────────── #}
+  <div class="htmx-indicator" aria-hidden="true"></div>
+
+  {# ── Impersonation banner (only shown when impersonating) ──────────── #}
+  {% if session.get('impersonating_user_id') %}
+  <div class="fixed top-0 inset-x-0 z-50 bg-turmeric text-ink px-4 py-2 text-small flex items-center justify-between">
+    <span>
+      <strong>Impersonating {{ current_user.first_name }} {{ current_user.last_name }}.</strong>
+      Actions taken here are logged.
+    </span>
+    <form method="post" action="{{ url_for('admin.impersonate_stop') }}" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn-ghost btn-sm !text-ink underline">Stop impersonating</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ── Desktop sidebar (md and up) ────────────────────────────────────── #}
+  {% if current_user.is_authenticated %}
+    {% include 'shared/_desktop_sidebar.html' %}
+  {% endif %}
+
+  {# ── Main content area ─────────────────────────────────────────────── #}
+  <div class="flex-1 flex flex-col min-w-0
+              {% if current_user.is_authenticated %}md:pl-60{% endif %}">
+
+    {# Page header (sticky on mobile) #}
+    {% block header %}
+      {% if current_user.is_authenticated %}
+        {% include 'shared/_header.html' %}
+      {% endif %}
+    {% endblock %}
+
+    {# Main content #}
+    <main class="flex-1 pb-20 md:pb-6 px-4 md:px-8 pt-4">
+      {% include 'shared/_flash.html' %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    {# Mobile bottom nav (hidden on md and up) #}
+    {% if current_user.is_authenticated %}
+      {% block bottom_nav %}
+        {% include 'shared/_bottom_nav.html' %}
+      {% endblock %}
+    {% endif %}
+  </div>
+
+  {# ── Scripts (deferred, load in parallel with HTML parse) ──────────── #}
+  <script src="{{ url_for('static', filename='js/alpine.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/htmx.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+
+  {# CSRF header injection for HTMX POST/PUT/DELETE #}
+  <script>
+    document.body.addEventListener('htmx:configRequest', (evt) => {
+      const csrf = document.querySelector('meta[name="csrf-token"]');
+      if (csrf) evt.detail.headers['X-CSRFToken'] = csrf.content;
+    });
+
+    /* Global HTMX error handler */
+    document.body.addEventListener('htmx:responseError', (evt) => {
+      const status = evt.detail.xhr.status;
+      const msg = status === 401 ? 'Session expired. Sign in again.'
+                : status === 403 ? "You don't have permission for that."
+                : status === 404 ? 'Not found.'
+                : status >= 500  ? 'Server error. Try again in a moment.'
+                :                  'Something went wrong.';
+      if (window.showToast) window.showToast('error', msg);
+    });
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

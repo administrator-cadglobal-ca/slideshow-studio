@@ -1,0 +1,166 @@
+{# ─────────────────────────────────────────────────────────────────────────
+   User card component
+   Used by:
+     - admin/users.html (list view, mobile default)
+     - HTMX partial responses for row updates
+
+   Expected context:
+     user           — User instance
+     current_user   — Flask-Login user
+     compact        — bool (default False); if True, no inline pending actions
+
+   Renders one card. Whole card is tappable (opens detail sheet).
+   Includes inline actions for pending users.
+   ───────────────────────────────────────────────────────────────────────── #}
+<article class="card-interactive card-body"
+         id="user-card-{{ user.id }}"
+         hx-get="{{ url_for('admin.user_detail', id=user.id) }}"
+         hx-target="#detail-container"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         tabindex="0"
+         aria-label="Open details for {{ user.first_name }} {{ user.last_name }}">
+
+  <div class="flex items-start gap-3">
+
+    {# Avatar (initials, colored by user id for consistency) #}
+    <div class="avatar-lg"
+         style="background-color: {{ user.avatar_color }}"
+         aria-hidden="true">
+      {{ user.first_name[:1] }}{{ user.last_name[:1] }}
+    </div>
+
+    {# Main content column #}
+    <div class="flex-1 min-w-0">
+
+      {# Row 1: name + kebab #}
+      <div class="flex items-start justify-between gap-2">
+        <h3 class="text-h3 truncate">
+          {{ user.first_name }} {{ user.last_name }}
+          {% if user.id == current_user.id %}
+            <span class="text-caption text-ink-faint font-normal">(you)</span>
+          {% endif %}
+        </h3>
+
+        {# Kebab — opens action bottom sheet.
+           Uses Alpine to open the sheet, stopping event propagation
+           so the card's own tap doesn't fire. #}
+        <button type="button"
+                class="btn-icon flex-shrink-0"
+                aria-label="Actions for {{ user.first_name }} {{ user.last_name }}"
+                @click.stop="$dispatch('open-user-actions', { userId: {{ user.id }} })">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="5"  r="1"></circle>
+            <circle cx="12" cy="12" r="1"></circle>
+            <circle cx="12" cy="19" r="1"></circle>
+          </svg>
+        </button>
+      </div>
+
+      {# Row 2: email #}
+      <p class="text-small text-ink-soft font-mono truncate mt-0.5">
+        {{ user.email }}
+      </p>
+
+      {# Row 3: phone (masked past area code) #}
+      {% if user.phone %}
+      <p class="text-small text-ink-soft font-mono">
+        {{ user.phone_display }}
+      </p>
+      {% endif %}
+
+      {# Row 4: badges — status + role #}
+      <div class="flex items-center gap-2 mt-2 flex-wrap">
+        {# Status badge #}
+        {% if user.status == 'active' %}
+          <span class="inline-flex items-center gap-1.5 text-caption text-ink-soft">
+            <span class="status-active" aria-hidden="true"></span>
+            Active
+          </span>
+        {% elif user.status == 'pending' %}
+          <span class="inline-flex items-center gap-1.5 text-caption text-ink-soft">
+            <span class="status-pending" aria-hidden="true"></span>
+            Pending approval
+          </span>
+        {% elif user.status == 'suspended' %}
+          <span class="inline-flex items-center gap-1.5 text-caption text-ink-soft">
+            <span class="status-suspended" aria-hidden="true"></span>
+            Suspended
+          </span>
+        {% elif user.status == 'deactivated' %}
+          <span class="inline-flex items-center gap-1.5 text-caption text-ink-soft">
+            <span class="status-inactive" aria-hidden="true"></span>
+            Deactivated
+          </span>
+        {% endif %}
+
+        {# Role badge (only for non-member roles) #}
+        {% if user.role in ('admin', 'super_admin') %}
+          <span class="badge-indigo">
+            {{ 'Super Admin' if user.role == 'super_admin' else 'Admin' }}
+          </span>
+        {% endif %}
+      </div>
+
+      {# Row 5: storage meter (only shown when user has data) #}
+      {% if user.storage_used_bytes and user.status == 'active' %}
+      <div class="mt-3">
+        <div class="h-1 rounded-full bg-line-soft overflow-hidden"
+             role="progressbar"
+             aria-valuenow="{{ user.storage_pct }}"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             aria-label="Storage used">
+          <div class="h-full transition-[width] duration-comfortable
+                      {% if user.storage_pct >= 90 %}bg-danger
+                      {% elif user.storage_pct >= 75 %}bg-caution
+                      {% else %}bg-indigo{% endif %}"
+               style="width: {{ user.storage_pct }}%"></div>
+        </div>
+        <p class="text-caption text-ink-faint mt-1">
+          {{ user.storage_used_display }} / {{ user.quota_display }}
+        </p>
+      </div>
+      {% endif %}
+
+      {# Row 6: timestamp #}
+      <p class="text-caption text-ink-faint mt-2"
+         title="{{ user.last_login.isoformat() if user.last_login else '' }}">
+        {% if user.status == 'pending' %}
+          Signed up {{ user.created_at | relative_time }}
+        {% elif user.last_login %}
+          Last seen {{ user.last_login | relative_time }}
+        {% else %}
+          Never signed in
+        {% endif %}
+      </p>
+
+      {# Row 7: inline actions — only for pending users #}
+      {% if user.status == 'pending' and not compact %}
+      <div class="flex items-center gap-2 mt-3 pt-3 border-t border-line">
+        <button type="button"
+                class="btn-primary btn-sm flex-1"
+                hx-post="{{ url_for('admin.user_approve', id=user.id) }}"
+                hx-target="#user-card-{{ user.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Approve {{ user.first_name }} {{ user.last_name }}?"
+                @click.stop>
+          Approve
+        </button>
+        <button type="button"
+                class="btn-secondary btn-sm flex-1"
+                hx-post="{{ url_for('admin.user_reject', id=user.id) }}"
+                hx-target="#user-card-{{ user.id }}"
+                hx-swap="outerHTML swap:300ms"
+                hx-confirm="Reject {{ user.first_name }} {{ user.last_name }}? They'll need to sign up again."
+                @click.stop>
+          Reject
+        </button>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</article>
