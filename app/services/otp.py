@@ -63,10 +63,17 @@ def verify_otp(user: User, code: str) -> tuple[bool, str]:
 def send_otp_email(user: User, otp: OTPCode) -> bool:
     """
     Send the OTP to the user by email via Flask-Mail (Hostinger SMTP).
+    Uses a 15-second socket timeout so a stuck SMTP connection cannot
+    freeze a gunicorn worker indefinitely.
     Falls back to console print if mail send raises. Returns True on success.
     """
     from flask import current_app, render_template
     from flask_mail import Message
+    import socket
+
+    # Cap SMTP handshake+send at 15 seconds
+    prev_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(15)
 
     try:
         msg = Message(
@@ -87,6 +94,8 @@ def send_otp_email(user: User, otp: OTPCode) -> bool:
         print(f"  [OTP EMAIL FALLBACK] Reason: {e}")
         print("="*55 + "\n")
         return False
+    finally:
+        socket.setdefaulttimeout(prev_timeout)
 
 
 def mask_email(email: str) -> str:
