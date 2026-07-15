@@ -418,6 +418,11 @@ function audioLibrary() {
         const fd = new FormData();
         fd.append('audio', file);
         if (csrf) fd.append('csrf_token', csrf);
+        // Pass currently-selected library so uploads land in it.
+        // 'all' and 'none' fall back to Unsorted on the backend.
+        if (typeof this.activeLibrary === 'number') {
+          fd.append('library_id', this.activeLibrary);
+        }
 
         try {
           const res = await fetch('/audio/upload', { method: 'POST', body: fd });
