@@ -10,7 +10,7 @@ class User(UserMixin, db.Model):
     email           = db.Column(db.String(255), unique=True, nullable=False, index=True)
     first_name      = db.Column(db.String(100), nullable=False)
     last_name       = db.Column(db.String(100), nullable=False)
-    phone           = db.Column(db.String(30),  unique=True, nullable=False)
+    phone           = db.Column(db.String(30),  unique=True, nullable=True)
     # Username = phone number (E.164 format: +14031234567)
 
     role            = db.Column(db.String(20),  default="user")   # "admin" | "user"
@@ -91,7 +91,7 @@ class RegistrationRequest(db.Model):
     first_name      = db.Column(db.String(100), nullable=False)
     last_name       = db.Column(db.String(100), nullable=False)
     email           = db.Column(db.String(255), nullable=False)
-    phone           = db.Column(db.String(30),  nullable=False)
+    phone           = db.Column(db.String(30),  nullable=True)
     discount_code   = db.Column(db.String(50))
     message         = db.Column(db.Text)        # message to admin
 

@@ -20,7 +20,7 @@ def register():
         code    = request.form.get("discount_code", "").strip().upper()
         message = request.form.get("message", "").strip()
 
-        if not all([first, last, email, phone]):
+        if not all([first, last, email]):
             flash("Please fill in all required fields.", "error")
             return render_template("auth/register.html", **request.form)
 
@@ -34,7 +34,7 @@ def register():
             first_name    = first,
             last_name     = last,
             email         = email,
-            phone         = phone,
+            phone         = phone or None,
             discount_code = code or None,
             message       = message or None,
         )
