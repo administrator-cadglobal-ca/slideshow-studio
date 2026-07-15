@@ -259,7 +259,6 @@
             {#  Inline player (shown only when playing)  #}
             <div x-show="playing" x-cloak class="px-4 pb-3 flex items-center gap-3">
               <audio x-ref="audio" preload="none"
-                     src="{{ url_for('static', filename='../..') }}"
                      @timeupdate="currentTime = $event.target.currentTime"
                      @loadedmetadata="if (!duration) duration = $event.target.duration"
                      @ended="playing = false; currentTime = 0"></audio>
@@ -375,8 +374,8 @@ function audioLibrary() {
       const audio = row.querySelector('audio');
       if (!audio) return;
 
-      // Set src lazily on first play
-      if (!audio.src || audio.src.endsWith('..')) {
+      // Set src lazily on first play (only once per song)
+      if (!audio.src) {
         audio.src = '/audio/stream/' + songId;
       }
 
