@@ -105,13 +105,14 @@
 
         <div class="card overflow-hidden">
           {% for clip in clips %}
-          <div class="border-b border-line last:border-b-0"
+          <div class="border-b border-line last:border-b-0 transition-colors"
                x-show="matchesLibrary({{ clip.song.library_id or 'null' }})"
+               :class="playing ? 'bg-indigo-soft' : ''"
                x-data="clipRow({{ clip.id }}, {{ clip.song_id }}, {{ clip.song.duration_s or 0 }}, '{{ clip.trim_start | e }}', '{{ clip.trim_end | e }}')">
 
-            {# Collapsed row #}
+            {# Collapsed row - click plays/pauses, chevron toggles expand #}
             <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft cursor-pointer"
-                 @click="expanded = !expanded; if (expanded) loadAudio()">
+                 @click="togglePlay($event)">
               <button type="button"
                       @click.stop="togglePlay($event)"
                       class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep"
@@ -136,11 +137,16 @@
                 {{ clip.song.orig_name }}
               </span>
 
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                   :class="expanded ? 'rotate-180' : ''"
-                   class="text-ink-faint flex-shrink-0 transition-transform">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
+              <button type="button"
+                      @click.stop="expanded = !expanded; if (expanded) loadAudio()"
+                      class="p-1 -m-1 flex-shrink-0 text-ink-faint hover:text-ink"
+                      :title="expanded ? 'Collapse' : 'Edit'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     :class="expanded ? 'rotate-180' : ''"
+                     class="transition-transform">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
             </div>
 
             {# Inline player shown when playing and row collapsed - matches Song library pattern #}
@@ -162,6 +168,8 @@
                 <audio x-ref="audio" preload="none"
                        @timeupdate="onTimeUpdate($event.target)"
                        @loadedmetadata="if (!songDuration) songDuration = $event.target.duration"
+                       @pause="playing = false"
+                       @play="playing = true"
                        @ended="playing = false"></audio>
                 <span class="text-caption tabular-nums text-ink-soft w-14 text-right" x-text="fmtTime(currentTime)"></span>
                 <div class="flex-1 group relative py-3 cursor-pointer"
@@ -297,6 +305,8 @@ function clipRow(clipId, songId, songDuration, trimStartInit, trimEndInit) {
     },
 
     togglePlay(event) {
+      // Ensure clip metadata loaded (name/description for the editor panel)
+      this.loadAudio();
       const audio = this.$refs.audio;
       if (!audio.src) {
         audio.src = '/audio/stream/' + this.songId;
@@ -305,7 +315,8 @@ function clipRow(clipId, songId, songDuration, trimStartInit, trimEndInit) {
         audio.pause();
         this.playing = false;
       } else {
-        // Set start position on first play or if before start
+        // Resume from current position if within clip window,
+        // otherwise seek to start
         if (audio.currentTime < this.startSec || audio.currentTime >= this.endSec) {
           audio.currentTime = this.startSec;
         }
