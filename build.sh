@@ -27,7 +27,7 @@ if ! command -v tailwindcss &> /dev/null; then
         *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
     esac
     curl -sL -o /usr/local/bin/tailwindcss \
-        "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/$BINARY"
+        "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.19/$BINARY"
     chmod +x /usr/local/bin/tailwindcss
     echo "Installed: $(tailwindcss --help | head -1)"
 fi
