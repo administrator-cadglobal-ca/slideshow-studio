@@ -29,6 +29,20 @@ class User(UserMixin, db.Model):
     # Notification preference
     notify_email    = db.Column(db.String(255))
 
+    # Suspension / deactivation audit
+    suspended_at        = db.Column(db.DateTime)
+    suspended_by        = db.Column(db.Integer, db.ForeignKey("users.id"))
+    suspension_reason   = db.Column(db.String(500))
+    deactivated_at      = db.Column(db.DateTime)
+    deactivated_by      = db.Column(db.Integer, db.ForeignKey("users.id"))
+    # Storage + verification tracking
+    storage_used_bytes  = db.Column(db.BigInteger, default=0)
+    last_login_ip       = db.Column(db.String(45))
+    last_login_user_agent = db.Column(db.String(500))
+    email_verified_at   = db.Column(db.DateTime)
+    phone_verified_at   = db.Column(db.DateTime)
+    avatar_url          = db.Column(db.String(500))
+    admin_notes         = db.Column(db.Text)
     # Google OAuth tokens
     google_access_token  = db.Column(db.Text)
     google_refresh_token = db.Column(db.Text)
@@ -81,6 +95,76 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<User {self.email}>"
+
+
+    # ── Derived properties ────────────────────────────────────────
+    @property
+    def status(self):
+        """Derived from is_enabled + suspended_at + is_active."""
+        if not self.is_enabled:
+            return "pending"
+        if self.suspended_at:
+            return "suspended"
+        if not self.is_active:
+            return "deactivated"
+        return "active"
+
+    @property
+    def status_label(self):
+        return {
+            "pending":     "Pending approval",
+            "active":      "Active",
+            "suspended":   "Suspended",
+            "deactivated": "Deactivated",
+        }.get(self.status, self.status)
+
+    @property
+    def avatar_color(self):
+        """Deterministic color per user id, drawn from the Rajasthani palette."""
+        palette = ["#2E3271", "#1F225A", "#B4761F", "#2F7D4F", "#B23A48", "#4A5170"]
+        return palette[(self.id or 0) % len(palette)]
+
+    @property
+    def initials(self):
+        f = (self.first_name or "?")[:1]
+        l = (self.last_name  or "?")[:1]
+        return (f + l).upper()
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+    @property
+    def phone_display(self):
+        """Masked phone for admin lists. Returns None if no phone."""
+        if not self.phone:
+            return None
+        p = self.phone.strip()
+        if len(p) < 6:
+            return p
+        return p[:5] + "***" + p[-3:]
+
+    @property
+    def storage_pct(self):
+        used  = self.storage_used_bytes or 0
+        quota = self.quota_bytes or 1
+        return min(100, int(round(100 * used / quota)))
+
+    @property
+    def storage_used_display(self):
+        return _fmt_bytes(self.storage_used_bytes or 0)
+
+    @property
+    def quota_display(self):
+        return _fmt_bytes(self.quota_bytes or 0)
+
+
+def _fmt_bytes(n):
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024 or unit == "TB":
+            return f"{n:.1f} {unit}" if unit != "B" else f"{n} B"
+        n /= 1024
+    return f"{n:.1f} TB"
 
 
 class RegistrationRequest(db.Model):
