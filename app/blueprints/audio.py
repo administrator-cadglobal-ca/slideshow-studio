@@ -323,8 +323,12 @@ def clips():
                   .order_by(AudioClip.name).all()
     libraries = Library.query.filter_by(user_id=current_user.id)\
                   .order_by(Library.sort_order, Library.name).all()
+    # Playlists (AudioLabel rows under Path B naming) for the "Add to playlist" picker
+    playlists = AudioLabel.query.filter_by(user_id=current_user.id)\
+                                .order_by(AudioLabel.sort_order, AudioLabel.name).all()
     return render_template("audio/clips.html",
-                           songs=songs, clips=all_clips, libraries=libraries)
+                           songs=songs, clips=all_clips,
+                           libraries=libraries, playlists=playlists)
 
 
 @bp.route("/<int:song_id>/clips", methods=["GET"])
@@ -511,6 +515,44 @@ def delete_label(label_id):
         abort(404)
     db.session.delete(label)
     db.session.commit()
+    return jsonify({"ok": True})
+
+
+@bp.route("/labels/<int:label_id>/clips/batch", methods=["POST"])
+@login_required
+def batch_add_clips_to_label(label_id):
+    """Add multiple clips to a playlist (label) in one call.
+    Body: {"clip_ids": [1, 2, 3]}"""
+    label = db.session.get(AudioLabel, label_id)
+    if not label or label.user_id != current_user.id:
+        abort(404)
+    data = request.json or {}
+    clip_ids = data.get("clip_ids", [])
+    added = 0
+    for cid in clip_ids:
+        clip = db.session.get(AudioClip, int(cid))
+        if not clip or clip.song.user_id != current_user.id:
+            continue
+        if clip not in label.clips:
+            label.clips.append(clip)
+            added += 1
+    db.session.commit()
+    return jsonify({"ok": True, "added": added, "playlist_size": len(label.clips)})
+
+
+@bp.route("/labels/<int:label_id>/clips/<int:clip_id>", methods=["DELETE"])
+@login_required
+def remove_clip_from_label(label_id, clip_id):
+    """Remove a clip from a playlist (label). Clip itself is not deleted."""
+    label = db.session.get(AudioLabel, label_id)
+    if not label or label.user_id != current_user.id:
+        abort(404)
+    clip = db.session.get(AudioClip, clip_id)
+    if not clip or clip.song.user_id != current_user.id:
+        abort(404)
+    if clip in label.clips:
+        label.clips.remove(clip)
+        db.session.commit()
     return jsonify({"ok": True})
 
 

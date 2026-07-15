@@ -113,6 +113,12 @@
             {# Collapsed row - click plays/pauses, chevron toggles expand #}
             <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft cursor-pointer"
                  @click="togglePlay($event)">
+              <label @click.stop class="flex items-center flex-shrink-0 cursor-pointer">
+                <input type="checkbox"
+                       @change="$dispatch('clip-selection', {clipId: {{ clip.id }}, checked: $event.target.checked})"
+                       :checked="$root.selectedClips.includes({{ clip.id }})"
+                       class="w-4 h-4 accent-indigo cursor-pointer">
+              </label>
               <button type="button"
                       @click.stop="togglePlay($event)"
                       class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep"
@@ -236,18 +242,75 @@
     </div>
   </div>
 
+  {# Floating action bar - shows when any clip is selected #}
+  <div x-show="selectedClips.length > 0" x-cloak x-transition
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40
+              bg-paper-raised border border-line rounded-comfortable shadow-lift
+              px-4 py-3 flex items-center gap-3 flex-wrap max-w-[calc(100vw-2rem)]">
+    <span class="text-small text-ink font-medium">
+      <span x-text="selectedClips.length"></span> clip<span x-show="selectedClips.length !== 1">s</span> selected
+    </span>
+    <select x-model="addToPlaylistId" class="input text-small py-1.5">
+      <option value="">Choose playlist...</option>
+      {% for pl in playlists %}
+      <option value="{{ pl.id }}">{{ pl.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" @click="addToPlaylist()"
+            :disabled="!addToPlaylistId"
+            :class="addToPlaylistId ? 'btn-primary' : 'bg-line text-ink-faint px-3 py-1.5 rounded-standard text-small cursor-not-allowed'"
+            class="text-small">
+      Add to playlist
+    </button>
+    <button type="button" @click="clearSelection()"
+            class="text-caption text-ink-soft hover:text-ink underline">
+      Clear
+    </button>
+  </div>
+
 </div>
 
 <script>
 function clipLibrary() {
   return {
     activeLibrary: 'all',
+    selectedClips: [],
+    addToPlaylistId: null,
     init() {
       window.addEventListener('audio-play', (e) => {
         document.querySelectorAll('audio').forEach(a => {
           if (a !== e.detail) a.pause();
         });
       });
+      window.addEventListener('clip-selection', (e) => {
+        const {clipId, checked} = e.detail;
+        if (checked && !this.selectedClips.includes(clipId)) {
+          this.selectedClips.push(clipId);
+        } else if (!checked) {
+          this.selectedClips = this.selectedClips.filter(id => id !== clipId);
+        }
+      });
+    },
+    addToPlaylist() {
+      if (!this.addToPlaylistId || this.selectedClips.length === 0) return;
+      fetch('/audio/labels/' + this.addToPlaylistId + '/clips/batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({clip_ids: this.selectedClips}),
+      })
+        .then(r => r.json())
+        .then(data => {
+          // Clear selection UI
+          document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+          this.selectedClips = [];
+          this.addToPlaylistId = null;
+          alert('Added ' + data.added + ' clip(s) to playlist.');
+        })
+        .catch(err => alert('Add failed: ' + err));
+    },
+    clearSelection() {
+      document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+      this.selectedClips = [];
     },
     matchesLibrary(clipLibraryId) {
       if (this.activeLibrary === 'all') return true;

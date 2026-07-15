@@ -292,10 +292,11 @@ function playlistsPage() {
     },
 
     removeClipFromPlaylist(playlistId, clipId) {
-      if (!confirm('Remove this clip from the playlist?')) return;
-      // The existing API doesn't have a "remove clip from label" - only add.
-      // For now, alert until Sub-commit B adds this endpoint.
-      alert('Remove-clip-from-playlist endpoint coming in the next sub-commit.');
+      if (!confirm('Remove this clip from the playlist? The clip itself is not deleted.')) return;
+      fetch('/audio/labels/' + playlistId + '/clips/' + clipId, {method: 'DELETE'})
+        .then(r => r.json())
+        .then(() => window.location.reload())
+        .catch(err => alert('Remove failed: ' + err));
     },
   };
 }
