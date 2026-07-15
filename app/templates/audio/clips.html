@@ -1,580 +1,376 @@
 {% extends "shared/base.html" %}
-{% block title %}Audio — Clip Library{% endblock %}
-{% block head %}
-<style>
-.audio-tabs{display:flex;gap:0;border-bottom:2px solid #e8e5e0;margin-bottom:20px}
-.audio-tab{padding:10px 20px;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;text-decoration:none;transition:.15s}
-.audio-tab:hover{color:#1e3a52}
-.audio-tab.active{color:#1e3a52;border-bottom-color:#1e3a52;font-weight:600}
-
-.clip-layout{display:grid;grid-template-columns:200px 1fr 260px;gap:14px;align-items:start}
-.bulk-bar{display:none;background:#1e3a52;color:#fff;padding:8px 14px;border-radius:8px;
-  margin-bottom:8px;align-items:center;gap:10px;font-size:12px}
-#bulkLabelSel option{color:#111;background:#fff}
-.bulk-bar.visible{display:flex}
-.bulk-sel{width:14px;height:14px;accent-color:#1e3a52;cursor:pointer;flex-shrink:0}
-.clip-detail{background:#fff;border:1px solid #e8e5e0;border-radius:10px;
-  position:sticky;top:68px;display:none}
-.clip-detail.visible{display:block}
-.cd-hd{padding:12px 14px;border-bottom:1px solid #f0ede8;font-size:12px;font-weight:600;color:#374151}
-.cd-body{padding:14px}
-.cd-song{font-size:11px;color:#9ca3af;margin-bottom:2px}
-.cd-name{font-size:14px;font-weight:600;color:#1a1a18;margin-bottom:4px}
-.cd-desc{font-size:11px;color:#6b7280;font-style:italic;margin-bottom:10px}
-.cd-trim{font-size:11px;font-family:monospace;color:#374151;background:#f5f4f1;
-  padding:4px 8px;border-radius:5px;display:inline-block;margin-bottom:12px}
-.cd-labels-title{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;
-  letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-.cd-label-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;
-  margin-bottom:4px;font-size:12px;background:#f9f8f6}
-.cd-label-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.cd-label-name{flex:1}
-.cd-label-remove{border:none;background:none;cursor:pointer;color:#d1d5db;font-size:14px;
-  padding:0 2px;line-height:1;border-radius:3px}
-.cd-label-remove:hover{color:#dc2626;background:#fef2f2}
-.cd-add-label{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;padding-top:8px;
-  border-top:1px dashed #e8e5e0}
-.cd-add-btn{font-size:10px;padding:3px 8px;border:1px solid #e8e5e0;border-radius:10px;
-  background:#fff;cursor:pointer;color:#6b7280;transition:.1s}
-.cd-add-btn:hover{border-color:#1e3a52;color:#1e3a52}
-.cd-add-btn.added{background:#1e3a52;color:#fff;border-color:#1e3a52}
-.cd-empty{color:#b0bec5;font-size:11px;font-style:italic;text-align:center;padding:12px 0}
-.clip-row.selected{background:#eff6ff;border-left:3px solid #3b82f6}
-.label-sidebar{background:#fff;border:1px solid #e8e5e0;border-radius:10px;overflow:hidden;position:sticky;top:68px}
-.label-sidebar-hd{padding:11px 14px;border-bottom:1px solid #f0ede8;display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px}
-.label-item{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:12px;color:#374151;transition:.1s;border-left:3px solid transparent}
-.label-item:hover{background:#f5f4f1}
-.label-item.active{background:#e8f0f8;color:#1e3a52;font-weight:600;border-left-color:#1e3a52}
-.label-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.label-count{margin-left:auto;font-size:10px;color:#b0bec5;flex-shrink:0}
-
-.clip-tbl{background:#fff;border:1px solid #e8e5e0;border-radius:10px;overflow:hidden}
-.clip-tbl-hd{display:grid;grid-template-columns:28px 32px 1fr 140px 120px 70px 60px 80px;
-  gap:8px;padding:8px 14px;border-bottom:1px solid #e8e5e0;
-  font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;background:#fafaf8}
-.clip-row{display:grid;grid-template-columns:28px 32px 1fr 140px 120px 70px 60px 80px;
-  gap:8px;align-items:center;padding:9px 14px;border-bottom:1px solid #f5f4f1;transition:.1s}
-.clip-row:last-child{border-bottom:none}
-.clip-row:hover{background:#fafaf8}
-.clip-row.playing{background:#ecfdf5}
-.play-btn{width:26px;height:26px;border:1px solid #e8e5e0;border-radius:50%;background:#fff;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
-.play-btn:hover{background:#1e3a52;color:#fff;border-color:#1e3a52}
-.play-btn.active{background:#059669;color:#fff;border-color:#059669}
-.clip-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.clip-song{font-size:10px;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.clip-trim{font-size:10px;font-family:monospace;color:#6b7280}
-.label-pills{display:flex;gap:3px;flex-wrap:wrap}
-.lpill{font-size:9px;font-weight:600;color:#fff;padding:2px 7px;border-radius:10px}
-.lpill-add{font-size:10px;color:#b0bec5;border:1px dashed #d1d5db;padding:1px 6px;border-radius:10px;cursor:pointer}
-.lpill-add:hover{border-color:#1e3a52;color:#1e3a52}
-.ra-btn{width:24px;height:24px;border:none;background:none;cursor:pointer;border-radius:4px;color:#9ca3af;display:flex;align-items:center;justify-content:center;text-decoration:none}
-.ra-btn:hover{background:#f0ede8;color:#374151}
-.ra-btn.del:hover{background:#fef2f2;color:#dc2626}
-.row-acts{display:flex;gap:2px;align-items:center;justify-content:flex-end}
-
-.player-bar{position:fixed;bottom:0;left:0;right:0;background:#1e3a52;color:#fff;padding:10px 24px;display:flex;align-items:center;gap:12px;z-index:200;box-shadow:0 -2px 16px rgba(0,0,0,.2);display:none}
-.pb-song{flex:1;min-width:0}
-.pb-sname{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pb-stime{font-size:10px;color:rgba(255,255,255,.55);font-family:monospace}
-.pb-btn{width:30px;height:30px;border:none;background:rgba(255,255,255,.15);border-radius:50%;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.pb-btn:hover{background:rgba(255,255,255,.25)}
-.pb-btn.lg{width:36px;height:36px;background:#fff;color:#1e3a52}
-.pb-prog{flex:1;max-width:300px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;cursor:pointer}
-.pb-fill{height:100%;background:#fff;border-radius:2px;pointer-events:none}
-</style>
-{% endblock %}
+{% block title %}Clip library - Slideshow Studio{% endblock %}
 
 {% block content %}
-<div class="page-header" style="margin-bottom:0">
-  <div class="page-header-left">
-    <h1>Audio</h1>
-    <div class="page-sub">
-      {% set total_clips = songs|sum(attribute='clip_count') %}
-      {{ total_clips }} clip{{ 's' if total_clips != 1 }} across {{ songs|length }} song{{ 's' if songs|length != 1 }}
+<div class="max-w-7xl mx-auto py-6"
+     x-data="clipLibrary()"
+     x-init="init()">
+
+  {# -- Header -- #}
+  <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
+    <div>
+      <h1 class="text-h1">Clip library</h1>
+      <p class="text-small text-ink-soft mt-1">
+        {{ clips|length }} clip{{ 's' if clips|length != 1 }} across
+        {{ songs|length }} song{{ 's' if songs|length != 1 }}
+      </p>
     </div>
   </div>
-</div>
 
-<div class="audio-tabs">
-  <a href="{{ url_for('audio.index') }}"       class="audio-tab">🎵 Song library</a>
-  <a href="{{ url_for('audio.clips') }}"       class="audio-tab active">✂ Clip library</a>
-  <a href="{{ url_for('audio.labels_page') }}" class="audio-tab">🏷 Labels</a>
-</div>
-
-<div class="clip-layout">
-  {# Sidebar: Song Folders + Labels #}
-  <div class="label-sidebar">
-    {# Song folders section #}
-    <div class="label-sidebar-hd">
-      <span>Song folders</span>
-    </div>
-    <div class="label-item active" id="lf-all" onclick="filterFolder('all','folder')">
-      <div class="label-dot" style="background:#1e3a52"></div>
-      <span>All clips</span>
-      <span class="label-count">{{ total_clips }}</span>
-    </div>
-    <div class="label-item" id="lf-none" onclick="filterFolder('none','folder')">
-      <div class="label-dot" style="background:#d1d5db;border:1px solid #e5e7eb"></div>
-      <span>Unorganised</span>
-    </div>
-    {% for f in song_folders %}
-    <div class="label-item" id="lf-{{ f.id }}" onclick="filterFolder({{ f.id }},'folder')">
-      <div class="label-dot" style="background:{{ f.color }}"></div>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
-      <span class="label-count">{{ f.clip_count }}</span>
-    </div>
-    {% endfor %}
-
-    {# Labels section #}
-    {% if labels %}
-    <div class="label-sidebar-hd" style="margin-top:4px;border-top:1px solid #f0ede8;padding-top:12px">
-      <span>Labels</span>
-    </div>
-    <div class="label-item" id="lbl-all" onclick="filterFolder('all','label')">
-      <div class="label-dot" style="background:#6b7280"></div>
-      <span>All labels</span>
-    </div>
-    <div class="label-item" id="lbl-none" onclick="filterFolder('unlabelled','label')">
-      <div class="label-dot" style="background:#d1d5db;border:1px solid #e5e7eb"></div>
-      <span>Unlabelled</span>
-    </div>
-    {% for label in labels %}
-    <div class="label-item" id="lbl-{{ label.id }}" onclick="filterFolder({{ label.id }},'label')">
-      <div class="label-dot" style="background:{{ label.color }}"></div>
-      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ label.name }}</span>
-      <span class="label-count">{{ label.clip_count }}</span>
-    </div>
-    {% endfor %}
-    {% endif %}
+  {# -- Tabs -- #}
+  <div class="flex items-center gap-1 border-b border-line mb-6">
+    <a href="{{ url_for('audio.index') }}"
+       class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px border-transparent text-ink-soft hover:text-ink">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"></path>
+        <circle cx="6" cy="18" r="3"></circle>
+        <circle cx="18" cy="16" r="3"></circle>
+      </svg>
+      Song library
+    </a>
+    <a href="{{ url_for('audio.clips') }}"
+       class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px border-indigo text-indigo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="6" r="3"></circle>
+        <circle cx="6" cy="18" r="3"></circle>
+        <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+        <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+        <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+      </svg>
+      Clip library
+    </a>
+    <a href="{{ url_for('audio.labels_page') }}"
+       class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px border-transparent text-ink-soft hover:text-ink">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+      </svg>
+      Labels
+    </a>
   </div>
 
-  {# Clip table #}
-  <div>
-    <div class="bulk-bar" id="bulkBar">
-      <span id="bulkCount">0 selected</span>
-      <span style="opacity:.5">→</span>
-      <span>Add to label:</span>
-      <select id="bulkLabelSel" style="border:1px solid rgba(255,255,255,.3);border-radius:5px;padding:3px 8px;background:rgba(255,255,255,.1);color:#fff;font-size:11px;outline:none">
-        <option value="">— pick label —</option>
-      </select>
-      <button onclick="bulkAddLabel()" style="background:#fff;color:#1e3a52;border:none;border-radius:5px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer">Add</button>
-      <button onclick="bulkRemoveLabel()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:5px;padding:4px 12px;font-size:11px;cursor:pointer">Remove</button>
-      <button onclick="clearSelection()" style="margin-left:auto;background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:16px">✕</button>
-    </div>
-    {% if songs %}
-    <div class="clip-tbl">
-      <div class="clip-tbl-hd">
-        <input type="checkbox" class="bulk-sel" id="selectAll" onchange="toggleSelectAll(this.checked)" title="Select all">
-        <span></span>
-        <span>Clip · Song</span>
-        <span>Description</span>
-        <span>Trim window</span>
-        <span>Duration</span>
-        <span>Labels</span>
-        <span></span>
+  {# -- Two-column: library sidebar + clips list -- #}
+  <div class="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
+
+    {# Library sidebar #}
+    <aside class="space-y-1">
+      <div class="flex items-center justify-between px-2 mb-1">
+        <p class="text-caption text-ink-faint uppercase tracking-wider">Libraries</p>
       </div>
-      {% for song in songs %}
-        {% for clip in song.clips %}
-        <div class="clip-row" id="cr-{{ clip.id }}"
-             data-labels="{{ clip.labels|map(attribute='id')|list|tojson|safe }}"
-             data-has-labels="{{ '1' if clip.labels else '0' }}"
-             data-song-folder="{{ song.song_folder_id or 'none' }}"
-             data-url="/api/v1/media/audio/{{ current_user.id }}/original/{{ song.filename }}"
-             data-start="{{ clip.start_s }}"
-             data-end="{{ clip.end_s or '' }}">
 
-          <input type="checkbox" class="bulk-sel" data-clip-id="{{ clip.id }}"
-                 onclick="event.stopPropagation()" onchange="onClipCheck(this)"
-                 style="margin:auto">
+      <button type="button"
+              @click="activeLibrary = 'all'"
+              :class="activeLibrary === 'all' ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
+              class="w-full flex items-center gap-2 px-3 py-2 rounded-standard text-small text-left">
+        <span class="w-2.5 h-2.5 rounded-full bg-ink-faint"></span>
+        <span class="flex-1">All clips</span>
+        <span class="text-caption tabular-nums">{{ clips|length }}</span>
+      </button>
 
-          <button class="play-btn" id="cpb-{{ clip.id }}"
-                  onclick="event.stopPropagation();playClip({{ clip.id }})">
-            <svg id="cpi-{{ clip.id }}" width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <svg id="cpa-{{ clip.id }}" width="9" height="9" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-          </button>
-
-          <div>
-            <div class="clip-name">{{ clip.name }}</div>
-            <div class="clip-song">{{ song.orig_name }}</div>
-          </div>
-
-          <div style="font-size:11px;color:#6b7280;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            {{ clip.description or '—' }}
-          </div>
-
-          <div class="clip-trim">{{ clip.trim_label }}</div>
-
-          <div style="font-size:12px;font-family:monospace">{{ clip.duration_display }}</div>
-
-            <div style="font-size:11px;color:#6b7280;cursor:pointer"
-               onclick="event.stopPropagation();selectClip({{ clip.id }}, document.getElementById('cr-{{ clip.id }}'))"
-               title="Click to manage labels">
-            {% if clip.labels %}
-              <span style="background:#e8f0f8;color:#1e3a52;padding:2px 7px;border-radius:10px;font-weight:600;font-size:10px">
-                {{ clip.labels|length }} 🏷
-              </span>
-            {% else %}
-              <span style="color:#d1d5db;font-size:10px">+ label</span>
-            {% endif %}
-          </div>
-
-          <div class="row-acts">
-            <a href="{{ url_for('audio.clip_editor', song_id=song.id) }}"
-               class="ra-btn" title="Open clip editor" style="text-decoration:none">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-            </a>
-            {% if song.clip_count > 1 %}
-            <button class="ra-btn del" title="Delete this clip"
-                    onclick="deleteClip({{ clip.id }}, '{{ clip.name }}')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-            </button>
-            {% endif %}
-          </div>
-        </div>
-        {% endfor %}
+      {% for lib in libraries %}
+      <button type="button"
+              @click="activeLibrary = {{ lib.id }}"
+              :class="activeLibrary === {{ lib.id }} ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
+              class="w-full flex items-center gap-2 px-3 py-2 rounded-standard text-small text-left">
+        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {{ lib.color }}"></span>
+        <span class="flex-1 truncate">{{ lib.name }}</span>
+        <span class="text-caption tabular-nums">
+          {{ clips | selectattr('song.library_id', 'equalto', lib.id) | list | length }}
+        </span>
+      </button>
       {% endfor %}
+    </aside>
+
+    {# Clips list #}
+    <div class="min-w-0">
+      {% if clips|length == 0 %}
+        <div class="rounded-comfortable border-2 border-dashed border-line p-12 text-center">
+          <div class="mx-auto w-14 h-14 rounded-full bg-line-soft flex items-center justify-center mb-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint">
+              <circle cx="6" cy="6" r="3"></circle>
+              <circle cx="6" cy="18" r="3"></circle>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+              <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+              <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <h2 class="text-h2 mb-1">No clips yet</h2>
+          <p class="text-small text-ink-soft mb-4">
+            Upload songs on the <a href="{{ url_for('audio.index') }}" class="text-indigo hover:underline">Song library</a> tab.
+            Each upload auto-creates a Full Song clip you can edit here.
+          </p>
+        </div>
+
+      {% else %}
+
+        <div class="card overflow-hidden">
+          {% for clip in clips %}
+          <div class="border-b border-line last:border-b-0"
+               x-show="matchesLibrary({{ clip.song.library_id or 'null' }})"
+               x-data="clipRow({{ clip.id }}, {{ clip.song_id }}, {{ clip.song.duration_s or 0 }}, '{{ clip.trim_start | e }}', '{{ clip.trim_end | e }}')">
+
+            {# Collapsed row #}
+            <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft cursor-pointer"
+                 @click="expanded = !expanded; if (expanded) loadAudio()">
+              <button type="button"
+                      @click.stop="togglePlay($event)"
+                      class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep"
+                      :title="playing ? 'Pause' : 'Play'">
+                <svg x-show="!playing" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <svg x-show="playing" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16"></rect>
+                  <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+              </button>
+
+              <div class="flex-1 min-w-0">
+                <p class="text-small font-medium text-ink truncate">{{ clip.name }}</p>
+                <p class="text-caption text-ink-faint truncate">
+                  {{ clip.description or 'No description' }}
+                </p>
+              </div>
+
+              <span class="text-caption text-ink-soft tabular-nums hidden md:inline">
+                {{ clip.song.orig_name }}
+              </span>
+
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                   :class="expanded ? 'rotate-180' : ''"
+                   class="text-ink-faint flex-shrink-0 transition-transform">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+
+            {# Expanded editor panel #}
+            <div x-show="expanded" x-cloak class="px-4 pb-4 pt-1 space-y-3 bg-line-soft/30">
+
+              {# Audio player + progress bar #}
+              <div class="flex items-center gap-3">
+                <audio x-ref="audio" preload="none"
+                       @timeupdate="onTimeUpdate($event.target)"
+                       @loadedmetadata="if (!songDuration) songDuration = $event.target.duration"
+                       @ended="playing = false"></audio>
+                <span class="text-caption tabular-nums text-ink-soft w-14 text-right" x-text="fmtTime(currentTime)"></span>
+                <div class="flex-1 h-1.5 bg-line rounded-full cursor-pointer relative"
+                     @click="seek($event, $refs.audio)">
+                  <div class="h-full bg-indigo rounded-full" :style="'width: ' + progressPct + '%'"></div>
+                </div>
+                <span class="text-caption tabular-nums text-ink-soft w-14" x-text="fmtTime(displayEnd)"></span>
+              </div>
+
+              {# Editor inputs #}
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="label text-caption">Start (mm:ss)</label>
+                  <input type="text" x-model="trimStart" placeholder="0:00" class="input font-mono">
+                </div>
+                <div>
+                  <label class="label text-caption">End (mm:ss)</label>
+                  <input type="text" x-model="trimEnd" :placeholder="fmtTime(songDuration || 0)" class="input font-mono">
+                </div>
+                <div>
+                  <label class="label text-caption">Name</label>
+                  <input type="text" x-model="name" class="input">
+                </div>
+              </div>
+
+              <div>
+                <label class="label text-caption">Description</label>
+                <input type="text" x-model="description" class="input">
+              </div>
+
+              {# Action buttons #}
+              <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" @click="save()" class="btn-primary"
+                        :disabled="saving" :class="saving ? 'opacity-50 cursor-not-allowed' : ''">
+                  <span x-show="!saving">Save</span>
+                  <span x-show="saving" x-cloak>Saving...</span>
+                </button>
+                <button type="button" @click="duplicate()" class="btn-secondary">
+                  Duplicate
+                </button>
+                <button type="button" @click="deleteClip()"
+                        class="ml-auto text-caption text-danger hover:underline">
+                  Delete clip
+                </button>
+              </div>
+
+              <p x-show="lastSaved" x-cloak class="text-caption text-ink-faint">
+                <span x-text="lastSaved"></span>
+              </p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+      {% endif %}
     </div>
-    {% else %}
-    <div class="empty-state">
-      <p>No songs uploaded yet.</p>
-      <div class="empty-cta"><a href="{{ url_for('audio.index') }}" class="btn btn-primary">Go to Song library</a></div>
-    </div>
-    {% endif %}
   </div>
 
-  {# Detail panel #}
-  <div style="font-size:11px;color:#b0bec5;text-align:center;padding:20px 0;display:block" id="clipHint">
-    ← Click any clip row to manage its labels
-  </div>
-  <div class="clip-detail" id="clipDetail">
-    <div class="cd-hd" style="display:flex;align-items:center;justify-content:space-between">Clip details <button onclick="document.getElementById('clipDetail').classList.remove('visible')" style="border:none;background:none;cursor:pointer;color:#9ca3af;font-size:16px">×</button></div>
-    <div class="cd-body">
-      <div class="cd-song" id="cdSong">—</div>
-      <div class="cd-name" id="cdName">—</div>
-      <div class="cd-desc" id="cdDesc"></div>
-      <div class="cd-trim" id="cdTrim">—</div>
-
-      <div class="cd-labels-title">
-        <span>Labels</span>
-        <span id="cdLabelCount" style="font-weight:400;color:#b0bec5"></span>
-      </div>
-      <div id="cdLabelList"></div>
-    </div>
-  </div>
 </div>
 
-{# Player #}
-<div id="playerBar" class="player-bar">
-  <button class="pb-btn" onclick="stopClip()">■</button>
-  <button class="pb-btn lg" onclick="pbToggle()">
-    <svg id="pbPI" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-    <svg id="pbPA" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-  </button>
-  <div class="pb-song">
-    <div class="pb-sname" id="pbName">—</div>
-    <div class="pb-stime"><span id="pbTime">0:00</span> / <span id="pbDur">—</span></div>
-  </div>
-  <div class="pb-prog" id="pbProg" onclick="pbSeek(event)">
-    <div class="pb-fill" id="pbFill" style="width:0%"></div>
-  </div>
-  <input type="range" min="0" max="1" step="0.05" value="0.8" style="width:70px;accent-color:#fff;cursor:pointer" oninput="audioEl.volume=this.value">
-  <button class="pb-btn" onclick="stopClip()" style="opacity:.5">✕</button>
-</div>
-<audio id="audioEl" preload="none"></audio>
-{% endblock %}
-
-{% block scripts %}
 <script>
-const BULK_LABELS = {{ labels_data | tojson | safe }};
-</script>
-<script>
-const LABELS = [
-  {% for l in labels %}
-  { id:{{ l.id }}, name:{{ l.name|tojson|safe }}, color:'{{ l.color }}' },
-  {% endfor %}
-];
-const audioEl = document.getElementById('audioEl');
-audioEl.volume = 0.8;
-let activeClipId = null, clipEndTime = null;
-
-// ── Filter by folder or label ─────────────────────────────────────────────────
-function filterFolder(id, type) {
-  document.querySelectorAll('.label-item').forEach(el => el.classList.remove('active'));
-  const prefix = type === 'label' ? 'lbl-' : 'lf-';
-  document.getElementById(prefix + id)?.classList.add('active');
-
-  document.querySelectorAll('.clip-row').forEach(row => {
-    if (type === 'folder') {
-      const sf = row.dataset.songFolder || 'none';
-      if (id === 'all') row.style.display = '';
-      else if (id === 'none') row.style.display = (!sf || sf === 'none') ? '' : 'none';
-      else row.style.display = String(sf) === String(id) ? '' : 'none';
-    } else {
-      const lbls = JSON.parse(row.dataset.labels || '[]');
-      if (id === 'all') row.style.display = '';
-      else if (id === 'unlabelled') row.style.display = lbls.length === 0 ? '' : 'none';
-      else row.style.display = lbls.includes(parseInt(id)) ? '' : 'none';
-    }
-  });
+function clipLibrary() {
+  return {
+    activeLibrary: 'all',
+    init() {
+      window.addEventListener('audio-play', (e) => {
+        document.querySelectorAll('audio').forEach(a => {
+          if (a !== e.detail) a.pause();
+        });
+      });
+    },
+    matchesLibrary(clipLibraryId) {
+      if (this.activeLibrary === 'all') return true;
+      return clipLibraryId === this.activeLibrary;
+    },
+  };
 }
 
-// ── Bulk selection ───────────────────────────────────────────────────────────
-var selectedClips = new Set();
+function clipRow(clipId, songId, songDuration, trimStartInit, trimEndInit) {
+  return {
+    clipId, songId,
+    songDuration,      // seconds
+    expanded: false,
+    playing: false,
+    currentTime: 0,
+    trimStart: trimStartInit,
+    trimEnd: trimEndInit,
+    name: '',
+    description: '',
+    saving: false,
+    lastSaved: '',
+    _audioLoaded: false,
 
-// Populate bulk label dropdown from sidebar labels
-// Populate label dropdown from template data
-(function(){
-  var sel = document.getElementById('bulkLabelSel');
-  if(!sel || typeof BULK_LABELS === 'undefined') return;
-  // Try from Jinja JSON first
-  if(BULK_LABELS && BULK_LABELS.length) {
-    BULK_LABELS.forEach(function(l){
-      var opt = document.createElement('option');
-      opt.value = l.id;
-      opt.textContent = l.name;
-      sel.appendChild(opt);
-    });
-    BULK_LABELS.forEach(function(l){ console.log('[BULK] label:', l.id, l.name); });
-  console.log('[BULK] loaded', BULK_LABELS.length, 'labels from template');
-  console.log('[BULK] select now has', sel.options.length, 'options');
-    return;
-  }
-  // Fallback to API
-  fetch('/api/v1/labels').then(r=>r.json()).then(function(data){
-    data.labels.forEach(function(l){
-      var opt=document.createElement('option');
-      opt.value=l.id; opt.textContent=l.name;
-      sel.appendChild(opt);
-    });
-  });
-})();
+    get startSec() { return parseTimeToSec(this.trimStart, 0); },
+    get endSec()   {
+      const e = parseTimeToSec(this.trimEnd, 0);
+      return e > 0 ? e : (this.songDuration || 0);
+    },
+    get displayEnd() { return this.endSec || this.songDuration || 0; },
+    get progressPct() {
+      const end = this.displayEnd;
+      if (!end) return 0;
+      const start = this.startSec;
+      const span = end - start;
+      if (span <= 0) return 0;
+      return Math.min(100, Math.max(0, 100 * (this.currentTime - start) / span));
+    },
 
-function onClipCheck(cb) {
-  var id = parseInt(cb.dataset.clipId);
-  if (cb.checked) selectedClips.add(id);
-  else selectedClips.delete(id);
-  updateBulkBar();
-}
+    loadAudio() {
+      if (this._audioLoaded) return;
+      // Fetch clip metadata (name, description) if we haven't yet
+      fetch('/audio/' + this.songId + '/clips')
+        .then(r => r.json())
+        .then(clips => {
+          const c = clips.find(x => x.id === this.clipId);
+          if (c) {
+            this.name = c.name;
+            this.description = c.description || '';
+            this.trimStart = c.trim_start || '';
+            this.trimEnd = c.trim_end || '';
+          }
+          this._audioLoaded = true;
+        });
+    },
 
-function toggleSelectAll(checked) {
-  document.querySelectorAll('.bulk-sel[data-clip-id]').forEach(function(cb) {
-    var row = cb.closest('.clip-row');
-    if (row && row.style.display !== 'none') {
-      cb.checked = checked;
-      var id = parseInt(cb.dataset.clipId);
-      if (checked) selectedClips.add(id);
-      else selectedClips.delete(id);
-    }
-  });
-  updateBulkBar();
-}
-
-function clearSelection() {
-  selectedClips.clear();
-  document.querySelectorAll('.bulk-sel').forEach(function(cb){ cb.checked = false; });
-  updateBulkBar();
-}
-
-function updateBulkBar() {
-  var bar = document.getElementById('bulkBar');
-  var cnt = document.getElementById('bulkCount');
-  if (selectedClips.size > 0) {
-    bar.classList.add('visible');
-    cnt.textContent = selectedClips.size + ' clip' + (selectedClips.size !== 1 ? 's' : '') + ' selected';
-  } else {
-    bar.classList.remove('visible');
-  }
-}
-
-function bulkAddLabel() {
-  var labelId = document.getElementById('bulkLabelSel').value;
-  if (!labelId) { alert('Pick a label first'); return; }
-  var ids = Array.from(selectedClips);
-  var done = 0;
-  ids.forEach(function(clipId) {
-    fetch('/audio/labels/' + labelId + '/clips', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({clip_id: clipId, action: 'add'})
-    }).then(function() {
-      done++;
-      if (done === ids.length) {
-        clearSelection();
-        location.reload();
+    togglePlay(event) {
+      const audio = this.$refs.audio;
+      if (!audio.src) {
+        audio.src = '/audio/stream/' + this.songId;
       }
-    });
-  });
-}
-
-function bulkRemoveLabel() {
-  var labelId = document.getElementById('bulkLabelSel').value;
-  if (!labelId) { alert('Pick a label first'); return; }
-  var ids = Array.from(selectedClips);
-  var done = 0;
-  ids.forEach(function(clipId) {
-    fetch('/audio/labels/' + labelId + '/clips', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({clip_id: clipId, action: 'remove'})
-    }).then(function() {
-      done++;
-      if (done === ids.length) {
-        clearSelection();
-        location.reload();
+      if (this.playing) {
+        audio.pause();
+        this.playing = false;
+      } else {
+        // Set start position on first play or if before start
+        if (audio.currentTime < this.startSec || audio.currentTime >= this.endSec) {
+          audio.currentTime = this.startSec;
+        }
+        window.dispatchEvent(new CustomEvent('audio-play', { detail: audio }));
+        audio.play();
+        this.playing = true;
       }
-    });
-  });
+    },
+
+    onTimeUpdate(audio) {
+      this.currentTime = audio.currentTime;
+      if (this.endSec && audio.currentTime >= this.endSec) {
+        audio.pause();
+        this.playing = false;
+      }
+    },
+
+    seek(event, audio) {
+      if (!audio || !audio.duration) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const pct = (event.clientX - rect.left) / rect.width;
+      const span = this.endSec - this.startSec;
+      audio.currentTime = this.startSec + pct * span;
+    },
+
+    save() {
+      this.saving = true;
+      this.lastSaved = '';
+      fetch('/audio/clips/' + this.clipId, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          name: this.name,
+          description: this.description,
+          trim_start: this.trimStart,
+          trim_end: this.trimEnd,
+        }),
+      })
+        .then(r => r.json())
+        .then(() => {
+          this.saving = false;
+          this.lastSaved = 'Saved just now';
+        })
+        .catch(err => {
+          this.saving = false;
+          this.lastSaved = 'Save failed: ' + err;
+        });
+    },
+
+    duplicate() {
+      fetch('/audio/clips/' + this.clipId + '/duplicate', {method: 'POST'})
+        .then(r => r.json())
+        .then(() => window.location.reload())
+        .catch(err => alert('Duplicate failed: ' + err));
+    },
+
+    deleteClip() {
+      if (!confirm('Delete this clip? This cannot be undone.')) return;
+      fetch('/audio/clips/' + this.clipId, {method: 'DELETE'})
+        .then(r => r.json())
+        .then(() => window.location.reload())
+        .catch(err => alert('Delete failed: ' + err));
+    },
+  };
 }
 
-// ── Clip detail panel ────────────────────────────────────────────────────────
-let selectedClipId = null;
-
-function selectClip(clipId, rowEl) {
-  // Deselect previous
-  document.querySelectorAll('.clip-row.selected').forEach(r => r.classList.remove('selected'));
-  rowEl.classList.add('selected');
-  selectedClipId = clipId;
-
-  const row = document.getElementById('cr-'+clipId);
-  const labelIds = JSON.parse(row.dataset.labels || '[]');
-
-  // Populate panel
-  document.getElementById('cdSong').textContent  = row.dataset.songName || '';
-  document.getElementById('cdName').textContent  = row.dataset.clipName || '';
-  document.getElementById('cdTrim').textContent  = row.dataset.clipTrim || '';
-  const desc = row.dataset.clipDesc || '';
-  const descEl = document.getElementById('cdDesc');
-  descEl.textContent  = desc;
-  descEl.style.display = desc ? 'block' : 'none';
-
-  renderDetailLabels(clipId, labelIds);
-  document.getElementById('clipDetail').classList.add('visible');
-  document.getElementById('clipHint').style.display = 'none';
-}
-
-function renderDetailLabels(clipId, labelIds) {
-  const list  = document.getElementById('cdLabelList');
-  const count = document.getElementById('cdLabelCount');
-  const checked = labelIds.length;
-  count.textContent = checked ? checked + ' assigned' : 'none assigned';
-
-  if (!LABELS.length) {
-    list.innerHTML = '<div class="cd-empty">No labels yet — create them in the Labels tab</div>';
-    return;
+function parseTimeToSec(str, fallback) {
+  if (!str) return fallback;
+  const s = String(str).trim();
+  if (!s) return fallback;
+  if (s.includes(':')) {
+    const parts = s.split(':').map(x => parseFloat(x));
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
   }
-
-  list.innerHTML = LABELS.map(l => {
-    const assigned = labelIds.includes(l.id);
-    var lbl = document.createElement('label');
-    lbl.className='cd-label-item'; lbl.style.cursor='pointer';
-    lbl.onmouseenter=function(){this.style.background='#f5f4f1';};
-    lbl.onmouseleave=function(){this.style.background='';};
-    var cb = document.createElement('input'); cb.type='checkbox';
-    if(assigned) cb.checked=true;
-    cb.style.cssText='width:14px;height:14px;accent-color:'+l.color+';cursor:pointer;flex-shrink:0';
-    cb.onchange=(function(cid,lid){ return function(){ toggleLabel(cid,lid,!this.checked); }; })(clipId,l.id);
-    var dot = document.createElement('div'); dot.className='cd-label-dot'; dot.style.background=l.color;
-    var nm = document.createElement('span'); nm.className='cd-label-name'; nm.textContent=l.name;
-    lbl.appendChild(cb); lbl.appendChild(dot); lbl.appendChild(nm);
-    return lbl;
-  }).join('');
+  const n = parseFloat(s);
+  return isNaN(n) ? fallback : n;
 }
 
-function toggleLabel(clipId, labelId, currentlyAdded) {
-  const action = currentlyAdded ? 'remove' : 'add';
-  fetch('/audio/labels/'+labelId+'/clips', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({clip_id: clipId, action})
-  }).then(r=>r.json()).then(d=>{
-    // Update row data
-    const row = document.getElementById('cr-'+clipId);
-    let ids = JSON.parse(row.dataset.labels || '[]');
-    if (action==='add' && !ids.includes(labelId)) ids.push(labelId);
-    else if (action==='remove') ids = ids.filter(x => x !== labelId);
-    row.dataset.labels = JSON.stringify(ids);
-    renderDetailLabels(clipId, ids);
-    showToast(action==='add' ? 'Added to label' : 'Removed from label', 'success');
-  });
+function fmtTime(secs) {
+  if (!secs || !isFinite(secs)) return '0:00';
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return m + ':' + (s < 10 ? '0' + s : s);
 }
-
-
-
-// ── Clip playback ─────────────────────────────────────────────────────────────
-function playClip(id) {
-  const row = document.getElementById('cr-'+id);
-  const url    = row.dataset.url;
-  const startS = parseFloat(row.dataset.start) || 0;
-  const endS   = row.dataset.end ? parseFloat(row.dataset.end) : null;
-
-  if (!url) { showToast('Cannot find audio file','error'); return; }
-
-  if (activeClipId === id && !audioEl.paused) {
-    audioEl.pause(); setClipUI(id, false); activeClipId = null; return;
-  }
-  if (activeClipId && activeClipId !== id) setClipUI(activeClipId, false);
-
-  activeClipId = id;
-  clipEndTime  = endS;
-
-  if (audioEl.dataset.src !== url) {
-    audioEl.src = url;
-    audioEl.dataset.src = url;
-  }
-  audioEl.currentTime = startS;
-  audioEl.play().catch(() => showToast('Cannot play — check file on pCloud', 'error'));
-  setClipUI(id, true);
-
-  const nameEl = row.querySelector('.clip-name');
-  const songEl = row.querySelector('.clip-song');
-  document.getElementById('pbName').textContent =
-    (nameEl?.textContent || 'Clip') + (songEl ? ' — ' + songEl.textContent : '');
-  const dur = endS ? endS - startS : null;
-  document.getElementById('pbDur').textContent = dur ? fmt(dur) : '--:--';
-  document.getElementById('playerBar').style.display = 'flex';
-  setPbUI(true);
-}
-function setClipUI(id,pl){
-  document.getElementById('cr-'+id)?.classList.toggle('playing',pl);
-  const pi=document.getElementById('cpi-'+id),pa=document.getElementById('cpa-'+id),btn=document.getElementById('cpb-'+id);
-  if(pi)pi.style.display=pl?'none':'block'; if(pa)pa.style.display=pl?'block':'none';
-  if(btn)btn.classList.toggle('active',pl);
-}
-function pbToggle(){audioEl.paused?(audioEl.play(),setPbUI(true)):(audioEl.pause(),setPbUI(false));}
-function setPbUI(pl){document.getElementById('pbPI').style.display=pl?'none':'block';document.getElementById('pbPA').style.display=pl?'block':'none';}
-function stopClip(){audioEl.pause();audioEl.src='';if(activeClipId)setClipUI(activeClipId,false);activeClipId=null;document.getElementById('playerBar').style.display='none';}
-function pbSeek(e){if(!audioEl.duration)return;audioEl.currentTime=(e.offsetX/document.getElementById('pbProg').offsetWidth)*audioEl.duration;}
-audioEl.addEventListener('timeupdate',()=>{
-  if(!audioEl.duration)return;
-  document.getElementById('pbFill').style.width=(audioEl.currentTime/audioEl.duration*100)+'%';
-  document.getElementById('pbTime').textContent=fmt(audioEl.currentTime);
-  if(clipEndTime && audioEl.currentTime>=clipEndTime){audioEl.pause();setPbUI(false);if(activeClipId)setClipUI(activeClipId,false);activeClipId=null;}
-});
-
-function deleteClip(id,name){
-  var row = document.getElementById('cr-'+id);
-  if(!row) return;
-  inlineConfirm(row, 'Delete "'+name.substring(0,20)+'"?', function(){
-    fetch('/audio/clips/'+id, {method:'DELETE'})
-    .then(function(r){ return r.json(); })
-    .then(function(){ row.remove(); showToast('Clip deleted','success'); })
-    .catch(function(){ showToast('Error deleting clip','error'); });
-  });
-}
-function inlineConfirm(row, msg, onYes){
-  if(row.querySelector('.del-confirm')) return;
-  var bar = document.createElement('div');
-  bar.className='del-confirm';
-  bar.style.cssText='position:absolute;right:0;top:50%;transform:translateY(-50%);background:#dc2626;color:#fff;padding:4px 10px;border-radius:6px;font-size:11px;z-index:10;display:flex;gap:8px;align-items:center;white-space:nowrap';
-  var yes = document.createElement('button');
-  yes.textContent='Yes'; yes.style.cssText='background:#fff;color:#dc2626;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-weight:700';
-  yes.onclick=function(){ bar.remove(); onYes(); };
-  var no = document.createElement('button');
-  no.textContent='No'; no.style.cssText='background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer';
-  no.onclick=function(){ bar.remove(); };
-  bar.appendChild(document.createTextNode(msg + ' '));
-  bar.appendChild(yes); bar.appendChild(no);
-  row.style.position='relative'; row.appendChild(bar);
-  setTimeout(function(){ if(bar.parentNode) bar.remove(); }, 5000);
-}
-
-function fmt(s){if(!s||!isFinite(s))return'--:--';const m=Math.floor(s/60),sec=Math.floor(s%60);return m+':'+(sec<10?'0':'')+sec;}
+window.fmtTime = fmtTime;
 </script>
 {% endblock %}

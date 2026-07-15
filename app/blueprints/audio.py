@@ -321,7 +321,10 @@ def clips():
                   .join(AudioFile, AudioClip.song_id == AudioFile.id)\
                   .filter(AudioFile.user_id == current_user.id)\
                   .order_by(AudioClip.name).all()
-    return render_template("audio/clips.html", songs=songs, clips=all_clips)
+    libraries = Library.query.filter_by(user_id=current_user.id)\
+                  .order_by(Library.sort_order, Library.name).all()
+    return render_template("audio/clips.html",
+                           songs=songs, clips=all_clips, libraries=libraries)
 
 
 @bp.route("/<int:song_id>/clips", methods=["GET"])
@@ -389,6 +392,50 @@ def update_clip(clip_id):
     for field in ("fade_in", "fade_out", "normalize"):
         if field in data:
             clip.__setattr__(field, bool(data[field]))
+    db.session.commit()
+    return jsonify(clip.to_dict())
+
+
+@bp.route("/clips/<int:clip_id>/duplicate", methods=["POST"])
+@login_required
+def duplicate_clip(clip_id):
+    """Duplicate an existing clip with the next available numeric name."""
+    source = db.session.get(AudioClip, clip_id)
+    if not source or source.song.user_id != current_user.id:
+        abort(404)
+
+    song = source.song
+    # Next numeric name: base = song orig_name minus extension, next num = clips count + 1
+    base = song.orig_name.rsplit(".", 1)[0] if "." in song.orig_name else song.orig_name
+    num  = song.clips.count() + 1
+    name = f"{base} - {num}"
+
+    # User clip number for auto-description: current count is position of the first user clip,
+    # so if there are already N clips (position 1 = Full Song), duplicate becomes position N+1 = "Clip N"
+    user_clip_num = song.clips.count()
+    default_desc = f"Clip {user_clip_num}" if user_clip_num > 0 else "Full Song"
+
+    clip = AudioClip(
+        song_id     = source.song_id,
+        name        = name,
+        description = default_desc,
+        trim_start  = source.trim_start,
+        trim_end    = source.trim_end,
+        fade_in     = source.fade_in,
+        fade_out    = source.fade_out,
+        normalize   = source.normalize,
+    )
+    db.session.add(clip)
+    db.session.flush()
+
+    # Auto-add to song's library's default playlist (matches upload behavior)
+    if song.library_id:
+        default_pl = Playlist.query.filter_by(
+            library_id=song.library_id, is_default=True
+        ).first()
+        if default_pl:
+            default_pl.clips.append(clip)
+
     db.session.commit()
     return jsonify(clip.to_dict())
 
