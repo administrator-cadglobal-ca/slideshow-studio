@@ -200,10 +200,17 @@ def create_clip(song_id):
     else:
         name = data["name"].strip()[:100]
 
+    # Auto-description: "Clip 1" for user's first manual clip after the
+    # auto-created "Full Song" clip. Formula: current clip count is the
+    # position number of the user's Nth manual clip (since Full Song is
+    # position 1, user clip 1 is position 2 = current count of 1).
+    user_clip_num = len(song.clips)  # count of clips before this insert
+    default_desc = f"Clip {user_clip_num}" if user_clip_num > 0 else "Full Song"
+
     clip = AudioClip(
         song_id     = song_id,
         name        = name,
-        description = data.get("description", ""),
+        description = data.get("description", "").strip() or default_desc,
         trim_start  = data.get("trim_start", ""),
         trim_end    = data.get("trim_end", ""),
         fade_in     = data.get("fade_in", False),

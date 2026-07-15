@@ -417,7 +417,7 @@ function audioLibrary() {
 
       for (const file of files) {
         const fd = new FormData();
-        fd.append('file', file);
+        fd.append('audio', file);
         if (csrf) fd.append('csrf_token', csrf);
 
         try {
