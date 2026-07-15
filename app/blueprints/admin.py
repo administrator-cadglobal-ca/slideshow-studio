@@ -301,9 +301,9 @@ def user_change_role(user_id):
     if new_role not in ("user", "admin"):
         flash("Invalid role.", "error")
         return redirect(request.referrer or url_for("admin.users_list"))
-    if new_role == "admin" and current_user.role != "super_admin":
-        flash("Only super_admin can grant admin role.", "error")
-        return redirect(request.referrer or url_for("admin.users_list"))
+    # Any admin can promote/demote for now. When role hierarchy is
+    # reworked (Wave 7 proper), tighten this to require super_admin
+    # for grants to admin role.
     admin_svc.change_role(user, new_role)
     flash(f"{user.full_name} role changed to {new_role}.", "success")
     return redirect(request.referrer or url_for("admin.users_list"))

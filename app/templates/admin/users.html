@@ -168,6 +168,22 @@
                     </form>
                   {% endif %}
 
+                  {# Role change - divider + one option depending on current role #}
+                  <div class="border-t border-line"></div>
+                  {% if u.role == 'admin' %}
+                    <form method="POST" action="{{ url_for('admin.user_change_role', user_id=u.id) }}" class="block"
+                          onsubmit="return confirm('Change {{ u.full_name }} back to a regular user? They will lose admin access.')">
+                      <input type="hidden" name="role" value="user">
+                      <button type="submit" class="w-full text-left px-3 py-2 text-small text-ink hover:bg-line-soft">Make regular user</button>
+                    </form>
+                  {% else %}
+                    <form method="POST" action="{{ url_for('admin.user_change_role', user_id=u.id) }}" class="block"
+                          onsubmit="return confirm('Promote {{ u.full_name }} to admin? They will be able to approve requests, suspend users, and change roles.')">
+                      <input type="hidden" name="role" value="admin">
+                      <button type="submit" class="w-full text-left px-3 py-2 text-small text-ink hover:bg-line-soft">Make admin</button>
+                    </form>
+                  {% endif %}
+
                 {% else %}
                   <p class="px-3 py-2 text-caption text-ink-faint italic border-t border-line">Own account - manage via profile</p>
                 {% endif %}
