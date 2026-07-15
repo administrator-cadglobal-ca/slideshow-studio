@@ -68,7 +68,11 @@ def delete_song(song_id):
     delete_audio_files(current_user.id, song.filename)
     db.session.delete(song)
     db.session.commit()
-    return jsonify({"ok": True})
+    # If AJAX/JSON request, return JSON. Otherwise redirect to library.
+    if request.headers.get("Accept", "").startswith("application/json") or \
+       request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"ok": True})
+    return redirect(url_for("audio.index"))
 
 
 @bp.route("/scan-durations", methods=["POST"])
