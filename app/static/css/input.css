@@ -278,3 +278,432 @@
   .scrollbar-hidden::-webkit-scrollbar { display: none; }
   .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+/* ============================================================
+   Audio page legacy styles
+   Written 2026-07-15 to restore visual after Task A1 removed
+   the old styles.css. Not final - proper rebuild scheduled.
+   ============================================================ */
+
+/* Layout ------------------------------------------------------ */
+.audio-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .audio-layout { grid-template-columns: 1fr; }
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.page-header-left h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.2;
+  margin: 0;
+}
+.page-sub {
+  font-size: 0.875rem;
+  color: var(--color-ink-soft);
+  margin-top: 0.25rem;
+}
+
+/* Folder sidebar --------------------------------------------- */
+.folder-sidebar {
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+.folder-sidebar-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-faint);
+  font-weight: 500;
+}
+.add-folder-btn {
+  background: none;
+  border: none;
+  color: var(--color-indigo);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  border-radius: 4px;
+}
+.add-folder-btn:hover { background: var(--color-line-soft); }
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-ink-soft);
+  user-select: none;
+}
+.folder-item:hover { background: var(--color-line-soft); }
+.folder-item.active {
+  background: var(--color-indigo-soft);
+  color: var(--color-indigo);
+  font-weight: 500;
+}
+.folder-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.folder-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--color-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.folder-item.active .folder-count { color: var(--color-indigo); }
+.folder-acts {
+  display: none;
+  gap: 0.25rem;
+  margin-left: 0.25rem;
+}
+.folder-item:hover .folder-acts { display: inline-flex; }
+.folder-act {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--color-ink-faint);
+}
+.folder-act:hover { background: var(--color-line); color: var(--color-ink); }
+.folder-sel { display: none; }
+
+/* Tabs ------------------------------------------------------- */
+.audio-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.75rem 0 1.25rem;
+  border-bottom: 1px solid var(--color-line);
+}
+.audio-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-ink-soft);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.audio-tab:hover { color: var(--color-ink); }
+.audio-tab.active {
+  color: var(--color-indigo);
+  border-bottom-color: var(--color-indigo);
+  font-weight: 500;
+}
+
+/* Empty state ------------------------------------------------ */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-ink-soft);
+}
+.empty-state svg { color: var(--color-ink-faint); margin-bottom: 1rem; }
+.empty-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--color-indigo);
+  color: white;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+.empty-cta:hover { background: var(--color-indigo-deep); }
+
+/* Song list -------------------------------------------------- */
+.song-tbl {
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.song-tbl-hd {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-faint);
+  font-weight: 500;
+  background: rgba(0,0,0,0.02);
+}
+.song-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-line);
+}
+.song-row:last-child { border-bottom: none; }
+.song-row:hover { background: var(--color-line-soft); }
+.song-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+.song-meta {
+  font-size: 0.75rem;
+  color: var(--color-ink-faint);
+  margin-top: 0.125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-acts { display: flex; gap: 0.25rem; }
+.ra-btn {
+  background: none;
+  border: 1px solid var(--color-line);
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+}
+.ra-btn:hover { background: var(--color-line); color: var(--color-ink); }
+.ra-btn.del { color: var(--color-danger); }
+.ra-btn.del:hover { background: var(--color-danger-soft); }
+
+/* Playback (persistent bottom bar) ---------------------------- */
+.player-bar {
+  position: fixed;
+  bottom: 4.5rem;
+  left: 0;
+  right: 0;
+  background: var(--color-paper-raised);
+  border-top: 1px solid var(--color-line);
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  z-index: 40;
+}
+@media (min-width: 768px) {
+  .player-bar { bottom: 0; left: 15rem; }
+}
+.pb-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.125rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--color-ink-soft);
+}
+.pb-btn:hover { color: var(--color-indigo); }
+.play-btn {
+  background: var(--color-indigo);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.play-btn:hover { background: var(--color-indigo-deep); }
+.pb-song {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.pb-sname {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pb-stime {
+  font-size: 0.75rem;
+  color: var(--color-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.pb-prog {
+  height: 4px;
+  background: var(--color-line);
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.pb-fill {
+  height: 100%;
+  background: var(--color-indigo);
+  transition: width 0.1s linear;
+}
+
+/* Progress bars (upload) ------------------------------------- */
+.progress {
+  height: 8px;
+  background: var(--color-line);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+.progress-bar {
+  height: 100%;
+  background: var(--color-indigo);
+  transition: width 0.2s ease;
+}
+.up-prog {
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+  margin-top: 0.5rem;
+}
+
+/* Modals ----------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal-box {
+  background: var(--color-paper-raised);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: 1rem;
+}
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* New-folder form ------------------------------------------- */
+.nf-form { display: flex; flex-direction: column; gap: 1rem; }
+.nf-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: var(--color-paper);
+}
+.nf-input:focus {
+  outline: none;
+  border-color: var(--color-indigo);
+  box-shadow: 0 0 0 3px rgba(46, 50, 113, 0.1);
+}
+.nf-colors {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.nf-color {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.nf-color:hover { border-color: var(--color-ink); }
+.nf-btns {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Legacy form controls -------------------------------------- */
+.form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.form-control {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: var(--color-paper);
+}
+.form-control:focus {
+  outline: none;
+  border-color: var(--color-indigo);
+  box-shadow: 0 0 0 3px rgba(46, 50, 113, 0.1);
+}
+
+/* Legacy .btn (older buttons that were not converted) ------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--color-line);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn:hover { background: var(--color-line-soft); }
+.btn-primary {
+  background: var(--color-indigo);
+  color: white;
+  border-color: var(--color-indigo);
+}
+.btn-primary:hover { background: var(--color-indigo-deep); }
+.btn-sm {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem;
+}
