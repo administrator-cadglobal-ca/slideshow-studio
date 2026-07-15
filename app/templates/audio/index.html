@@ -286,9 +286,9 @@
        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
     <div @click.outside="folderDialog.open = false"
          class="w-full max-w-md bg-paper-raised border border-line rounded-comfortable shadow-lift p-6">
-      <h3 class="text-h3 mb-4" x-text="folderDialog.mode === 'edit' ? 'Edit folder' : 'New folder'"></h3>
+      <h3 class="text-h3 mb-4" x-text="folderDialog.mode === 'edit' ? 'Edit library' : 'New library'"></h3>
       <form method="POST"
-            :action="folderDialog.mode === 'edit' ? '/audio/libraries/' + folderDialog.id : '/audio/song-folders'"
+            :action="folderDialog.mode === 'edit' ? '/audio/libraries/' + folderDialog.id : '/audio/libraries'"
             x-data="{}"
             @submit="if (folderDialog.mode === 'edit') { $event.target.querySelector('input[name=_method]').value = 'PUT'; }">
         {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
