@@ -1,0 +1,93 @@
+{# ─────────────────────────────────────────────────────────────────────────
+   Mobile bottom navigation
+   Hidden on md: (768px) and up.
+
+   Active state derived from `request.endpoint` prefix.
+   ───────────────────────────────────────────────────────────────────────── #}
+{% set section = request.endpoint.split('.')[0] if request.endpoint else '' %}
+
+<nav aria-label="Primary" class="md:hidden fixed inset-x-0 bottom-0 z-40
+                                  bg-paper-raised border-t border-line
+                                  shadow-[0_-1px_3px_rgba(26,31,54,0.04)]"
+     style="padding-bottom: env(safe-area-inset-bottom);">
+  <ul class="flex items-stretch justify-around">
+
+    {# Home #}
+    <li class="flex-1">
+      <a href="{{ url_for('dashboard.index') }}"
+         class="flex flex-col items-center justify-center gap-1 py-2
+                {% if section == 'dashboard' %}text-indigo{% else %}text-ink-soft{% endif %}"
+         aria-current="{% if section == 'dashboard' %}page{% endif %}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span class="text-micro">Home</span>
+      </a>
+    </li>
+
+    {# Projects #}
+    <li class="flex-1">
+      <a href="{{ url_for('projects.index') }}"
+         class="flex flex-col items-center justify-center gap-1 py-2
+                {% if section == 'projects' %}text-indigo{% else %}text-ink-soft{% endif %}"
+         aria-current="{% if section == 'projects' %}page{% endif %}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="text-micro">Projects</span>
+      </a>
+    </li>
+
+    {# Renders #}
+    <li class="flex-1">
+      <a href="{{ url_for('renders.index') }}"
+         class="flex flex-col items-center justify-center gap-1 py-2
+                {% if section == 'renders' %}text-indigo{% else %}text-ink-soft{% endif %}"
+         aria-current="{% if section == 'renders' %}page{% endif %}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+          <line x1="7" y1="2" x2="7" y2="22"></line>
+          <line x1="17" y1="2" x2="17" y2="22"></line>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+        </svg>
+        <span class="text-micro">Renders</span>
+      </a>
+    </li>
+
+    {# Settings #}
+    <li class="flex-1">
+      <a href="{{ url_for('dashboard.profile') }}"
+         class="flex flex-col items-center justify-center gap-1 py-2
+                {% if request.endpoint == 'dashboard.profile' %}text-indigo{% else %}text-ink-soft{% endif %}"
+         aria-current="{% if request.endpoint == 'dashboard.profile' %}page{% endif %}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span class="text-micro">Settings</span>
+      </a>
+    </li>
+
+    {# Admin (only for admins) #}
+    {% if current_user.role in ('admin', 'super_admin') %}
+    <li class="flex-1">
+      <a href="{{ url_for('admin.index') }}"
+         class="flex flex-col items-center justify-center gap-1 py-2
+                {% if section == 'admin' %}text-indigo{% else %}text-ink-soft{% endif %}"
+         aria-current="{% if section == 'admin' %}page{% endif %}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <span class="text-micro">Admin</span>
+      </a>
+    </li>
+    {% endif %}
+
+  </ul>
+</nav>

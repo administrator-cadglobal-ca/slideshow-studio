@@ -1,0 +1,9 @@
+﻿{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
+         class="toast-{{ 'success' if category == 'success' else 'error' if category == 'error' else 'info' }}">
+      <span>{{ message }}</span>
+      <button @click="show = false" class="ml-auto opacity-70 hover:opacity-100" aria-label="Dismiss">×</button>
+    </div>
+  {% endfor %}
+{% endwith %}

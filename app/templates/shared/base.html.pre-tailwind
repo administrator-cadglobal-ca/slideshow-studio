@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Slideshow Studio{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+{% block head %}{% endblock %}
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<nav class="topbar">
+  <a href="{{ url_for('dashboard.index') }}" class="nav-logo">
+    <span class="nav-logo-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+    </span>
+    Slideshow Studio
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('dashboard.index') }}" class="nav-link {% if request.endpoint=='dashboard.index' %}active{% endif %}">Dashboard</a>
+    <a href="{{ url_for('projects.index') }}" class="nav-link {% if request.blueprint=='projects' %}active{% endif %}">Projects</a>
+    <a href="{{ url_for('audio.index') }}" class="nav-link {% if request.blueprint=='audio' %}active{% endif %}">Audio</a>
+    <a href="{{ url_for('renders.index') }}" class="nav-link {% if request.blueprint=='renders' %}active{% endif %}">Renders</a>
+    {% if current_user.is_admin %}
+    <a href="{{ url_for('admin.index') }}" class="nav-link admin-link {% if request.blueprint=='admin' %}active{% endif %}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Admin
+    </a>
+    {% endif %}
+  </div>
+  <div class="nav-right">
+    {% if current_user.is_admin %}
+      {% set pc = pending_requests_count() %}
+      <a href="{{ url_for('admin.requests_list') }}" class="nav-bell {% if pc > 0 %}has-badge{% endif %}" title="Registration requests">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        {% if pc > 0 %}<span class="nav-badge">{{ pc }}</span>{% endif %}
+      </a>
+    {% endif %}
+    <div class="nav-user-wrap">
+      <button class="nav-user" onclick="toggleUserMenu()">
+        <span class="nav-avatar {% if current_user.is_admin %}admin-av{% endif %}">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</span>
+        {{ current_user.first_name }}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="user-dropdown" id="userDropdown">
+        <div class="ud-header">
+          <div class="ud-name">{{ current_user.full_name }}</div>
+          <div class="ud-email">{{ current_user.email }}</div>
+          {% if current_user.is_admin %}<span class="ud-role">Admin</span>{% endif %}
+        </div>
+        <div class="ud-sep"></div>
+        <a href="{{ url_for('dashboard.profile') }}" class="ud-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile and settings
+        </a>
+        {% if current_user.google_connected %}
+        <div class="ud-item ud-google-ok">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Google: {{ current_user.google_email }}
+        </div>
+        {% else %}
+        <a href="{{ url_for('auth.google_connect') }}" class="ud-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Connect Google account
+        </a>
+        {% endif %}
+        <div class="ud-sep"></div>
+        <a href="{{ url_for('auth.logout') }}" class="ud-item ud-logout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+{% if current_user.is_admin %}
+  {% set pc = pending_requests_count() %}
+  {% if pc > 0 %}
+  <div class="pending-banner" id="pendingBanner">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <strong>{{ pc }} registration request{{ 's' if pc != 1 }}</strong>&nbsp;waiting for review.
+    <a href="{{ url_for('admin.requests_list') }}" class="banner-link">Review now</a>
+    <button class="banner-dismiss" onclick="dismissBanner()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  {% endif %}
+{% endif %}
+{% endif %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-wrap">
+  {% for cat, msg in messages %}
+  <div class="flash flash-{{ cat }}">
+    {% if cat=='success' %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    {% elif cat=='error' %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    {% else %}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    {% endif %}
+    {{ msg }}
+    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<main class="{% block main_class %}page{% endblock %}">
+  {% block content %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
