@@ -53,6 +53,23 @@ def create_app(env: str = "default") -> Flask:
     # ── Template helpers ────────────────────────────────────────────────────────
     _register_template_helpers(app)
 
+    # ── Context processors ────────────────────────────────────
+    @app.context_processor
+    def inject_admin_counts():
+        """Make pending-request count available in every template.
+        Only queries when user is authenticated admin, to avoid load."""
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return {}
+        if getattr(current_user, "role", None) not in ("admin", "super_admin"):
+            return {}
+        from app.models.user import RegistrationRequest
+        try:
+            n = RegistrationRequest.query.filter_by(status="pending").count()
+        except Exception:
+            n = 0
+        return {"pending_requests_count": n}
+
     return app
 
 
