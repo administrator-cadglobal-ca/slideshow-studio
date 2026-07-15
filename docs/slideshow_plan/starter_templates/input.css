@@ -248,7 +248,7 @@
     top: 0;
     left: 0;
     height: 2px;
-    background: theme(colors.indigo.DEFAULT);
+    background: var(--color-indigo);
     width: 0;
     transition: width 0.3s ease-out;
     z-index: 100;
