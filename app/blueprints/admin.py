@@ -3,6 +3,9 @@ from flask          import Blueprint, render_template, redirect, url_for, \
 from flask_login    import login_required, current_user
 from app.extensions import db
 from app.models.user import User, RegistrationRequest
+from app.models.audit import AdminAuditLog, log_admin_action
+from app.services import admin as admin_svc
+from sqlalchemy import or_, desc, asc
 from functools      import wraps
 
 bp = Blueprint("admin", __name__)
