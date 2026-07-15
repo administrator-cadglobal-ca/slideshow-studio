@@ -360,3 +360,20 @@ def clip_editor(song_id):
     return render_template("audio/clip_editor.html",
                            audio_file=song, song=song,
                            audio_url=audio_url, labels=labels)
+
+@bp.route("/stream/<int:song_id>")
+@login_required
+def stream_song(song_id):
+    """Stream a song for HTML5 <audio> playback. Redirects to a
+    short-lived presigned R2 URL so seek + range requests work
+    natively without proxying bytes through Flask."""
+    from app.models.audio import AudioFile
+    from app.services import r2 as r2svc
+
+    song = db.session.get(AudioFile, song_id)
+    if not song or song.user_id != current_user.id:
+        abort(404)
+
+    key = r2svc.key_for_audio(song.user_id, song.filename)
+    url = r2svc.presign_get(key, expires_in=600)  # 10 minutes
+    return redirect(url)
