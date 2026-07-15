@@ -1,17 +1,10 @@
-{# ─────────────────────────────────────────────────────────────────────────
-   Desktop sidebar
-   Hidden below md: (768px). Fixed 240px wide.
-   ───────────────────────────────────────────────────────────────────────── #}
 {% set section = request.endpoint.split('.')[0] if request.endpoint else '' %}
 
-<aside class="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-60
-              bg-paper-raised border-r border-line z-30">
+<aside class="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-60 bg-paper-raised border-r border-line z-30">
 
-  {# Brand / logo #}
   <div class="h-16 flex items-center px-5 border-b border-line">
     <a href="{{ url_for('dashboard.index') }}" class="flex items-center gap-2 text-ink">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="2" width="20" height="20" rx="3"></rect>
         <path d="M8 10l4 4 4-4"></path>
       </svg>
@@ -19,49 +12,38 @@
     </a>
   </div>
 
-  {# Nav sections #}
   <nav class="flex-1 overflow-y-auto py-4 space-y-6" aria-label="Primary">
 
-    {# Primary group #}
     <ul class="space-y-0.5 px-3">
       <li>
         <a href="{{ url_for('dashboard.index') }}"
-           class="flex items-center gap-3 px-3 py-2 rounded-standard text-small
-                  {% if section == 'dashboard' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}"
-           aria-current="{% if section == 'dashboard' %}page{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-standard text-small {% if section == 'dashboard' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
           Home
         </a>
       </li>
       <li>
         <a href="{{ url_for('projects.index') }}"
-           class="flex items-center gap-3 px-3 py-2 rounded-standard text-small
-                  {% if section == 'projects' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}"
-           aria-current="{% if section == 'projects' %}page{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-standard text-small {% if section == 'projects' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
           Projects
         </a>
       </li>
       <li>
         <a href="{{ url_for('renders.index') }}"
-           class="flex items-center gap-3 px-3 py-2 rounded-standard text-small
-                  {% if section == 'renders' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}"
-           aria-current="{% if section == 'renders' %}page{% endif %}">
+           class="flex items-center gap-3 px-3 py-2 rounded-standard text-small {% if section == 'renders' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
           Renders
         </a>
       </li>
     </ul>
 
-    {# Library group #}
     <div class="px-3">
       <p class="px-3 mb-1 text-micro uppercase text-ink-faint">Library</p>
       <ul class="space-y-0.5">
         <li>
           <a href="{{ url_for('audio.index') }}"
-             class="flex items-center gap-3 px-3 py-2 rounded-standard text-small
-                    {% if section == 'audio' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}"
-             aria-current="{% if section == 'audio' %}page{% endif %}">
+             class="flex items-center gap-3 px-3 py-2 rounded-standard text-small {% if section == 'audio' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
             Audio
           </a>
@@ -69,25 +51,20 @@
       </ul>
     </div>
 
-    {# Admin group #}
     {% if current_user.role in ('admin', 'super_admin') %}
     <div class="px-3">
       <p class="px-3 mb-1 text-micro uppercase text-ink-faint">Administration</p>
       <ul class="space-y-0.5">
         <li>
           <a href="{{ url_for('admin.index') }}"
-             class="flex items-center gap-3 px-3 py-2 rounded-standard text-small
-                    {% if section == 'admin' and request.endpoint == 'admin.index' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}"
-             aria-current="{% if section == 'admin' and request.endpoint == 'admin.index' %}page{% endif %}">
+             class="flex items-center gap-3 px-3 py-2 rounded-standard text-small {% if section == 'admin' and request.endpoint == 'admin.index' %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
             Dashboard
           </a>
         </li>
         <li>
           <a href="{{ url_for('admin.users_list') }}"
-             class="flex items-center gap-3 px-3 py-2 rounded-standard text-small
-                    {% if request.endpoint and 'users' in request.endpoint %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}"
-             aria-current="{% if request.endpoint and 'users' in request.endpoint %}page{% endif %}">
+             class="flex items-center gap-3 px-3 py-2 rounded-standard text-small {% if request.endpoint and 'users' in request.endpoint %}bg-indigo-soft text-indigo font-medium{% else %}text-ink-soft hover:bg-line-soft hover:text-ink{% endif %}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             Users
           </a>
@@ -98,7 +75,6 @@
 
   </nav>
 
-  {# Bottom: user card, tap to open Profile / Sign out popover #}
   <div class="border-t border-line p-3 relative" x-data="{ open: false }">
     <button type="button"
             @click="open = !open"
@@ -115,27 +91,16 @@
           {{ current_user.email }}
         </p>
       </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-           class="text-ink-faint flex-shrink-0"
-           :class="open ? 'rotate-180' : ''">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint flex-shrink-0" :class="open ? 'rotate-180' : ''">
         <polyline points="18 15 12 9 6 15"></polyline>
       </svg>
     </button>
 
-    {# Popover � opens upward since we're at bottom of sidebar #}
-    <div x-show="open"
-         x-transition
-         @click.outside="open = false"
-         @keydown.escape.window="open = false"
-         x-cloak
-         class="absolute bottom-full left-3 right-3 mb-2
-                bg-paper-raised border border-line rounded-comfortable
-                shadow-lift overflow-hidden">
+    <div x-show="open" x-transition @click.outside="open = false" @keydown.escape.window="open = false" x-cloak
+         class="absolute bottom-full left-3 right-3 mb-2 bg-paper-raised border border-line rounded-comfortable shadow-lift overflow-hidden">
       <a href="{{ url_for('dashboard.profile') }}"
          class="flex items-center gap-2 px-3 py-2.5 text-small text-ink hover:bg-line-soft">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
@@ -143,8 +108,7 @@
       </a>
       <a href="{{ url_for('auth.logout') }}"
          class="flex items-center gap-2 px-3 py-2.5 text-small text-danger hover:bg-danger-soft border-t border-line">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
           <polyline points="16 17 21 12 16 7"></polyline>
           <line x1="21" y1="12" x2="9" y2="12"></line>

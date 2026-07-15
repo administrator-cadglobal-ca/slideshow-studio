@@ -1,4 +1,4 @@
-﻿<header class="h-16 flex items-center justify-between px-4 md:px-8 border-b border-line sticky top-0 z-20 bg-paper/90 backdrop-blur">
+<header class="h-16 flex items-center justify-between px-4 md:px-8 border-b border-line sticky top-0 z-20 bg-paper/90 backdrop-blur">
   <h1 class="text-h2 truncate flex-1">{% block page_title %}{% endblock %}</h1>
   {% if current_user.is_authenticated %}
   <a href="{{ url_for('auth.logout') }}"
