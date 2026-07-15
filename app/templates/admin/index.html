@@ -1,169 +1,196 @@
 {% extends "shared/base.html" %}
-{% block title %}Admin — Slideshow Studio{% endblock %}
+
+{% block title %}Admin - Slideshow Studio{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div class="page-header-left">
-    <h1>Admin panel</h1>
-    <div class="page-sub">Manage users, registrations, and system settings</div>
-  </div>
-</div>
+<div class="max-w-6xl mx-auto py-6 space-y-6">
 
-<div class="admin-layout">
-
-{# ── Sidebar nav ── #}
-<div class="admin-sidenav">
-  <a href="{{ url_for('admin.index') }}" class="sidenav-item {% if request.endpoint=='admin.index' %}active{% endif %}">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-    Overview
-  </a>
-  <a href="{{ url_for('admin.requests_list') }}" class="sidenav-item {% if request.endpoint=='admin.requests_list' %}active{% endif %}">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    Requests
-    {% set pc = pending_requests_count %}
-    {% if pc > 0 %}<span class="sidenav-count">{{ pc }}</span>{% endif %}
-  </a>
-  <a href="{{ url_for('admin.users_list') }}" class="sidenav-item {% if request.endpoint=='admin.users_list' %}active{% endif %}">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    Users
-  </a>
-</div>
-
-{# ── Main content ── #}
-<div>
-  <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
-    <div class="stat-card">
-      <div class="stat-label">Pending requests</div>
-      <div class="stat-value" style="{{ 'color:#d97706' if pending|length > 0 else '' }}">{{ pending|length }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Active users</div>
-      <div class="stat-value">{{ users|selectattr('is_active')|list|length }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Total renders</div>
-      <div class="stat-value">{{ total_renders }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Storage backend</div>
-      <div style="font-size:13px;font-weight:600;margin-top:6px">pCloud</div>
-      <div class="stat-sub">P:\slideshow</div>
-    </div>
+  {# -- Header -------------------------------------------------- #}
+  <div>
+    <p class="text-caption text-ink-faint uppercase tracking-wider">Administration</p>
+    <h1 class="text-h1 mt-1">Overview</h1>
+    <p class="text-small text-ink-soft mt-1">Manage users, registrations, and system settings.</p>
   </div>
 
+  {# -- Stats grid ---------------------------------------------- #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+    <a href="{{ url_for('admin.requests_list') }}" class="card card-body hover:border-indigo transition-colors">
+      <p class="text-caption text-ink-faint uppercase tracking-wider">Pending requests</p>
+      <p class="text-h1 mt-2 {% if pending|length > 0 %}text-caution{% else %}text-ink{% endif %}">{{ pending|length }}</p>
+      {% if pending|length > 0 %}
+        <p class="text-caption text-ink-soft mt-1">Awaiting review</p>
+      {% else %}
+        <p class="text-caption text-ink-soft mt-1">All caught up</p>
+      {% endif %}
+    </a>
+
+    <a href="{{ url_for('admin.users_list') }}" class="card card-body hover:border-indigo transition-colors">
+      <p class="text-caption text-ink-faint uppercase tracking-wider">Active users</p>
+      <p class="text-h1 mt-2 text-ink">{{ users | selectattr('is_active') | list | length }}</p>
+      <p class="text-caption text-ink-soft mt-1">Signed-in capable</p>
+    </a>
+
+    <div class="card card-body">
+      <p class="text-caption text-ink-faint uppercase tracking-wider">Total renders</p>
+      <p class="text-h1 mt-2 text-ink">{{ total_renders }}</p>
+      <p class="text-caption text-ink-soft mt-1">Videos processed</p>
+    </div>
+
+    <div class="card card-body">
+      <p class="text-caption text-ink-faint uppercase tracking-wider">Storage backend</p>
+      <p class="text-body font-medium mt-2 text-ink">Cloudflare R2</p>
+      <p class="text-caption text-ink-soft mt-1 font-mono truncate">app.calgarydhamaka.com</p>
+    </div>
+
+  </div>
+
+  {# -- Pending banner ------------------------------------------ #}
   {% if pending %}
-  <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    <span style="font-size:13px;color:#92400e">
-      <strong>{{ pending|length }} registration request{{ 's' if pending|length != 1 }}</strong> waiting for review.
-    </span>
-    <a href="{{ url_for('admin.requests_list') }}" class="btn btn-sm btn-warning" style="margin-left:auto">Review now</a>
+  <div class="rounded-comfortable border border-caution/40 bg-caution-soft p-4 flex items-start gap-3 flex-wrap">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-caution flex-shrink-0 mt-0.5">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <div class="flex-1 min-w-0">
+      <p class="text-small font-medium text-ink">
+        {{ pending|length }} registration request{{ 's' if pending|length != 1 }} awaiting review
+      </p>
+      <p class="text-caption text-ink-soft mt-0.5">
+        Approve or reject to unblock new sign-ins.
+      </p>
+    </div>
+    <a href="{{ url_for('admin.requests_list') }}" class="btn-primary flex-shrink-0">Review now</a>
   </div>
   {% endif %}
 
-  {# Recent requests preview #}
+  {# -- Recent pending registrations (preview) ------------------ #}
   {% if pending %}
-  <div class="section-hd" style="margin-bottom:10px">
-    <div class="section-title">Pending registrations</div>
-    <a href="{{ url_for('admin.requests_list') }}" class="btn btn-sm">View all</a>
-  </div>
-  <div class="req-list" style="margin-bottom:20px">
-    {% for req in pending[:3] %}
-    <div class="req-card-item">
-      <div class="req-card-body">
-        <div class="req-av req-av-sm">{{ req.first_name[0] }}{{ req.last_name[0] }}</div>
-        <div class="req-info">
-          <div class="req-name-row">
-            {{ req.full_name }}
-            {% if req.discount_code %}<span class="disc-tag">{{ req.discount_code }}</span>{% endif %}
+  <section>
+    <div class="flex items-baseline justify-between mb-3">
+      <h2 class="text-h2">Recent registrations</h2>
+      <a href="{{ url_for('admin.requests_list') }}" class="text-small text-indigo hover:text-indigo-deep font-medium">View all</a>
+    </div>
+    <div class="space-y-3">
+      {% for req in pending[:3] %}
+      <div class="card card-body">
+        <div class="flex items-start gap-3 flex-wrap">
+          <div class="avatar-md bg-indigo text-white flex-shrink-0">
+            {{ req.first_name[:1] }}{{ req.last_name[:1] }}
           </div>
-          <div class="req-meta-row">
-            <span>{{ req.email }}</span>
-            <span>{{ req.phone }}</span>
-            <span>{{ req.created_at | naturaltime }}</span>
+          <div class="min-w-0 flex-1">
+            <p class="text-small font-medium">
+              {{ req.first_name }} {{ req.last_name }}
+              {% if req.discount_code %}
+                <span class="badge-neutral text-caption ml-2">{{ req.discount_code }}</span>
+              {% endif %}
+            </p>
+            <p class="text-caption text-ink-soft font-mono truncate">{{ req.email }}</p>
+            {% if req.phone %}
+              <p class="text-caption text-ink-soft font-mono">{{ req.phone }}</p>
+            {% else %}
+              <p class="text-caption text-ink-faint italic">No phone provided</p>
+            {% endif %}
+            {% if req.message %}
+              <p class="text-caption text-ink-soft mt-2 italic">"{{ req.message }}"</p>
+            {% endif %}
           </div>
-          {% if req.message %}<div class="req-msg">"{{ req.message }}"</div>{% endif %}
-          <div class="req-actions-row">
-            <form method="POST" action="{{ url_for('admin.approve_request', req_id=req.id) }}"
-                  onsubmit="return confirmApprove('{{ req.full_name }}')">
-              <button type="submit" class="btn btn-sm btn-success">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Approve
-              </button>
-            </form>
-            <button class="btn btn-sm btn-danger" onclick="toggleReject('{{ req.id }}')">Reject</button>
-          </div>
-          <div id="reject-{{ req.id }}" class="reject-expand" style="display:none">
-            <form method="POST" action="{{ url_for('admin.reject_request', req_id=req.id) }}">
-              <div class="reject-expand-inner">
-                <input type="text" name="note" placeholder="Reason (sent by SMS, optional)">
-                <button type="submit" class="btn btn-sm btn-danger">Send rejection</button>
-                <button type="button" class="btn btn-sm" onclick="toggleReject('{{ req.id }}')">Cancel</button>
-              </div>
-            </form>
+          <div class="text-right flex-shrink-0">
+            <p class="text-caption text-ink-faint">{{ req.created_at | naturaltime }}</p>
           </div>
         </div>
       </div>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
+  </section>
   {% endif %}
 
-  {# Recent users #}
-  <div class="section-hd" style="margin-bottom:10px">
-    <div class="section-title">Recent users</div>
-    <a href="{{ url_for('admin.users_list') }}" class="btn btn-sm">Manage all</a>
-  </div>
-  <div class="card">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>User</th>
-          <th>Phone</th>
-          <th>Storage</th>
-          <th>Status</th>
-          <th>Role</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for user in users[:8] %}
-        <tr>
-          <td>
-            <div class="td-user">
-              <div class="td-avatar {% if user.is_admin %}av-admin{% endif %}">{{ user.first_name[0] }}{{ user.last_name[0] }}</div>
-              <div>
-                <div class="td-name">{{ user.full_name }}</div>
-                <div class="td-meta">{{ user.email }}</div>
+  {# -- Recent users preview ------------------------------------ #}
+  <section>
+    <div class="flex items-baseline justify-between mb-3">
+      <h2 class="text-h2">Recent users</h2>
+      <a href="{{ url_for('admin.users_list') }}" class="text-small text-indigo hover:text-indigo-deep font-medium">Manage all</a>
+    </div>
+
+    {# Desktop table #}
+    <div class="hidden md:block card overflow-hidden">
+      <table class="w-full">
+        <thead class="border-b border-line bg-line-soft/50">
+          <tr class="text-left text-caption text-ink-faint uppercase tracking-wider">
+            <th class="px-4 py-3">User</th>
+            <th class="px-4 py-3">Role</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Storage</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+          {% for u in users[:8] %}
+          <tr class="hover:bg-line-soft/40">
+            <td class="px-4 py-3">
+              <a href="{{ url_for('admin.user_detail', user_id=u.id) }}" class="flex items-center gap-3 min-w-0">
+                <div class="avatar-md flex-shrink-0" style="background-color: {{ u.avatar_color }}; color: white">
+                  {{ u.initials }}
+                </div>
+                <div class="min-w-0">
+                  <p class="text-small font-medium truncate">{{ u.full_name }}</p>
+                  <p class="text-caption text-ink-soft font-mono truncate">{{ u.email }}</p>
+                </div>
+              </a>
+            </td>
+            <td class="px-4 py-3">
+              {% if u.role in ('admin', 'super_admin') %}
+                <span class="badge-indigo">{{ u.role | replace('_', ' ') | title }}</span>
+              {% else %}
+                <span class="text-small text-ink-soft">User</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              {% if u.status == 'active' %}<span class="badge-success">Active</span>
+              {% elif u.status == 'pending' %}<span class="badge-caution">Pending</span>
+              {% elif u.status == 'suspended' %}<span class="badge-danger">Suspended</span>
+              {% elif u.status == 'deactivated' %}<span class="badge-neutral">Deactivated</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <div class="text-caption text-ink-soft">{{ u.storage_used_display }} / {{ u.quota_display }}</div>
+              <div class="mt-1 w-24 h-1 bg-line rounded-full overflow-hidden">
+                <div class="h-full {% if u.storage_pct >= 90 %}bg-danger{% elif u.storage_pct >= 70 %}bg-caution{% else %}bg-indigo{% endif %}" style="width: {{ u.storage_pct }}%"></div>
               </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Mobile cards #}
+    <div class="md:hidden space-y-3">
+      {% for u in users[:8] %}
+      <a href="{{ url_for('admin.user_detail', user_id=u.id) }}" class="block card card-body">
+        <div class="flex items-center gap-3">
+          <div class="avatar-md flex-shrink-0" style="background-color: {{ u.avatar_color }}; color: white">
+            {{ u.initials }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-small font-medium truncate">{{ u.full_name }}</p>
+            <p class="text-caption text-ink-soft font-mono truncate">{{ u.email }}</p>
+            <div class="mt-1 flex items-center gap-2 flex-wrap">
+              {% if u.status == 'active' %}<span class="badge-success text-caption">Active</span>
+              {% elif u.status == 'pending' %}<span class="badge-caution text-caption">Pending</span>
+              {% elif u.status == 'suspended' %}<span class="badge-danger text-caption">Suspended</span>
+              {% elif u.status == 'deactivated' %}<span class="badge-neutral text-caption">Deactivated</span>
+              {% endif %}
+              {% if u.role in ('admin', 'super_admin') %}
+                <span class="badge-indigo text-caption">{{ u.role | replace('_', ' ') | title }}</span>
+              {% endif %}
             </div>
-          </td>
-          <td><div class="td-meta">{{ user.phone }}</div></td>
-          <td>
-            <div class="td-meta">{{ user.storage_used|filesizeformat }} / {{ user.quota_bytes|filesizeformat }}</div>
-            <div class="progress" style="margin-top:3px;width:80px">
-              <div class="progress-bar" style="width:{{ [user.storage_pct,100]|min }}%"></div>
-            </div>
-          </td>
-          <td>
-            {% if user.is_active %}
-              <span class="pill pill-success">Active</span>
-            {% else %}
-              <span class="pill pill-danger">Suspended</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if user.is_admin %}
-              <span class="pill pill-purple">Admin</span>
-            {% else %}
-              <span class="pill pill-gray">User</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
 
 </div>
 {% endblock %}
