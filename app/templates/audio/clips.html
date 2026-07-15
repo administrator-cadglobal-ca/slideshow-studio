@@ -143,6 +143,14 @@
               </svg>
             </div>
 
+            {# Thin progress bar shown when playing (only when collapsed) #}
+            <div x-show="playing && !expanded" x-cloak class="px-4 pb-2">
+              <div class="h-1 bg-line rounded-full overflow-hidden">
+                <div class="h-full bg-indigo rounded-full transition-none"
+                     :style="'width: ' + progressPct + '%'"></div>
+              </div>
+            </div>
+
             {# Expanded editor panel #}
             <div x-show="expanded" x-cloak class="px-4 pb-4 pt-1 space-y-3 bg-line-soft/30">
 
