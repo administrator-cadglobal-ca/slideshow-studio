@@ -1,3 +1,27 @@
+/* ============================================================
+   Design tokens as CSS custom properties
+   Mirror the Tailwind theme so plain-CSS rules can reference them
+   via var(--color-*). Added 2026-07-15 alongside audio legacy CSS.
+   ============================================================ */
+:root {
+  --color-indigo:        #2E3271;
+  --color-indigo-deep:   #1F225A;
+  --color-indigo-soft:   #EEF0FA;
+  --color-turmeric:      #E5A63E;
+  --color-paper:         #FBF9F4;
+  --color-paper-raised:  #FFFFFF;
+  --color-ink:           #1A1F36;
+  --color-ink-soft:      #4A5170;
+  --color-ink-faint:     #8A90A8;
+  --color-line:          #E8E4DA;
+  --color-line-soft:     #F3F0E8;
+  --color-danger:        #B23A48;
+  --color-danger-soft:   #FBEBEE;
+  --color-success:       #2F7D4F;
+  --color-success-soft:  #E6F4EC;
+  --color-caution:       #B4761F;
+  --color-caution-soft:  #FCF3E4;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
