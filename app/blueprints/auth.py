@@ -63,9 +63,9 @@ def login():
             flash("No active account found for that email.", "error")
             return render_template("auth/login.html", email=email)
 
-        from app.services.otp import issue_otp, send_otp_sms
+        from app.services.otp import issue_otp, send_otp_email
         otp = issue_otp(user)
-        send_otp_sms(user, otp)
+        send_otp_email(user, otp)
         session["pending_user_id"] = user.id
         return redirect(url_for("auth.verify"))
 
@@ -82,8 +82,8 @@ def verify():
     if not user:
         return redirect(url_for("auth.login"))
 
-    from app.services.otp import mask_phone
-    masked = mask_phone(user.phone)
+    from app.services.otp import mask_email
+    sent_to = mask_email(user.email)
 
     if request.method == "POST":
         code = request.form.get("code", "").strip().upper()
@@ -102,7 +102,7 @@ def verify():
         else:
             flash(reason, "error")
 
-    return render_template("auth/verify.html", masked_phone=masked)
+    return render_template("auth/verify.html", sent_to=sent_to)
 
 
 @bp.route("/resend-otp", methods=["POST"])
@@ -111,9 +111,9 @@ def resend_otp():
     if user_id:
         user = db.session.get(User, user_id)
         if user:
-            from app.services.otp import issue_otp, send_otp_sms
+            from app.services.otp import issue_otp, send_otp_email
             otp = issue_otp(user)
-            send_otp_sms(user, otp)
+            send_otp_email(user, otp)
             flash("New code sent.", "info")
     return redirect(url_for("auth.verify"))
 
