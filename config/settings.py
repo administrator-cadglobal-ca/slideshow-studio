@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -92,6 +93,9 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    # Session lifetime — user must re-authenticate every 24 hours
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
+    REMEMBER_COOKIE_DURATION  = timedelta(hours=24)
     SESSION_COOKIE_SECURE   = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"

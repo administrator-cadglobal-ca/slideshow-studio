@@ -95,7 +95,8 @@ def verify():
             user.last_login = datetime.now(timezone.utc)
             db.session.commit()
             session.pop("pending_user_id", None)
-            login_user(user, remember=True)
+            session.permanent = True
+            login_user(user, remember=False)
             next_url = request.args.get("next") or url_for("dashboard.index")
             return redirect(next_url)
         else:

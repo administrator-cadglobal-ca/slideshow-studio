@@ -98,10 +98,12 @@
 
   </nav>
 
-  {# Bottom: user card / settings shortcut #}
-  <div class="border-t border-line p-3">
-    <a href="{{ url_for('dashboard.profile') }}"
-       class="flex items-center gap-3 p-2 rounded-standard hover:bg-line-soft">
+  {# Bottom: user card, tap to open Profile / Sign out popover #}
+  <div class="border-t border-line p-3 relative" x-data="{ open: false }">
+    <button type="button"
+            @click="open = !open"
+            :aria-expanded="open"
+            class="w-full flex items-center gap-3 p-2 rounded-standard hover:bg-line-soft text-left">
       <div class="avatar-md" style="background-color: {{ current_user.avatar_color if current_user.avatar_color else '#2E3271' }}">
         {{ current_user.first_name[:1] }}{{ current_user.last_name[:1] }}
       </div>
@@ -113,6 +115,42 @@
           {{ current_user.email }}
         </p>
       </div>
-    </a>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           class="text-ink-faint flex-shrink-0"
+           :class="open ? 'rotate-180' : ''">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+
+    {# Popover — opens upward since we're at bottom of sidebar #}
+    <div x-show="open"
+         x-transition
+         @click.outside="open = false"
+         @keydown.escape.window="open = false"
+         x-cloak
+         class="absolute bottom-full left-3 right-3 mb-2
+                bg-paper-raised border border-line rounded-comfortable
+                shadow-lift overflow-hidden">
+      <a href="{{ url_for('dashboard.profile') }}"
+         class="flex items-center gap-2 px-3 py-2.5 text-small text-ink hover:bg-line-soft">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        Profile
+      </a>
+      <a href="{{ url_for('auth.logout') }}"
+         class="flex items-center gap-2 px-3 py-2.5 text-small text-danger hover:bg-danger-soft border-t border-line">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Sign out
+      </a>
+    </div>
   </div>
 </aside>
