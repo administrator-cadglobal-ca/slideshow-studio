@@ -1,0 +1,311 @@
+{% extends "shared/base.html" %}
+{% block title %}Playlists - Slideshow Studio{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6"
+     x-data="playlistsPage()"
+     x-init="init()">
+
+  {# -- Header -- #}
+  <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
+    <div>
+      <h1 class="text-h1">Playlists</h1>
+      <p class="text-small text-ink-soft mt-1">
+        {{ playlists|length }} playlist{{ 's' if playlists|length != 1 }} &middot;
+        {{ all_clips|length }} clip{{ 's' if all_clips|length != 1 }} available
+      </p>
+    </div>
+  </div>
+
+  {# -- Tabs -- #}
+  <div class="flex items-center gap-1 border-b border-line mb-6">
+    <a href="{{ url_for('audio.index') }}"
+       class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px border-transparent text-ink-soft hover:text-ink">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"></path>
+        <circle cx="6" cy="18" r="3"></circle>
+        <circle cx="18" cy="16" r="3"></circle>
+      </svg>
+      Song library
+    </a>
+    <a href="{{ url_for('audio.clips') }}"
+       class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px border-transparent text-ink-soft hover:text-ink">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="6" r="3"></circle>
+        <circle cx="6" cy="18" r="3"></circle>
+        <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+        <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+        <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+      </svg>
+      Clip library
+    </a>
+    <a href="{{ url_for('audio.playlists_page') }}"
+       class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px border-indigo text-indigo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+      </svg>
+      Playlists
+    </a>
+  </div>
+
+  {# -- Two-column: playlists sidebar + selected playlist clips -- #}
+  <div class="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
+
+    {# Playlists sidebar #}
+    <aside class="space-y-1">
+      <div class="flex items-center justify-between px-2 mb-1">
+        <p class="text-caption text-ink-faint uppercase tracking-wider">Playlists</p>
+        <button type="button"
+                @click="playlistDialog = { open: true, mode: 'create', id: null, name: '', color: '#2E3271' }"
+                class="text-ink-faint hover:text-indigo text-body leading-none px-1"
+                title="New playlist">+</button>
+      </div>
+
+      {% if playlists|length == 0 %}
+        <p class="text-caption text-ink-faint italic px-2 py-2">No playlists yet. Click + to create one.</p>
+      {% endif %}
+
+      {% for pl in playlists %}
+      <div class="group flex items-center gap-1">
+        <button type="button"
+                @click="activePlaylist = {{ pl.id }}"
+                :class="activePlaylist === {{ pl.id }} ? 'bg-indigo-soft text-indigo font-medium' : 'text-ink-soft hover:bg-line-soft'"
+                class="flex-1 flex items-center gap-2 px-3 py-2 rounded-standard text-small text-left min-w-0">
+          <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {{ pl.color }}"></span>
+          <span class="flex-1 truncate">{{ pl.name }}</span>
+          <span class="text-caption tabular-nums">{{ pl.clips|length }}</span>
+        </button>
+        <button type="button"
+                @click="playlistDialog = { open: true, mode: 'edit', id: {{ pl.id }}, name: '{{ pl.name|e }}', color: '{{ pl.color }}' }"
+                class="opacity-0 group-hover:opacity-100 text-ink-faint hover:text-ink px-1 text-caption"
+                title="Edit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+        </button>
+      </div>
+      {% endfor %}
+    </aside>
+
+    {# Main area: clips in selected playlist #}
+    <div class="min-w-0">
+
+      {% if playlists|length == 0 %}
+        <div class="rounded-comfortable border-2 border-dashed border-line p-12 text-center">
+          <div class="mx-auto w-14 h-14 rounded-full bg-line-soft flex items-center justify-center mb-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+              <line x1="7" y1="7" x2="7.01" y2="7"></line>
+            </svg>
+          </div>
+          <h2 class="text-h2 mb-1">No playlists yet</h2>
+          <p class="text-small text-ink-soft mb-4">
+            Playlists are curated collections of audio clips.<br>
+            Create one, then add clips from your <a href="{{ url_for('audio.clips') }}" class="text-indigo hover:underline">Clip library</a>.
+          </p>
+          <button type="button"
+                  @click="playlistDialog = { open: true, mode: 'create', id: null, name: '', color: '#2E3271' }"
+                  class="btn-primary">
+            Create your first playlist
+          </button>
+        </div>
+
+      {% else %}
+
+        {% for pl in playlists %}
+        <div x-show="activePlaylist === {{ pl.id }}" x-cloak>
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div>
+              <h2 class="text-h2" style="color: {{ pl.color }}">{{ pl.name }}</h2>
+              <p class="text-small text-ink-soft mt-1">
+                {{ pl.clips|length }} clip{{ 's' if pl.clips|length != 1 }}
+              </p>
+            </div>
+          </div>
+
+          {% if pl.clips|length == 0 %}
+            <div class="rounded-comfortable border-2 border-dashed border-line p-8 text-center">
+              <p class="text-small text-ink-soft">
+                No clips in this playlist yet. Head to
+                <a href="{{ url_for('audio.clips') }}" class="text-indigo hover:underline">Clip library</a>,
+                select clips, and click <span class="font-medium">Add to playlist</span>.
+              </p>
+            </div>
+          {% else %}
+            <div class="card overflow-hidden">
+              {% for clip in pl.clips %}
+              <div class="border-b border-line last:border-b-0 transition-colors"
+                   x-data="{ playing: false, currentTime: 0, songDuration: {{ clip.song.duration_s or 0 }} }"
+                   :class="playing ? 'bg-indigo-soft' : ''">
+
+                <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft cursor-pointer"
+                     @click="togglePlay({{ clip.id }}, {{ clip.song_id }}, $refs.audio)">
+                  <button type="button"
+                          @click.stop="togglePlay({{ clip.id }}, {{ clip.song_id }}, $refs.audio)"
+                          class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep">
+                    <svg x-show="!playing" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <svg x-show="playing" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16"></rect>
+                      <rect x="14" y="4" width="4" height="16"></rect>
+                    </svg>
+                  </button>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-small font-medium text-ink truncate">{{ clip.name }}</p>
+                    <p class="text-caption text-ink-faint truncate">{{ clip.description or 'No description' }}</p>
+                  </div>
+                  <span class="text-caption text-ink-soft tabular-nums hidden md:inline">{{ clip.song.orig_name }}</span>
+                  <button type="button"
+                          @click.stop="removeClipFromPlaylist({{ pl.id }}, {{ clip.id }})"
+                          class="text-ink-faint hover:text-danger p-1" title="Remove from playlist">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+
+                <div x-show="(playing || currentTime > 0)" x-cloak class="px-4 pb-3 flex items-center gap-3">
+                  <audio x-ref="audio" preload="none"
+                         @timeupdate="currentTime = $event.target.currentTime"
+                         @pause="playing = false"
+                         @play="playing = true"
+                         @ended="playing = false"></audio>
+                  <span class="text-caption tabular-nums text-ink-soft w-10 text-right" x-text="fmtTime(currentTime)"></span>
+                  <div class="flex-1 h-1.5 bg-line rounded-full cursor-pointer relative"
+                       @click.stop="seek($event, $refs.audio)">
+                    <div class="h-full bg-indigo rounded-full transition-none"
+                         :style="'width: ' + (songDuration ? Math.round(100 * currentTime / songDuration) : 0) + '%'"></div>
+                  </div>
+                  <span class="text-caption tabular-nums text-ink-soft w-10" x-text="fmtTime(songDuration)"></span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+
+      {% endif %}
+    </div>
+  </div>
+
+  {# Playlist create/edit modal #}
+  <div x-show="playlistDialog.open" x-cloak
+       @keydown.escape.window="playlistDialog.open = false"
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+    <div @click.outside="playlistDialog.open = false"
+         class="w-full max-w-md bg-paper-raised border border-line rounded-comfortable shadow-lift p-6">
+      <h3 class="text-h3 mb-4" x-text="playlistDialog.mode === 'edit' ? 'Edit playlist' : 'New playlist'"></h3>
+
+      <label class="label">Playlist name</label>
+      <input type="text" x-model="playlistDialog.name" required autofocus class="input mb-4" placeholder="e.g. Wedding Baraat">
+
+      <label class="label">Color</label>
+      <div class="flex flex-wrap gap-2 mb-6">
+        <template x-for="c in ['#2E3271', '#7A4EA8', '#2F7D4F', '#B4761F', '#B23A48', '#3E7BB0', '#B2437F', '#4A5170', '#5C7A5B']">
+          <button type="button"
+                  @click="playlistDialog.color = c"
+                  :style="'background-color: ' + c"
+                  :class="playlistDialog.color === c ? 'ring-2 ring-offset-2 ring-ink' : ''"
+                  class="w-8 h-8 rounded-full"></button>
+        </template>
+      </div>
+
+      <div class="flex justify-between items-center gap-3">
+        <div>
+          <template x-if="playlistDialog.mode === 'edit'">
+            <button type="button"
+                    @click="deletePlaylist(playlistDialog.id)"
+                    class="text-small text-danger hover:underline">Delete playlist</button>
+          </template>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" @click="playlistDialog.open = false" class="btn-secondary">Cancel</button>
+          <button type="button" @click="savePlaylist()" class="btn-primary"
+                  x-text="playlistDialog.mode === 'edit' ? 'Save changes' : 'Create'"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function playlistsPage() {
+  return {
+    activePlaylist: {{ playlists[0].id if playlists else 'null' }},
+    playlistDialog: { open: false, mode: 'create', id: null, name: '', color: '#2E3271' },
+
+    init() {
+      window.addEventListener('audio-play', (e) => {
+        document.querySelectorAll('audio').forEach(a => {
+          if (a !== e.detail) a.pause();
+        });
+      });
+    },
+
+    togglePlay(clipId, songId, audio) {
+      if (!audio.src) {
+        audio.src = '/audio/stream/' + songId;
+      }
+      if (audio.paused) {
+        window.dispatchEvent(new CustomEvent('audio-play', { detail: audio }));
+        audio.play();
+      } else {
+        audio.pause();
+      }
+    },
+
+    seek(event, audio) {
+      if (!audio || !audio.duration) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const pct = (event.clientX - rect.left) / rect.width;
+      audio.currentTime = pct * audio.duration;
+    },
+
+    savePlaylist() {
+      const dlg = this.playlistDialog;
+      const isEdit = dlg.mode === 'edit';
+      const url = isEdit ? '/audio/labels/' + dlg.id : '/audio/labels';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      fetch(url, {
+        method: method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: dlg.name.trim(), color: dlg.color}),
+      })
+        .then(r => r.json())
+        .then(() => window.location.reload())
+        .catch(err => alert('Save failed: ' + err));
+    },
+
+    deletePlaylist(id) {
+      if (!confirm('Delete this playlist? Clips are not deleted, just removed from this playlist.')) return;
+      fetch('/audio/labels/' + id, {method: 'DELETE'})
+        .then(r => r.json())
+        .then(() => window.location.reload())
+        .catch(err => alert('Delete failed: ' + err));
+    },
+
+    removeClipFromPlaylist(playlistId, clipId) {
+      if (!confirm('Remove this clip from the playlist?')) return;
+      // The existing API doesn't have a "remove clip from label" - only add.
+      // For now, alert until Sub-commit B adds this endpoint.
+      alert('Remove-clip-from-playlist endpoint coming in the next sub-commit.');
+    },
+  };
+}
+
+function fmtTime(secs) {
+  if (!secs || !isFinite(secs)) return '0:00';
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return m + ':' + (s < 10 ? '0' + s : s);
+}
+window.fmtTime = fmtTime;
+</script>
+{% endblock %}

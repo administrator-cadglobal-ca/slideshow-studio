@@ -454,14 +454,21 @@ def delete_clip(clip_id):
 # -----------------------------------------------------------------------------
 # LABELS (existing system; untouched by Session A migration)
 # -----------------------------------------------------------------------------
-@bp.route("/labels")
+@bp.route("/playlists")
 @login_required
-def labels_page():
+def playlists_page():
+    """Renamed from labels_page. Underlying AudioLabel model unchanged for now -
+    render pipeline (projects.py) still calls them 'labels' internally."""
     labels = AudioLabel.query.filter_by(user_id=current_user.id)\
                              .order_by(AudioLabel.sort_order, AudioLabel.name).all()
     songs  = AudioFile.query.filter_by(user_id=current_user.id)\
                             .order_by(AudioFile.orig_name).all()
-    return render_template("audio/labels.html", labels=labels, songs=songs)
+    all_clips = AudioClip.query\
+                  .join(AudioFile, AudioClip.song_id == AudioFile.id)\
+                  .filter(AudioFile.user_id == current_user.id)\
+                  .order_by(AudioClip.name).all()
+    return render_template("audio/playlists.html",
+                           playlists=labels, songs=songs, all_clips=all_clips)
 
 
 @bp.route("/labels", methods=["POST"])
