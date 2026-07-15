@@ -172,14 +172,16 @@
         {% else %}
         <div class="card overflow-hidden">
           {% for song in songs %}
-          <div class="border-b border-line last:border-b-0"
+          <div class="border-b border-line last:border-b-0 transition-colors"
                x-show="matchesLibrary({{ song.library_id or 'null' }})"
+               :class="playing ? 'bg-indigo-soft' : ''"
                x-data="{ playing: false, currentTime: 0, duration: {{ song.duration_s or 0 }} }">
 
             {#  Row body  #}
-            <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft">
+            <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft cursor-pointer"
+                 @click="togglePlay('{{ song.id }}', $event)">
               <button type="button"
-                      @click="togglePlay('{{ song.id }}', $event)"
+                      @click.stop="togglePlay('{{ song.id }}', $event)"
                       class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep"
                       :title="playing ? 'Pause' : 'Play'">
                 <svg x-show="!playing" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -240,6 +242,7 @@
 
               {# Delete #}
               <form method="POST" action="{{ url_for('audio.delete_song', song_id=song.id) }}"
+                    @click.stop
                     onsubmit="return confirm('Delete {{ song.orig_name|e }}?');">
                 {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
                 <button type="submit" class="text-ink-faint hover:text-danger p-1" title="Delete">
@@ -252,11 +255,11 @@
             </div>
 
             {#  Inline player (shown only when playing)  #}
-            <div x-show="playing" x-cloak class="px-4 pb-3 flex items-center gap-3">
+            <div x-show="playing || currentTime > 0" x-cloak class="px-4 pb-3 flex items-center gap-3">
               <audio x-ref="audio" preload="none"
                      @timeupdate="currentTime = $event.target.currentTime"
                      @loadedmetadata="if (!duration) duration = $event.target.duration"
-                     @ended="playing = false; currentTime = 0"></audio>
+                     @ended="playing = false"></audio>
               <span class="text-caption tabular-nums text-ink-soft w-10 text-right" x-text="fmtTime(currentTime)"></span>
               <div class="flex-1 h-1.5 bg-line rounded-full cursor-pointer relative"
                    @click="seek($event, $refs.audio)">
