@@ -143,12 +143,15 @@
               </svg>
             </div>
 
-            {# Thin progress bar shown when playing (only when collapsed) #}
-            <div x-show="playing && !expanded" x-cloak class="px-4 pb-2">
-              <div class="h-1 bg-line rounded-full overflow-hidden">
+            {# Inline player shown when playing and row collapsed - matches Song library pattern #}
+            <div x-show="playing && !expanded" x-cloak class="px-4 pb-3 flex items-center gap-3">
+              <span class="text-caption tabular-nums text-ink-soft w-10 text-right" x-text="fmtTime(currentTime)"></span>
+              <div class="flex-1 h-1.5 bg-line rounded-full cursor-pointer relative"
+                   @click.stop="seek($event, $refs.audio)">
                 <div class="h-full bg-indigo rounded-full transition-none"
                      :style="'width: ' + progressPct + '%'"></div>
               </div>
+              <span class="text-caption tabular-nums text-ink-soft w-10" x-text="fmtTime(displayEnd)"></span>
             </div>
 
             {# Expanded editor panel #}
