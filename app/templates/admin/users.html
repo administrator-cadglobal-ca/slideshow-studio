@@ -1,188 +1,240 @@
 {% extends "shared/base.html" %}
-{% block title %}Users — Admin{% endblock %}
+
+{% block title %}Users - Admin{% endblock %}
 
 {% block content %}
-<div class="page-wrap">
+<div class="max-w-6xl mx-auto py-6" x-data="{ actionsFor: null }">
 
-  <div class="page-header">
-    <div>
-      <h1>Users</h1>
-      <p class="page-sub">{{ users|length }} accounts</p>
-    </div>
+  {# Header #}
+  <div class="mb-6">
+    <p class="text-caption text-ink-faint uppercase tracking-wider">Administration</p>
+    <h1 class="text-h1 mt-1">Users</h1>
+    <p class="text-small text-ink-soft mt-1">
+      {{ counts.all }} total
+      {% if counts.pending %}&middot; {{ counts.pending }} awaiting approval{% endif %}
+    </p>
   </div>
 
-  <div class="card">
-    <table class="user-table">
-      <thead>
-        <tr>
-          <th>User</th>
-          <th>Contact</th>
-          <th>Storage</th>
-          <th>Status</th>
-          <th>Role</th>
-          <th>Actions</th>
+  {# Filters + search #}
+  <form method="GET" action="{{ url_for('admin.users_list') }}" class="mb-6 space-y-3">
+    {# Status filter chips #}
+    <div class="flex flex-wrap gap-2">
+      {% set chip_defs = [
+        ("",             "All",         counts.all),
+        ("pending",      "Pending",     counts.pending),
+        ("active",       "Active",      counts.active),
+        ("suspended",    "Suspended",   counts.suspended),
+        ("deactivated", "Deactivated", counts.deactivated),
+      ] %}
+      {% for value, label, count in chip_defs %}
+        <a href="{{ url_for('admin.users_list', q=q, status=value, role=role, sort=sort) }}"
+           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-small {% if status == value %}bg-indigo text-white{% else %}bg-line-soft text-ink-soft hover:bg-line hover:text-ink{% endif %}">
+          <span>{{ label }}</span>
+          <span class="text-caption {% if status == value %}text-white/80{% else %}text-ink-faint{% endif %}">{{ count }}</span>
+        </a>
+      {% endfor %}
+    </div>
+
+    {# Search + role + sort row #}
+    <div class="flex flex-col md:flex-row gap-2">
+      <div class="flex-1 relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" name="q" value="{{ q }}"
+               class="input pl-9" placeholder="Search name, email, phone...">
+        {# Preserve current filter state on submit #}
+        <input type="hidden" name="status" value="{{ status }}">
+        <input type="hidden" name="role"   value="{{ role }}">
+        <input type="hidden" name="sort"   value="{{ sort }}">
+      </div>
+      <select name="role" class="input md:w-40" onchange="this.form.submit()">
+        <option value="">All roles</option>
+        <option value="user"  {% if role == 'user'  %}selected{% endif %}>User</option>
+        <option value="admin" {% if role == 'admin' %}selected{% endif %}>Admin</option>
+      </select>
+      <select name="sort" class="input md:w-48" onchange="this.form.submit()">
+        <option value="recent"     {% if sort == 'recent'     %}selected{% endif %}>Recently added</option>
+        <option value="oldest"     {% if sort == 'oldest'     %}selected{% endif %}>Oldest first</option>
+        <option value="name"       {% if sort == 'name'       %}selected{% endif %}>Name A-Z</option>
+        <option value="email"      {% if sort == 'email'      %}selected{% endif %}>Email A-Z</option>
+        <option value="last_login" {% if sort == 'last_login' %}selected{% endif %}>Last login</option>
+      </select>
+      <button type="submit" class="btn-primary md:w-auto">Search</button>
+    </div>
+  </form>
+
+  {# Empty state #}
+  {% if not users %}
+    <div class="card card-body text-center py-12">
+      <div class="mx-auto w-14 h-14 rounded-full bg-line-soft flex items-center justify-center mb-4">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </div>
+      <h2 class="text-h2 mb-1">No users match</h2>
+      <p class="text-small text-ink-soft">Try clearing the filters or adjusting your search.</p>
+    </div>
+
+  {% else %}
+
+  {# -- DESKTOP TABLE (md+) --------------------------------------- #}
+  <div class="hidden md:block card overflow-hidden">
+    <table class="w-full">
+      <thead class="border-b border-line bg-line-soft/50">
+        <tr class="text-left text-caption text-ink-faint uppercase tracking-wider">
+          <th class="px-4 py-3">User</th>
+          <th class="px-4 py-3">Role</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">Storage</th>
+          <th class="px-4 py-3">Last login</th>
+          <th class="px-4 py-3 w-12"></th>
         </tr>
       </thead>
-      <tbody>
-        {% for user in users %}
-        <tr class="user-row {% if not user.is_active %}user-suspended{% endif %}">
-
-          {# Name + avatar #}
-          <td>
-            <div class="user-cell">
-              <div class="user-avatar {% if user.is_admin %}avatar-admin{% endif %}">
-                {{ user.first_name[0] }}{{ user.last_name[0] }}
+      <tbody class="divide-y divide-line">
+        {% for u in users %}
+        <tr class="hover:bg-line-soft/40">
+          <td class="px-4 py-3">
+            <a href="{{ url_for('admin.user_detail', user_id=u.id) }}" class="flex items-center gap-3 min-w-0">
+              <div class="avatar-md flex-shrink-0" style="background-color: {{ u.avatar_color }}; color: white">
+                {{ u.initials }}
               </div>
-              <div>
-                <div class="user-name">
-                  {{ user.full_name }}
-                  {% if user.id == current_user.id %}
-                    <span class="you-tag">(you)</span>
-                  {% endif %}
-                </div>
-                <div class="user-email">{{ user.email }}</div>
+              <div class="min-w-0">
+                <p class="text-small font-medium text-ink truncate">
+                  {{ u.full_name }}
+                  {% if u.id == current_user.id %}<span class="text-caption text-ink-faint font-normal">(you)</span>{% endif %}
+                </p>
+                <p class="text-caption text-ink-soft font-mono truncate">{{ u.email }}</p>
               </div>
-            </div>
+            </a>
           </td>
-
-          {# Phone #}
-          <td>
-            <div class="cell-meta">{{ user.phone }}</div>
-            {% if user.google_connected %}
-            <div class="google-connected">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-              Google connected
-            </div>
-            {% endif %}
-          </td>
-
-          {# Storage #}
-          <td>
-            <div class="storage-cell">
-              <div class="storage-nums">
-                {{ user.storage_used | filesizeformat }} / {{ user.quota_bytes | filesizeformat }}
-              </div>
-              <div class="storage-bar">
-                <div class="storage-fill" style="width: {{ [user.storage_pct, 100]|min }}%
-                  {% if user.storage_pct > 90 %}; background: var(--fill-danger){% endif %}">
-                </div>
-              </div>
-            </div>
-          </td>
-
-          {# Status #}
-          <td>
-            {% if user.is_active %}
-              <span class="pill pill-success">Active</span>
+          <td class="px-4 py-3">
+            {% if u.role in ('admin', 'super_admin') %}
+              <span class="badge-indigo">{{ u.role | replace('_', ' ') | title }}</span>
             {% else %}
-              <span class="pill pill-danger">Suspended</span>
+              <span class="text-small text-ink-soft">User</span>
             {% endif %}
-            <div class="cell-meta">
-              Last login: {{ user.last_login | naturaltime if user.last_login else 'never' }}
+          </td>
+          <td class="px-4 py-3">
+            {% if u.status == 'active' %}<span class="badge-success">Active</span>
+            {% elif u.status == 'pending' %}<span class="badge-caution">Pending</span>
+            {% elif u.status == 'suspended' %}<span class="badge-danger">Suspended</span>
+            {% elif u.status == 'deactivated' %}<span class="badge-neutral">Deactivated</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <div class="text-caption text-ink-soft">{{ u.storage_used_display }} / {{ u.quota_display }}</div>
+            <div class="mt-1 w-24 h-1 bg-line rounded-full overflow-hidden">
+              <div class="h-full {% if u.storage_pct >= 90 %}bg-danger{% elif u.storage_pct >= 70 %}bg-caution{% else %}bg-indigo{% endif %}" style="width: {{ u.storage_pct }}%"></div>
             </div>
           </td>
-
-          {# Role — dropdown to promote/demote #}
-          <td>
-            {% if user.id != current_user.id %}
-            <form method="POST" action="{{ url_for('admin.set_role', user_id=user.id) }}">
-              <select name="role" class="role-select"
-                      onchange="this.form.submit()"
-                      title="Change role">
-                <option value="user"  {% if user.role == 'user'  %}selected{% endif %}>User</option>
-                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
-              </select>
-            </form>
-            {% else %}
-              <span class="pill pill-pro">Admin</span>
-            {% endif %}
+          <td class="px-4 py-3 text-caption text-ink-soft">
+            {% if u.last_login %}{{ u.last_login | naturaltime }}{% else %}<span class="text-ink-faint italic">never</span>{% endif %}
           </td>
-
-          {# Actions #}
-          <td>
-            <div class="action-btns">
-              {% if user.id != current_user.id %}
-
-              {# Quota #}
-              <button class="btn-icon" title="Set storage quota"
-                      onclick="openQuota({{ user.id }}, '{{ user.full_name }}', {{ (user.quota_bytes / 1024**3)|round|int }})">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-                Quota
+          <td class="px-4 py-3 text-right">
+            <div class="relative inline-block" x-data="{ open: false }">
+              <button type="button"
+                      @click.stop="open = !open"
+                      class="btn-icon-sm"
+                      aria-label="Actions">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="1"></circle>
+                  <circle cx="12" cy="5"  r="1"></circle>
+                  <circle cx="12" cy="19" r="1"></circle>
+                </svg>
               </button>
-
-              {# Suspend / Reactivate #}
-              <form method="POST" action="{{ url_for('admin.toggle_user', user_id=user.id) }}"
-                    onsubmit="return confirm('{{ 'Suspend' if user.is_active else 'Reactivate' }} {{ user.full_name }}?')">
-                <button type="submit" class="btn-icon {% if user.is_active %}btn-warn{% else %}btn-ok{% endif %}"
-                        title="{{ 'Suspend' if user.is_active else 'Reactivate' }}">
-                  {% if user.is_active %}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                    Suspend
-                  {% else %}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                    Reactivate
+              <div x-show="open" x-transition x-cloak
+                   @click.outside="open = false"
+                   @keydown.escape.window="open = false"
+                   class="absolute right-0 top-full mt-1 w-56 bg-paper-raised border border-line rounded-comfortable shadow-lift overflow-hidden z-30">
+                <a href="{{ url_for('admin.user_detail', user_id=u.id) }}"
+                   class="block px-3 py-2 text-small text-ink hover:bg-line-soft">View details</a>
+                {% if u.id != current_user.id %}
+                  {% if u.status == 'active' %}
+                    <form method="POST" action="{{ url_for('admin.user_suspend', user_id=u.id) }}" class="block">
+                      <input type="hidden" name="reason" value="Suspended from users list">
+                      <button type="submit" class="w-full text-left px-3 py-2 text-small text-ink hover:bg-line-soft">Suspend</button>
+                    </form>
+                  {% elif u.status == 'suspended' %}
+                    <form method="POST" action="{{ url_for('admin.user_reactivate', user_id=u.id) }}" class="block">
+                      <button type="submit" class="w-full text-left px-3 py-2 text-small text-ink hover:bg-line-soft">Reactivate</button>
+                    </form>
                   {% endif %}
-                </button>
-              </form>
-
-              {# Delete — only for suspended users #}
-              {% if not user.is_active %}
-              <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
-                    onsubmit="return confirm('Permanently delete {{ user.full_name }} and all their data?\n\nThis cannot be undone.')">
-                <button type="submit" class="btn-icon btn-danger" title="Delete user">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                  Delete
-                </button>
-              </form>
-              {% endif %}
-
-              {% endif %}{# end not current_user #}
+                  {% if u.status != 'deactivated' and u.status != 'suspended' %}
+                    <form method="POST" action="{{ url_for('admin.user_deactivate', user_id=u.id) }}" class="block">
+                      <button type="submit" class="w-full text-left px-3 py-2 text-small text-ink hover:bg-line-soft">Deactivate</button>
+                    </form>
+                  {% endif %}
+                  <form method="POST" action="{{ url_for('admin.impersonate_as', user_id=u.id) }}" class="block border-t border-line">
+                    <button type="submit" class="w-full text-left px-3 py-2 text-small text-ink hover:bg-line-soft">Impersonate</button>
+                  </form>
+                {% else %}
+                  <p class="px-3 py-2 text-caption text-ink-faint italic border-t border-line">Own account - manage via profile</p>
+                {% endif %}
+              </div>
             </div>
           </td>
-
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-</div>
-
-{# ── Quota modal ─────────────────────────────────────────────────────────── #}
-<div id="quotaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none;align-items:center;justify-content:center">
-  <div class="modal-card">
-    <div class="modal-title">Set storage quota</div>
-    <div class="modal-sub" id="quotaUserName"></div>
-    <form method="POST" id="quotaForm">
-      <div class="modal-field">
-        <label>Storage limit (GB)</label>
-        <input type="number" name="quota_gb" id="quotaInput" min="1" max="1000" step="1" class="modal-input">
+  {# -- MOBILE CARDS (<md) --------------------------------------- #}
+  <div class="md:hidden space-y-3">
+    {% for u in users %}
+    <a href="{{ url_for('admin.user_detail', user_id=u.id) }}" class="block card card-body">
+      <div class="flex items-center gap-3">
+        <div class="avatar-md flex-shrink-0" style="background-color: {{ u.avatar_color }}; color: white">
+          {{ u.initials }}
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-small font-medium truncate">
+            {{ u.full_name }}
+            {% if u.id == current_user.id %}<span class="text-caption text-ink-faint font-normal">(you)</span>{% endif %}
+          </p>
+          <p class="text-caption text-ink-soft font-mono truncate">{{ u.email }}</p>
+          <div class="mt-1 flex items-center gap-2 flex-wrap">
+            {% if u.status == 'active' %}<span class="badge-success text-caption">Active</span>
+            {% elif u.status == 'pending' %}<span class="badge-caution text-caption">Pending</span>
+            {% elif u.status == 'suspended' %}<span class="badge-danger text-caption">Suspended</span>
+            {% elif u.status == 'deactivated' %}<span class="badge-neutral text-caption">Deactivated</span>
+            {% endif %}
+            {% if u.role in ('admin', 'super_admin') %}
+              <span class="badge-indigo text-caption">{{ u.role | replace('_', ' ') | title }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint flex-shrink-0">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
       </div>
-      <div class="modal-actions">
-        <button type="submit" class="btn-primary">Save</button>
-        <button type="button" onclick="closeQuota()" class="btn-outline-md">Cancel</button>
-      </div>
-    </form>
+    </a>
+    {% endfor %}
   </div>
+
+  {# -- PAGINATION ----------------------------------------------- #}
+  {% if pagination and pagination.pages > 1 %}
+  <nav class="mt-6 flex items-center justify-between" aria-label="Pagination">
+    <p class="text-caption text-ink-soft">
+      Page {{ pagination.page }} of {{ pagination.pages }} &middot; {{ pagination.total }} users
+    </p>
+    <div class="flex items-center gap-2">
+      {% if pagination.has_prev %}
+        <a href="{{ url_for('admin.users_list', q=q, status=status, role=role, sort=sort, page=pagination.prev_num) }}"
+           class="btn-secondary-sm">Previous</a>
+      {% endif %}
+      {% if pagination.has_next %}
+        <a href="{{ url_for('admin.users_list', q=q, status=status, role=role, sort=sort, page=pagination.next_num) }}"
+           class="btn-secondary-sm">Next</a>
+      {% endif %}
+    </div>
+  </nav>
+  {% endif %}
+
+  {% endif %}
+
 </div>
-
-{% endblock %}
-
-{% block scripts %}
-<script>
-function openQuota(userId, name, currentGb) {
-  document.getElementById('quotaUserName').textContent = name;
-  document.getElementById('quotaInput').value = currentGb;
-  document.getElementById('quotaForm').action = '/admin/users/' + userId + '/quota';
-  const modal = document.getElementById('quotaModal');
-  modal.style.display = 'flex';
-  setTimeout(() => document.getElementById('quotaInput').focus(), 50);
-}
-function closeQuota() {
-  document.getElementById('quotaModal').style.display = 'none';
-}
-document.getElementById('quotaModal').addEventListener('click', function(e) {
-  if (e.target === this) closeQuota();
-});
-</script>
 {% endblock %}
