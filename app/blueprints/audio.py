@@ -385,6 +385,6 @@ def stream_song(song_id):
     if not song or song.user_id != current_user.id:
         abort(404)
 
-    key = r2svc.key_for_audio(song.user_id, song.filename)
-    url = r2svc.presign_get(key, expires_in=600)  # 10 minutes
+    key = r2svc.audio_key(song.user_id, song.filename)
+    url = r2svc.presigned_url(key, expires=600)  # 10 minutes
     return redirect(url)
