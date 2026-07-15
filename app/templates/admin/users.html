@@ -167,9 +167,7 @@
                       <button type="submit" class="w-full text-left px-3 py-2 text-small text-ink hover:bg-line-soft">Deactivate</button>
                     </form>
                   {% endif %}
-                  <form method="POST" action="{{ url_for('admin.impersonate_as', user_id=u.id) }}" class="block border-t border-line">
-                    <button type="submit" class="w-full text-left px-3 py-2 text-small text-ink hover:bg-line-soft">Impersonate</button>
-                  </form>
+
                 {% else %}
                   <p class="px-3 py-2 text-caption text-ink-faint italic border-t border-line">Own account - manage via profile</p>
                 {% endif %}
