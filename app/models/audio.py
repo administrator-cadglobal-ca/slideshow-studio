@@ -133,16 +133,18 @@ class AudioLabel(db.Model):
 
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    name       = db.Column(db.String(50), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"))
+    name       = db.Column(db.String(100), nullable=False)
     color      = db.Column(db.String(10))
     sort_order = db.Column(db.Integer, default=0)
-    is_default = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user   = db.relationship("User", backref=db.backref("audio_labels", lazy="dynamic"))
-    clips  = db.relationship("AudioClip",
-                             secondary="audio_clip_labels",
-                             back_populates="labels")
+    user    = db.relationship("User", backref=db.backref("audio_labels", lazy="dynamic"))
+    project = db.relationship("Project", back_populates="audio_label",
+                              foreign_keys=[project_id])
+    clips   = db.relationship("AudioClip",
+                              secondary="audio_clip_labels",
+                              back_populates="labels")
 
     def clips_by_key(self):
         """Return dict keyed by clip id for O(1) lookup."""
