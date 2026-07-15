@@ -259,6 +259,8 @@
               <audio x-ref="audio" preload="none"
                      @timeupdate="currentTime = $event.target.currentTime"
                      @loadedmetadata="if (!duration) duration = $event.target.duration"
+                     @pause="playing = false"
+                     @play="playing = true"
                      @ended="playing = false"></audio>
               <span class="text-caption tabular-nums text-ink-soft w-10 text-right" x-text="fmtTime(currentTime)"></span>
               <div class="flex-1 h-1.5 bg-line rounded-full cursor-pointer relative"
