@@ -58,4 +58,4 @@ tailwindcss.exe
 # ── Cloudflare Wrangler local state ────────────────────────────────────
 .wrangler/
 cloudflare/*/node_modules/
-cloudflare/*/.wrangler/
+cloudflare/*/.wrangler/apply_subcommit_d.ps1
