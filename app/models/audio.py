@@ -158,8 +158,9 @@ class AudioLabel(db.Model):
 class AudioClipLabel(db.Model):
     __tablename__ = "audio_clip_labels"
 
-    clip_id  = db.Column(db.Integer, db.ForeignKey("audio_clips.id"), primary_key=True)
-    label_id = db.Column(db.Integer, db.ForeignKey("audio_labels.id"), primary_key=True)
+    clip_id    = db.Column(db.Integer, db.ForeignKey("audio_clips.id"), primary_key=True)
+    label_id   = db.Column(db.Integer, db.ForeignKey("audio_labels.id"), primary_key=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
 
 
 # Backwards-compat alias so any lingering code that still says SongFolder
