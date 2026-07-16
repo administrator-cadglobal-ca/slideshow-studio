@@ -51,6 +51,7 @@ class AudioFile(db.Model):
     duration_s  = db.Column(db.Float)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     library_id  = db.Column(db.Integer, db.ForeignKey("libraries.id"))
+    sort_order  = db.Column(db.Integer, nullable=False, default=0)
 
     user  = db.relationship("User", back_populates="audio_files")
     clips = db.relationship("AudioClip", backref="song", lazy="dynamic",
@@ -70,6 +71,8 @@ class AudioClip(db.Model):
     fade_out    = db.Column(db.Boolean, default=True)
     normalize   = db.Column(db.Boolean, default=False)
     created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    sort_order  = db.Column(db.Integer, nullable=False, default=0)
+    sort_order  = db.Column(db.Integer, nullable=False, default=0)
 
     labels = db.relationship("AudioLabel",
                              secondary="audio_clip_labels",

@@ -20,7 +20,7 @@ bp = Blueprint("audio", __name__)
 def index():
     songs     = db.session.query(AudioFile)\
                   .filter_by(user_id=current_user.id)\
-                  .order_by(AudioFile.orig_name).all()
+                  .order_by(AudioFile.sort_order, AudioFile.id).all()
     labels    = db.session.query(AudioLabel)\
                   .filter_by(user_id=current_user.id)\
                   .order_by(AudioLabel.sort_order, AudioLabel.name).all()
@@ -104,7 +104,9 @@ def upload():
         db.session.add(default_pl)
         db.session.flush()
 
-    # Create the song
+    # Create the song. sort_order = current max + 1 so new songs land at end.
+    max_sort = db.session.query(db.func.coalesce(db.func.max(AudioFile.sort_order), 0))\
+                 .filter_by(user_id=current_user.id).scalar() or 0
     song = AudioFile(
         user_id     = current_user.id,
         filename    = result["filename"],
@@ -112,6 +114,7 @@ def upload():
         file_size   = result["file_size"],
         duration_s  = result.get("duration_s"),
         library_id  = library.id,
+        sort_order  = max_sort + 1,
     )
     db.session.add(song)
     db.session.flush()
@@ -320,7 +323,7 @@ def clips():
     all_clips = AudioClip.query\
                   .join(AudioFile, AudioClip.song_id == AudioFile.id)\
                   .filter(AudioFile.user_id == current_user.id)\
-                  .order_by(AudioClip.name).all()
+                  .order_by(AudioClip.sort_order, AudioClip.id).all()
     libraries = Library.query.filter_by(user_id=current_user.id)\
                   .order_by(Library.sort_order, Library.name).all()
     # Playlists (AudioLabel rows under Path B naming) for the "Add to playlist" picker
@@ -329,6 +332,44 @@ def clips():
     return render_template("audio/clips.html",
                            songs=songs, clips=all_clips,
                            libraries=libraries, playlists=playlists)
+
+
+@bp.route("/songs/reorder", methods=["POST"])
+@login_required
+def reorder_songs():
+    """Update sort_order for songs.
+    Body: {"song_ids": [3, 1, 2]} means song id 3 first, then 1, then 2."""
+    data = request.json or {}
+    song_ids = data.get("song_ids", [])
+    songs = AudioFile.query.filter_by(user_id=current_user.id)\
+                           .filter(AudioFile.id.in_(song_ids)).all()
+    songs_by_id = {s.id: s for s in songs}
+    for idx, sid in enumerate(song_ids):
+        s = songs_by_id.get(int(sid))
+        if s:
+            s.sort_order = idx + 1
+    db.session.commit()
+    return jsonify({"ok": True, "reordered": len(songs)})
+
+
+@bp.route("/clips/reorder", methods=["POST"])
+@login_required
+def reorder_clips():
+    """Update sort_order for clips.
+    Body: {"clip_ids": [5, 2, 7]} means clip id 5 first, then 2, then 7."""
+    data = request.json or {}
+    clip_ids = data.get("clip_ids", [])
+    clips = AudioClip.query\
+              .join(AudioFile, AudioClip.song_id == AudioFile.id)\
+              .filter(AudioFile.user_id == current_user.id)\
+              .filter(AudioClip.id.in_(clip_ids)).all()
+    clips_by_id = {c.id: c for c in clips}
+    for idx, cid in enumerate(clip_ids):
+        c = clips_by_id.get(int(cid))
+        if c:
+            c.sort_order = idx + 1
+    db.session.commit()
+    return jsonify({"ok": True, "reordered": len(clips)})
 
 
 @bp.route("/<int:song_id>/clips", methods=["GET"])
@@ -358,6 +399,9 @@ def create_clip(song_id):
     user_clip_num = len(song.clips.all())
     default_desc = f"Clip {user_clip_num}" if user_clip_num > 0 else "Full Song"
 
+    max_clip_sort = db.session.query(db.func.coalesce(db.func.max(AudioClip.sort_order), 0))\
+                      .join(AudioFile, AudioClip.song_id == AudioFile.id)\
+                      .filter(AudioFile.user_id == current_user.id).scalar() or 0
     clip = AudioClip(
         song_id     = song_id,
         name        = name,
@@ -367,6 +411,7 @@ def create_clip(song_id):
         fade_in     = data.get("fade_in", False),
         fade_out    = data.get("fade_out", True),
         normalize   = data.get("normalize", False),
+        sort_order  = max_clip_sort + 1,
     )
     db.session.add(clip)
     db.session.flush()
@@ -419,6 +464,9 @@ def duplicate_clip(clip_id):
     user_clip_num = song.clips.count()
     default_desc = f"Clip {user_clip_num}" if user_clip_num > 0 else "Full Song"
 
+    max_clip_sort = db.session.query(db.func.coalesce(db.func.max(AudioClip.sort_order), 0))\
+                      .join(AudioFile, AudioClip.song_id == AudioFile.id)\
+                      .filter(AudioFile.user_id == current_user.id).scalar() or 0
     clip = AudioClip(
         song_id     = source.song_id,
         name        = name,
@@ -428,6 +476,7 @@ def duplicate_clip(clip_id):
         fade_in     = source.fade_in,
         fade_out    = source.fade_out,
         normalize   = source.normalize,
+        sort_order  = max_clip_sort + 1,
     )
     db.session.add(clip)
     db.session.flush()
@@ -470,7 +519,7 @@ def playlists_page():
     all_clips = AudioClip.query\
                   .join(AudioFile, AudioClip.song_id == AudioFile.id)\
                   .filter(AudioFile.user_id == current_user.id)\
-                  .order_by(AudioClip.name).all()
+                  .order_by(AudioClip.sort_order, AudioClip.id).all()
     return render_template("audio/playlists.html",
                            playlists=labels, songs=songs, all_clips=all_clips)
 
