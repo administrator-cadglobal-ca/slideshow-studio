@@ -59,3 +59,6 @@ tailwindcss.exe
 .wrangler/
 cloudflare/*/node_modules/
 cloudflare/*/.wrangler/apply_subcommit_d.ps1
+
+# Local automation scripts
+apply_*.ps1

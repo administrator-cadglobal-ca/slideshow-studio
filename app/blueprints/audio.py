@@ -589,6 +589,28 @@ def batch_add_clips_to_label(label_id):
     return jsonify({"ok": True, "added": added, "playlist_size": len(label.clips)})
 
 
+@bp.route("/labels/<int:label_id>/clips/reorder", methods=["POST"])
+@login_required
+def reorder_playlist_clips(label_id):
+    """Reorder clips within a playlist (label).
+    Body: {"clip_ids": [3, 1, 2]} means clip 3 first, then 1, then 2."""
+    label = db.session.get(AudioLabel, label_id)
+    if not label or label.user_id != current_user.id:
+        abort(404)
+    data = request.json or {}
+    clip_ids = data.get("clip_ids", [])
+    # Update sort_order in the audio_clip_labels join table directly.
+    from sqlalchemy import text
+    for idx, cid in enumerate(clip_ids):
+        db.session.execute(
+            text("UPDATE audio_clip_labels SET sort_order = :so "
+                 "WHERE label_id = :lid AND clip_id = :cid"),
+            {"so": idx + 1, "lid": label_id, "cid": int(cid)}
+        )
+    db.session.commit()
+    return jsonify({"ok": True, "reordered": len(clip_ids)})
+
+
 @bp.route("/labels/<int:label_id>/clips/<int:clip_id>", methods=["DELETE"])
 @login_required
 def remove_clip_from_label(label_id, clip_id):

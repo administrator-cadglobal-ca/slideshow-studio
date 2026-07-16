@@ -147,6 +147,7 @@ class AudioLabel(db.Model):
                               foreign_keys=[project_id])
     clips   = db.relationship("AudioClip",
                               secondary="audio_clip_labels",
+                              order_by="audio_clip_labels.c.sort_order",
                               back_populates="labels")
 
     def clips_by_key(self):
