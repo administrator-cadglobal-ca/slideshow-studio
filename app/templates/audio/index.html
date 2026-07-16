@@ -499,10 +499,24 @@ function audioLibrary() {
     },
     playQueue() {
       if (this.queuePlaying) {
-        // Pause: find and pause the current audio
+        // Pause current playback and mark queue paused
         this.pauseCurrent();
+        this.queuePlaying = false;
         return;
       }
+      // If queue exists and we're mid-playback, resume where we left off
+      if (this.queue.length > 0 && this.currentQueueIndex < this.queue.length) {
+        const songId = this.queue[this.currentQueueIndex];
+        const rowEl = document.querySelector('#songList .song-row[data-song-id=\"' + songId + '\"]');
+        const audio = rowEl ? rowEl.querySelector('audio') : null;
+        if (audio && audio.src && audio.currentTime > 0 && audio.currentTime < audio.duration) {
+          window.dispatchEvent(new CustomEvent('audio-play', { detail: audio }));
+          audio.play();
+          this.queuePlaying = true;
+          return;
+        }
+      }
+      // Fresh start: rebuild queue from selection, play from top
       this.buildQueue();
       if (this.queue.length === 0) return;
       this.currentQueueIndex = 0;
