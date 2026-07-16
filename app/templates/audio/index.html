@@ -434,12 +434,15 @@ function audioLibrary() {
 
     async onDrop(event) {
       this.dragActive = false;
-      const files = Array.from(event.dataTransfer.files || []).filter(f => f.type.startsWith('audio/'));
-      if (files.length === 0) {
+      const allFiles = Array.from(event.dataTransfer.files || []);
+      // No files at all (e.g. an internal SortableJS drag) - silently ignore
+      if (allFiles.length === 0) return;
+      const audioFiles = allFiles.filter(f => f.type.startsWith('audio/'));
+      if (audioFiles.length === 0) {
         this.uploadError = 'No audio files in that drop.';
         return;
       }
-      await this.uploadFiles(files);
+      await this.uploadFiles(audioFiles);
     },
 
     async uploadFiles(files) {
