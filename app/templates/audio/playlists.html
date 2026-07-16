@@ -126,7 +126,7 @@
           </div>
 
           {# Inline action bar - only visible when this playlist is active #}
-          <div x-show="activePlaylist === {{ pl.id }} && pl.clips|length > 0" x-cloak class="bg-paper-raised border border-line rounded-comfortable px-4 py-3 mb-3 flex items-center gap-3 flex-wrap">
+          <div x-show="activePlaylist === {{ pl.id }} && {{ pl.clips|length }} > 0" x-cloak class="bg-paper-raised border border-line rounded-comfortable px-4 py-3 mb-3 flex items-center gap-3 flex-wrap">
             <label class="flex items-center gap-2 cursor-pointer flex-shrink-0">
               <input type="checkbox" @change="toggleSelectAll($event.target.checked)" :checked="allVisibleSelected" class="w-4 h-4 accent-indigo cursor-pointer">
               <span class="text-small text-ink-soft">Select all</span>
@@ -174,7 +174,7 @@
                   <label @click.stop class="flex items-center flex-shrink-0 cursor-pointer">
                     <input type="checkbox"
                            @change="$dispatch('pl-clip-selection', {clipId: {{ clip.id }}, checked: $event.target.checked})"
-                           :checked="$root.selectedClips.includes({{ clip.id }})"
+                           :checked="window._playlistsState && window._playlistsState.selectedClips.includes({{ clip.id }})"
                            class="w-4 h-4 accent-indigo cursor-pointer pl-clip-checkbox">
                   </label>
                   <button type="button"
@@ -279,6 +279,7 @@ function playlistsPage() {
     playlistDialog: { open: false, mode: 'create', id: null, name: '', color: '#2E3271' },
 
     init() {
+      window._playlistsState = this;
       window.addEventListener('audio-play', (e) => {
         document.querySelectorAll('audio').forEach(a => {
           if (a !== e.detail) a.pause();
