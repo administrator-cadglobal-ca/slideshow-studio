@@ -103,9 +103,10 @@
 
       {% else %}
 
-        <div class="card overflow-hidden">
+        <div class="card overflow-hidden" id="clipList">
           {% for clip in clips %}
-          <div class="border-b border-line last:border-b-0 transition-colors"
+          <div class="border-b border-line last:border-b-0 transition-colors clip-row"
+               data-clip-id="{{ clip.id }}"
                x-show="matchesLibrary({{ clip.song.library_id or 'null' }})"
                :class="playing ? 'bg-indigo-soft' : ''"
                x-data="clipRow({{ clip.id }}, {{ clip.song_id }}, {{ clip.song.duration_s or 0 }}, '{{ clip.trim_start | e }}', '{{ clip.trim_end | e }}')">
@@ -113,6 +114,13 @@
             {# Collapsed row - click plays/pauses, chevron toggles expand #}
             <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft cursor-pointer"
                  @click="togglePlay($event)">
+              <button type="button" @click.stop class="drag-handle cursor-grab active:cursor-grabbing text-ink-faint hover:text-ink flex-shrink-0" title="Drag to reorder">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="16" y2="6"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                  <line x1="8" y1="18" x2="16" y2="18"></line>
+                </svg>
+              </button>
               <label @click.stop class="flex items-center flex-shrink-0 cursor-pointer">
                 <input type="checkbox"
                        @change="$dispatch('clip-selection', {clipId: {{ clip.id }}, checked: $event.target.checked})"
@@ -270,6 +278,7 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 function clipLibrary() {
   return {
@@ -290,6 +299,29 @@ function clipLibrary() {
           this.selectedClips = this.selectedClips.filter(id => id !== clipId);
         }
       });
+      this.$nextTick(() => {
+        const listEl = document.getElementById('clipList');
+        if (listEl && typeof Sortable !== 'undefined') {
+          Sortable.create(listEl, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'opacity-40',
+            chosenClass: 'bg-line-soft',
+            onEnd: () => this.saveOrder(),
+          });
+        }
+      });
+    },
+    saveOrder() {
+      const ids = Array.from(document.querySelectorAll('#clipList .clip-row'))
+                       .map(el => parseInt(el.dataset.clipId, 10))
+                       .filter(id => !isNaN(id));
+      fetch('/audio/clips/reorder', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({clip_ids: ids}),
+      })
+        .catch(err => console.error('Reorder save failed:', err));
     },
     addToPlaylist() {
       if (!this.addToPlaylistId || this.selectedClips.length === 0) return;
