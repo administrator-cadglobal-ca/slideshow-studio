@@ -531,7 +531,7 @@ function playlistsPage() {
     },
 
     deletePlaylist(id) {
-      if (!confirm('Delete this playlist? It must be empty first.')) return;
+      if (!confirm('Delete this playlist?')) return;
       fetch('/audio/labels/' + id, {method: 'DELETE'})
         .then(r => r.json().then(data => ({ok: r.ok, data})))
         .then(({ok, data}) => {
