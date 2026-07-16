@@ -170,9 +170,10 @@
             </button>
           </div>
         {% else %}
-        <div class="card overflow-hidden">
+        <div class="card overflow-hidden" id="songList">
           {% for song in songs %}
-          <div class="border-b border-line last:border-b-0 transition-colors"
+          <div class="border-b border-line last:border-b-0 transition-colors song-row"
+               data-song-id="{{ song.id }}"
                x-show="matchesLibrary({{ song.library_id or 'null' }})"
                :class="playing ? 'bg-indigo-soft' : ''"
                x-data="{ playing: false, currentTime: 0, duration: {{ song.duration_s or 0 }} }">
@@ -180,6 +181,16 @@
             {#  Row body  #}
             <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft cursor-pointer"
                  @click="togglePlay('{{ song.id }}', $event)">
+              <button type="button"
+                      @click.stop
+                      class="drag-handle cursor-grab active:cursor-grabbing text-ink-faint hover:text-ink flex-shrink-0"
+                      title="Drag to reorder">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="16" y2="6"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                  <line x1="8" y1="18" x2="16" y2="18"></line>
+                </svg>
+              </button>
               <button type="button"
                       @click.stop="togglePlay('{{ song.id }}', $event)"
                       class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep"
@@ -327,6 +338,7 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 function audioLibrary() {
   return {
@@ -345,6 +357,30 @@ function audioLibrary() {
           if (a !== e.detail) { a.pause(); }
         });
       });
+      // Initialize drag-and-drop reordering on song list
+      this.$nextTick(() => {
+        const listEl = document.getElementById('songList');
+        if (listEl && typeof Sortable !== 'undefined') {
+          Sortable.create(listEl, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'opacity-40',
+            chosenClass: 'bg-line-soft',
+            onEnd: () => this.saveOrder(),
+          });
+        }
+      });
+    },
+    saveOrder() {
+      const ids = Array.from(document.querySelectorAll('#songList .song-row'))
+                       .map(el => parseInt(el.dataset.songId, 10))
+                       .filter(id => !isNaN(id));
+      fetch('/audio/songs/reorder', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({song_ids: ids}),
+      })
+        .catch(err => console.error('Reorder save failed:', err));
     },
 
     matchesLibrary(songLibraryId) {
