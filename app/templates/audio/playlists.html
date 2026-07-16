@@ -127,14 +127,7 @@
 
         {% for pl in playlists %}
         <div x-show="activePlaylist === {{ pl.id }}" x-cloak>
-          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <div>
-              <h2 class="text-h2" style="color: {{ pl.color }}">{{ pl.name }}</h2>
-              <p class="text-small text-ink-soft mt-1">
-                {{ pl.clips|length }} clip{{ 's' if pl.clips|length != 1 }}
-              </p>
-            </div>
-          </div>
+
 
           {# Inline action bar - single line #}
           <div x-show="activePlaylist === {{ pl.id }} && {{ pl.clips|length }} > 0" x-cloak class="bg-paper-raised border border-line rounded-comfortable px-4 py-2 mb-3 flex items-center gap-3 flex-nowrap">
