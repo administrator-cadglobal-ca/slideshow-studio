@@ -170,6 +170,27 @@
             </button>
           </div>
         {% else %}
+        {# Inline action bar #}
+        <div class="bg-paper-raised border border-line rounded-comfortable px-4 py-3 mb-3 flex items-center gap-3 flex-wrap">
+          <label class="flex items-center gap-2 cursor-pointer flex-shrink-0">
+            <input type="checkbox" @change="toggleSelectAll($event.target.checked)" :checked="allVisibleSelected" class="w-4 h-4 accent-indigo cursor-pointer">
+            <span class="text-small text-ink-soft">Select all visible</span>
+          </label>
+          <span class="text-small text-ink-soft flex-shrink-0">
+            <span x-text="selectedSongs.length"></span>
+            song<span x-show="selectedSongs.length !== 1">s</span> selected
+          </span>
+          <div class="flex-1"></div>
+          <select x-model="moveToLibraryId" class="input text-small py-1.5 max-w-[200px]">
+            <option value="">Move to...</option>
+            {% for lib in libraries %}
+            <option value="{{ lib.id }}">{{ lib.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" @click="moveSelectedToLibrary()" :disabled="moveToLibraryId === '' || selectedSongs.length === 0" :class="(moveToLibraryId !== '' && selectedSongs.length > 0) ? 'btn-primary' : 'bg-line text-ink-faint px-3 py-1.5 rounded-standard text-small cursor-not-allowed'" class="text-small">Move</button>
+          <button type="button" @click="clearSelection()" x-show="selectedSongs.length > 0" class="text-caption text-ink-soft hover:text-ink underline flex-shrink-0">Clear</button>
+        </div>
+
         <div class="card overflow-hidden" id="songList">
           {% for song in songs %}
           <div class="border-b border-line last:border-b-0 transition-colors song-row"
@@ -191,6 +212,12 @@
                   <line x1="8" y1="18" x2="16" y2="18"></line>
                 </svg>
               </button>
+              <label @click.stop class="flex items-center flex-shrink-0 cursor-pointer">
+                <input type="checkbox"
+                       @change="$dispatch('song-selection', {songId: {{ song.id }}, checked: $event.target.checked})"
+                       :checked="$root.selectedSongs.includes({{ song.id }})"
+                       class="w-4 h-4 accent-indigo cursor-pointer song-checkbox">
+              </label>
               <button type="button"
                       @click.stop="togglePlay('{{ song.id }}', $event)"
                       class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep"
@@ -343,6 +370,8 @@
 function audioLibrary() {
   return {
     activeLibrary: 'all',
+    selectedSongs: [],
+    moveToLibraryId: '',
     uploading: false,
     uploadedCount: 0,
     uploadTotal: 0,
@@ -356,6 +385,14 @@ function audioLibrary() {
         document.querySelectorAll('audio').forEach(a => {
           if (a !== e.detail) { a.pause(); }
         });
+      });
+      window.addEventListener('song-selection', (e) => {
+        const {songId, checked} = e.detail;
+        if (checked && !this.selectedSongs.includes(songId)) {
+          this.selectedSongs.push(songId);
+        } else if (!checked) {
+          this.selectedSongs = this.selectedSongs.filter(id => id !== songId);
+        }
       });
       // Initialize drag-and-drop reordering on song list
       this.$nextTick(() => {
@@ -381,6 +418,49 @@ function audioLibrary() {
         body: JSON.stringify({song_ids: ids}),
       })
         .catch(err => console.error('Reorder save failed:', err));
+    },
+    get visibleSongIds() {
+      return Array.from(document.querySelectorAll('#songList .song-row'))
+                  .filter(el => el.offsetParent !== null)
+                  .map(el => parseInt(el.dataset.songId, 10))
+                  .filter(id => !isNaN(id));
+    },
+    get allVisibleSelected() {
+      const vis = this.visibleSongIds;
+      if (vis.length === 0) return false;
+      return vis.every(id => this.selectedSongs.includes(id));
+    },
+    toggleSelectAll(checked) {
+      const vis = this.visibleSongIds;
+      if (checked) {
+        vis.forEach(id => { if (!this.selectedSongs.includes(id)) this.selectedSongs.push(id); });
+      } else {
+        this.selectedSongs = this.selectedSongs.filter(id => !vis.includes(id));
+      }
+      document.querySelectorAll('.song-checkbox').forEach(cb => {
+        const row = cb.closest('.song-row');
+        if (row) {
+          const id = parseInt(row.dataset.songId, 10);
+          cb.checked = this.selectedSongs.includes(id);
+        }
+      });
+    },
+    moveSelectedToLibrary() {
+      if (this.selectedSongs.length === 0) return;
+      const libId = this.moveToLibraryId === '' ? null : parseInt(this.moveToLibraryId, 10);
+      fetch('/audio/songs/batch-move', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({song_ids: this.selectedSongs, library_id: libId}),
+      })
+        .then(r => r.json())
+        .then(() => window.location.reload())
+        .catch(err => alert('Move failed: ' + err));
+    },
+    clearSelection() {
+      document.querySelectorAll('.song-checkbox').forEach(cb => cb.checked = false);
+      this.selectedSongs = [];
+      this.moveToLibraryId = '';
     },
 
     matchesLibrary(songLibraryId) {

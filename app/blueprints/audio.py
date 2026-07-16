@@ -334,6 +334,27 @@ def clips():
                            libraries=libraries, playlists=playlists)
 
 
+@bp.route("/songs/batch-move", methods=["POST"])
+@login_required
+def batch_move_songs():
+    """Reassign multiple songs to a library.
+    Body: {"song_ids": [1,2,3], "library_id": 5 or null}"""
+    data = request.json or {}
+    song_ids = data.get("song_ids", [])
+    library_id = data.get("library_id")
+    if library_id is not None:
+        lib = db.session.get(Library, int(library_id))
+        if not lib or lib.user_id != current_user.id:
+            return jsonify({"error": "invalid library"}), 400
+        library_id = lib.id
+    songs = AudioFile.query.filter_by(user_id=current_user.id)\
+                           .filter(AudioFile.id.in_(song_ids)).all()
+    for s in songs:
+        s.library_id = library_id
+    db.session.commit()
+    return jsonify({"ok": True, "moved": len(songs), "library_id": library_id})
+
+
 @bp.route("/songs/reorder", methods=["POST"])
 @login_required
 def reorder_songs():
