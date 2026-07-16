@@ -134,14 +134,22 @@
               </p>
             </div>
           {% else %}
-            <div class="card overflow-hidden">
+            <div class="card overflow-hidden" id="playlistClipsList-{{ pl.id }}">
               {% for clip in pl.clips %}
-              <div class="border-b border-line last:border-b-0 transition-colors"
+              <div class="border-b border-line last:border-b-0 transition-colors playlist-clip-row"
+                   data-clip-id="{{ clip.id }}"
                    x-data="{ playing: false, currentTime: 0, songDuration: {{ clip.song.duration_s or 0 }} }"
                    :class="playing ? 'bg-indigo-soft' : ''">
 
                 <div class="flex items-center gap-3 px-4 py-3 hover:bg-line-soft cursor-pointer"
                      @click="togglePlay({{ clip.id }}, {{ clip.song_id }}, $refs.audio)">
+                  <button type="button" @click.stop class="drag-handle cursor-grab active:cursor-grabbing text-ink-faint hover:text-ink flex-shrink-0" title="Drag to reorder">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="8" y1="6" x2="16" y2="6"></line>
+                      <line x1="8" y1="12" x2="16" y2="12"></line>
+                      <line x1="8" y1="18" x2="16" y2="18"></line>
+                    </svg>
+                  </button>
                   <button type="button"
                           @click.stop="togglePlay({{ clip.id }}, {{ clip.song_id }}, $refs.audio)"
                           class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep">
@@ -234,6 +242,7 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 function playlistsPage() {
   return {
@@ -246,6 +255,34 @@ function playlistsPage() {
           if (a !== e.detail) a.pause();
         });
       });
+      this.$nextTick(() => this.initSortables());
+      this.$watch('activePlaylist', () => { this.$nextTick(() => this.initSortables()); });
+    },
+    initSortables() {
+      if (typeof Sortable === 'undefined') return;
+      document.querySelectorAll('[id^="playlistClipsList-"]').forEach(listEl => {
+        if (listEl._sortableInit) return;
+        Sortable.create(listEl, {
+          handle: '.drag-handle',
+          animation: 150,
+          ghostClass: 'opacity-40',
+          chosenClass: 'bg-line-soft',
+          onEnd: () => this.savePlaylistOrder(listEl),
+        });
+        listEl._sortableInit = true;
+      });
+    },
+    savePlaylistOrder(listEl) {
+      const playlistId = parseInt(listEl.id.replace('playlistClipsList-', ''), 10);
+      const clipIds = Array.from(listEl.querySelectorAll('.playlist-clip-row'))
+                           .map(el => parseInt(el.dataset.clipId, 10))
+                           .filter(id => !isNaN(id));
+      fetch('/audio/labels/' + playlistId + '/clips/reorder', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({clip_ids: clipIds}),
+      })
+        .catch(err => console.error('Playlist reorder save failed:', err));
     },
 
     togglePlay(clipId, songId, audio) {
