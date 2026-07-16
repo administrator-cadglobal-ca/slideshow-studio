@@ -166,31 +166,6 @@ def delete_song(song_id):
 
 
 # -----------------------------------------------------------------------------
-# SCAN DURATIONS
-# -----------------------------------------------------------------------------
-@bp.route("/scan-durations", methods=["POST"])
-@login_required
-def scan_durations():
-    from mutagen import File as MutagenFile
-    fixed = 0
-    songs = AudioFile.query.filter_by(user_id=current_user.id).all()
-    for song in songs:
-        if song.duration_s and song.duration_s > 0:
-            continue
-        path = audio_dir(current_user.id) / song.filename
-        try:
-            m = MutagenFile(str(path))
-            if m and m.info and m.info.length:
-                song.duration_s = float(m.info.length)
-                fixed += 1
-        except Exception:
-            pass
-    if fixed:
-        db.session.commit()
-    return jsonify({"fixed": fixed, "total": len(songs)})
-
-
-# -----------------------------------------------------------------------------
 # LIBRARY CRUD (was: song-folders)
 # -----------------------------------------------------------------------------
 @bp.route("/libraries", methods=["POST"])
