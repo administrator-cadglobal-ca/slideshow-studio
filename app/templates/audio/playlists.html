@@ -512,10 +512,13 @@ function playlistsPage() {
     },
 
     deletePlaylist(id) {
-      if (!confirm('Delete this playlist? Clips are not deleted, just removed from this playlist.')) return;
+      if (!confirm('Delete this playlist? It must be empty first.')) return;
       fetch('/audio/labels/' + id, {method: 'DELETE'})
-        .then(r => r.json())
-        .then(() => window.location.reload())
+        .then(r => r.json().then(data => ({ok: r.ok, data})))
+        .then(({ok, data}) => {
+          if (!ok) { alert(data.error || 'Delete failed'); return; }
+          window.location.reload();
+        })
         .catch(err => alert('Delete failed: ' + err));
     },
 

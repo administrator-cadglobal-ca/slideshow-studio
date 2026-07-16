@@ -668,7 +668,7 @@ function audioLibrary() {
     },
 
     deleteFolder(id) {
-      if (!confirm('Delete this library? Songs in it will become Unsorted. Playlists tied to it will also be removed.')) return;
+      if (!confirm('Delete this library? It must be empty first.')) return;
       const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
       const fd = new FormData();
       if (csrf) fd.append('csrf_token', csrf);

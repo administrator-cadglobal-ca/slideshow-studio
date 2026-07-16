@@ -240,10 +240,12 @@ def delete_library(library_id):
     library = db.session.get(Library, library_id)
     if not library or library.user_id != current_user.id:
         abort(404)
-    # Move songs in this library back to "Unsorted" (or None)
-    for song in library.songs:
-        song.library_id = None
-    # Playlists get cascade-deleted via ORM relationship
+    # Enforce empty-first rule
+    song_count = AudioFile.query.filter_by(library_id=library.id).count()
+    if song_count > 0:
+        return jsonify({
+            "error": f"This library still contains {song_count} song(s). Please move or delete them first."
+        }), 400
     db.session.delete(library)
     db.session.commit()
     return jsonify({"ok": True})
@@ -558,6 +560,12 @@ def delete_label(label_id):
     label = db.session.get(AudioLabel, label_id)
     if not label or label.user_id != current_user.id:
         abort(404)
+    # Enforce empty-first rule
+    clip_count = len(label.clips)
+    if clip_count > 0:
+        return jsonify({
+            "error": f"This playlist still contains {clip_count} clip(s). Please remove them first."
+        }), 400
     db.session.delete(label)
     db.session.commit()
     return jsonify({"ok": True})
