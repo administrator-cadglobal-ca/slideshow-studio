@@ -94,10 +94,10 @@
      Two-column: folder sidebar + song list
      ============================================================ #}
 
-    <div class="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
+    <div class="grid grid-cols-1 gap-6">
 
       {#  Folder sidebar  #}
-      <aside class="space-y-1 hidden md:block">
+      <aside class="hidden">
         <div class="flex items-center justify-between px-2 mb-1">
           <p class="text-caption text-ink-faint uppercase tracking-wider">Libraries</p>
           <button type="button" @click="folderDialog = { open: true, mode: 'create', id: null, name: '', color: '#2E3271' }"
@@ -147,14 +147,15 @@
       </aside>
 
       {#  Song list  #}
-      <div class="md:hidden mb-3">
+      <div class="mb-3 flex items-center gap-2">
         <select x-model.number="activeLibrary"
-                class="input w-full text-small">
+                class="input flex-1 text-small">
           <option value="'all'">All songs ({{ songs|length }})</option>
           {% for lib in libraries %}
           <option value="{{ lib.id }}">{{ lib.name }} ({{ songs | selectattr('library_id', 'equalto', lib.id) | list | length }})</option>
           {% endfor %}
         </select>
+        <button type="button" @click="folderDialog = { open: true, mode: 'create', id: null, name: '', color: '#2E3271' }" class="btn-secondary text-small flex-shrink-0" title="New library">+</button>
       </div>
       <div class="min-w-0"
            @dragover.prevent="dragActive = true"
