@@ -413,6 +413,96 @@ function clipLibrary() {
     pauseCurrent() {
       document.querySelectorAll('audio').forEach(a => a.pause());
     },
+    buildQueue() {
+      const orderedIds = Array.from(document.querySelectorAll('#clipList .clip-row'))
+                              .map(el => parseInt(el.dataset.clipId, 10))
+                              .filter(id => this.selectedClips.includes(id));
+      this.queue = orderedIds;
+    },
+    playQueue() {
+      if (this.queuePlaying) {
+        this.pauseCurrent();
+        this.queuePlaying = false;
+        return;
+      }
+      if (this.queue.length > 0 && this.currentQueueIndex < this.queue.length) {
+        const clipId = this.queue[this.currentQueueIndex];
+        const rowEl = document.querySelector('#clipList .clip-row[data-clip-id=\"' + clipId + '\"]');
+        const audio = rowEl ? rowEl.querySelector('audio') : null;
+        if (audio && audio.src && audio.currentTime > 0) {
+          const rowData = window.Alpine.$data(rowEl);
+          if (rowData && audio.currentTime < (rowData.endSec || audio.duration)) {
+            window.dispatchEvent(new CustomEvent('audio-play', { detail: audio }));
+            audio.play();
+            this.queuePlaying = true;
+            return;
+          }
+        }
+      }
+      this.buildQueue();
+      if (this.queue.length === 0) return;
+      this.currentQueueIndex = 0;
+      this.queuePlaying = true;
+      this.playCurrentInQueue();
+    },
+    playCurrentInQueue() {
+      if (this.currentQueueIndex >= this.queue.length) {
+        if (this.repeatMode) this.currentQueueIndex = 0;
+        else { this.queuePlaying = false; return; }
+      }
+      const clipId = this.queue[this.currentQueueIndex];
+      const rowEl = document.querySelector('#clipList .clip-row[data-clip-id=\"' + clipId + '\"]');
+      if (!rowEl) { this.playNext(); return; }
+      const audio = rowEl.querySelector('audio');
+      if (!audio) { this.playNext(); return; }
+      const rowData = window.Alpine.$data(rowEl);
+      const startSec = rowData ? rowData.startSec : 0;
+      const endSec = rowData ? rowData.endSec : 0;
+      if (!audio.src && rowData) audio.src = '/audio/stream/' + rowData.songId;
+      window.dispatchEvent(new CustomEvent('audio-play', { detail: audio }));
+      audio.currentTime = startSec;
+      audio.play();
+      const trimAdvance = () => {
+        if (endSec > 0 && audio.currentTime >= endSec) {
+          audio.removeEventListener('timeupdate', trimAdvance);
+          audio.removeEventListener('ended', onEndAdvance);
+          audio.pause();
+          if (this.queuePlaying) this.playNext();
+        }
+      };
+      const onEndAdvance = () => {
+        audio.removeEventListener('timeupdate', trimAdvance);
+        audio.removeEventListener('ended', onEndAdvance);
+        if (this.queuePlaying) this.playNext();
+      };
+      audio.addEventListener('timeupdate', trimAdvance);
+      audio.addEventListener('ended', onEndAdvance);
+    },
+    playNext() {
+      this.pauseCurrent();
+      if (this.shuffleMode) {
+        if (this.queue.length <= 1) {
+          if (this.repeatMode) this.currentQueueIndex = 0;
+          else { this.queuePlaying = false; return; }
+        } else {
+          let nextIdx;
+          do { nextIdx = Math.floor(Math.random() * this.queue.length); }
+          while (nextIdx === this.currentQueueIndex);
+          this.currentQueueIndex = nextIdx;
+        }
+      } else {
+        this.currentQueueIndex++;
+      }
+      if (this.queuePlaying) this.playCurrentInQueue();
+    },
+    playPrev() {
+      this.pauseCurrent();
+      this.currentQueueIndex = Math.max(0, this.currentQueueIndex - 1);
+      if (this.queuePlaying) this.playCurrentInQueue();
+    },
+    pauseCurrent() {
+      document.querySelectorAll('audio').forEach(a => a.pause());
+    },
     addToPlaylist() {
       if (!this.addToPlaylistId || this.selectedClips.length === 0) return;
       fetch('/audio/labels/' + this.addToPlaylistId + '/clips/batch', {
