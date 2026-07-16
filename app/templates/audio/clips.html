@@ -103,6 +103,27 @@
 
       {% else %}
 
+        {# Inline action bar - multi-select + playlist picker #}
+        <div class="bg-paper-raised border border-line rounded-comfortable px-4 py-3 mb-3 flex items-center gap-3 flex-wrap">
+          <label class="flex items-center gap-2 cursor-pointer flex-shrink-0">
+            <input type="checkbox" @change="toggleSelectAll($event.target.checked)" :checked="allVisibleSelected" class="w-4 h-4 accent-indigo cursor-pointer">
+            <span class="text-small text-ink-soft">Select all visible</span>
+          </label>
+          <span class="text-small text-ink-soft flex-shrink-0">
+            <span x-text="selectedClips.length"></span>
+            clip<span x-show="selectedClips.length !== 1">s</span> selected
+          </span>
+          <div class="flex-1"></div>
+          <select x-model="addToPlaylistId" class="input text-small py-1.5 max-w-[200px]">
+            <option value="">Add to playlist...</option>
+            {% for pl in playlists %}
+            <option value="{{ pl.id }}">{{ pl.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" @click="addToPlaylist()" :disabled="!addToPlaylistId || selectedClips.length === 0" :class="(addToPlaylistId && selectedClips.length > 0) ? 'btn-primary' : 'bg-line text-ink-faint px-3 py-1.5 rounded-standard text-small cursor-not-allowed'" class="text-small">Add</button>
+          <button type="button" @click="clearSelection()" x-show="selectedClips.length > 0" class="text-caption text-ink-soft hover:text-ink underline flex-shrink-0">Clear</button>
+        </div>
+
         {# Playback controls bar #}
         <div class="bg-paper-raised border border-line rounded-comfortable px-4 py-2 mb-3 flex items-center gap-2 flex-wrap">
           <button type="button" @click="playPrev()" :disabled="selectedClips.length === 0" :class="selectedClips.length === 0 ? 'text-ink-faint cursor-not-allowed' : 'text-ink hover:bg-line-soft'" class="p-2 rounded" title="Previous">
@@ -273,31 +294,6 @@
     </div>
   </div>
 
-  {# Floating action bar - shows when any clip is selected #}
-  <div x-show="selectedClips.length > 0" x-cloak x-transition
-       class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40
-              bg-paper-raised border border-line rounded-comfortable shadow-lift
-              px-4 py-3 flex items-center gap-3 flex-wrap max-w-[calc(100vw-2rem)]">
-    <span class="text-small text-ink font-medium">
-      <span x-text="selectedClips.length"></span> clip<span x-show="selectedClips.length !== 1">s</span> selected
-    </span>
-    <select x-model="addToPlaylistId" class="input text-small py-1.5">
-      <option value="">Choose playlist...</option>
-      {% for pl in playlists %}
-      <option value="{{ pl.id }}">{{ pl.name }}</option>
-      {% endfor %}
-    </select>
-    <button type="button" @click="addToPlaylist()"
-            :disabled="!addToPlaylistId"
-            :class="addToPlaylistId ? 'btn-primary' : 'bg-line text-ink-faint px-3 py-1.5 rounded-standard text-small cursor-not-allowed'"
-            class="text-small">
-      Add to playlist
-    </button>
-    <button type="button" @click="clearSelection()"
-            class="text-caption text-ink-soft hover:text-ink underline">
-      Clear
-    </button>
-  </div>
 
 </div>
 
@@ -337,6 +333,32 @@ function clipLibrary() {
             chosenClass: 'bg-line-soft',
             onEnd: () => this.saveOrder(),
           });
+        }
+      });
+    },
+    get visibleClipIds() {
+      return Array.from(document.querySelectorAll('#clipList .clip-row'))
+                  .filter(el => el.offsetParent !== null)
+                  .map(el => parseInt(el.dataset.clipId, 10))
+                  .filter(id => !isNaN(id));
+    },
+    get allVisibleSelected() {
+      const vis = this.visibleClipIds;
+      if (vis.length === 0) return false;
+      return vis.every(id => this.selectedClips.includes(id));
+    },
+    toggleSelectAll(checked) {
+      const vis = this.visibleClipIds;
+      if (checked) {
+        vis.forEach(id => { if (!this.selectedClips.includes(id)) this.selectedClips.push(id); });
+      } else {
+        this.selectedClips = this.selectedClips.filter(id => !vis.includes(id));
+      }
+      document.querySelectorAll('#clipList input[type=checkbox]').forEach(cb => {
+        const row = cb.closest('.clip-row');
+        if (row) {
+          const id = parseInt(row.dataset.clipId, 10);
+          cb.checked = this.selectedClips.includes(id);
         }
       });
     },
