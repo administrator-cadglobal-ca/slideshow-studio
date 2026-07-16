@@ -125,6 +125,27 @@
             </div>
           </div>
 
+          {# Inline action bar - only visible when this playlist is active #}
+          <div x-show="activePlaylist === {{ pl.id }} && pl.clips|length > 0" x-cloak class="bg-paper-raised border border-line rounded-comfortable px-4 py-3 mb-3 flex items-center gap-3 flex-wrap">
+            <label class="flex items-center gap-2 cursor-pointer flex-shrink-0">
+              <input type="checkbox" @change="toggleSelectAll($event.target.checked)" :checked="allVisibleSelected" class="w-4 h-4 accent-indigo cursor-pointer">
+              <span class="text-small text-ink-soft">Select all</span>
+            </label>
+            <span class="text-small text-ink-soft flex-shrink-0">
+              <span x-text="selectedClips.length"></span>
+              clip<span x-show="selectedClips.length !== 1">s</span> selected
+            </span>
+            <div class="flex-1"></div>
+            <select x-model="copyToPlaylistId" class="input text-small py-1.5 max-w-[200px]">
+              <option value="">Copy to...</option>
+              {% for other in playlists %}{% if other.id != pl.id %}
+              <option value="{{ other.id }}">{{ other.name }}</option>
+              {% endif %}{% endfor %}
+            </select>
+            <button type="button" @click="copyToPlaylist()" :disabled="copyToPlaylistId === '' || selectedClips.length === 0" :class="(copyToPlaylistId !== '' && selectedClips.length > 0) ? 'btn-primary' : 'bg-line text-ink-faint px-3 py-1.5 rounded-standard text-small cursor-not-allowed'" class="text-small">Copy</button>
+            <button type="button" @click="clearSelection()" x-show="selectedClips.length > 0" class="text-caption text-ink-soft hover:text-ink underline flex-shrink-0">Clear</button>
+          </div>
+
           {% if pl.clips|length == 0 %}
             <div class="rounded-comfortable border-2 border-dashed border-line p-8 text-center">
               <p class="text-small text-ink-soft">
@@ -150,6 +171,12 @@
                       <line x1="8" y1="18" x2="16" y2="18"></line>
                     </svg>
                   </button>
+                  <label @click.stop class="flex items-center flex-shrink-0 cursor-pointer">
+                    <input type="checkbox"
+                           @change="$dispatch('pl-clip-selection', {clipId: {{ clip.id }}, checked: $event.target.checked})"
+                           :checked="$root.selectedClips.includes({{ clip.id }})"
+                           class="w-4 h-4 accent-indigo cursor-pointer pl-clip-checkbox">
+                  </label>
                   <button type="button"
                           @click.stop="togglePlay({{ clip.id }}, {{ clip.song_id }}, $refs.audio)"
                           class="w-9 h-9 rounded-full bg-indigo text-white flex items-center justify-center flex-shrink-0 hover:bg-indigo-deep">
@@ -247,6 +274,8 @@
 function playlistsPage() {
   return {
     activePlaylist: {{ playlists[0].id if playlists else 'null' }},
+    selectedClips: [],
+    copyToPlaylistId: '',
     playlistDialog: { open: false, mode: 'create', id: null, name: '', color: '#2E3271' },
 
     init() {
@@ -255,8 +284,65 @@ function playlistsPage() {
           if (a !== e.detail) a.pause();
         });
       });
+      window.addEventListener('pl-clip-selection', (e) => {
+        const {clipId, checked} = e.detail;
+        if (checked && !this.selectedClips.includes(clipId)) {
+          this.selectedClips.push(clipId);
+        } else if (!checked) {
+          this.selectedClips = this.selectedClips.filter(id => id !== clipId);
+        }
+      });
       this.$nextTick(() => this.initSortables());
-      this.$watch('activePlaylist', () => { this.$nextTick(() => this.initSortables()); });
+      this.$watch('activePlaylist', () => {
+        this.$nextTick(() => this.initSortables());
+        this.clearSelection();
+      });
+    },
+    get visibleClipIds() {
+      const cardEl = document.getElementById('playlistClipsList-' + this.activePlaylist);
+      if (!cardEl) return [];
+      return Array.from(cardEl.querySelectorAll('.playlist-clip-row'))
+                  .map(el => parseInt(el.dataset.clipId, 10))
+                  .filter(id => !isNaN(id));
+    },
+    get allVisibleSelected() {
+      const vis = this.visibleClipIds;
+      if (vis.length === 0) return false;
+      return vis.every(id => this.selectedClips.includes(id));
+    },
+    toggleSelectAll(checked) {
+      const vis = this.visibleClipIds;
+      if (checked) {
+        vis.forEach(id => { if (!this.selectedClips.includes(id)) this.selectedClips.push(id); });
+      } else {
+        this.selectedClips = this.selectedClips.filter(id => !vis.includes(id));
+      }
+      document.querySelectorAll('.pl-clip-checkbox').forEach(cb => {
+        const row = cb.closest('.playlist-clip-row');
+        if (row) {
+          const id = parseInt(row.dataset.clipId, 10);
+          cb.checked = this.selectedClips.includes(id);
+        }
+      });
+    },
+    copyToPlaylist() {
+      if (!this.copyToPlaylistId || this.selectedClips.length === 0) return;
+      fetch('/audio/labels/' + this.copyToPlaylistId + '/clips/batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({clip_ids: this.selectedClips}),
+      })
+        .then(r => r.json())
+        .then(data => {
+          alert('Copied ' + data.added + ' clip(s) to playlist.');
+          this.clearSelection();
+        })
+        .catch(err => alert('Copy failed: ' + err));
+    },
+    clearSelection() {
+      document.querySelectorAll('.pl-clip-checkbox').forEach(cb => cb.checked = false);
+      this.selectedClips = [];
+      this.copyToPlaylistId = '';
     },
     initSortables() {
       if (typeof Sortable === 'undefined') return;
