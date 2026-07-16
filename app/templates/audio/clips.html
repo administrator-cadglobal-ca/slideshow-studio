@@ -103,6 +103,29 @@
 
       {% else %}
 
+        {# Playback controls bar #}
+        <div class="bg-paper-raised border border-line rounded-comfortable px-4 py-2 mb-3 flex items-center gap-2 flex-wrap">
+          <button type="button" @click="playPrev()" :disabled="selectedClips.length === 0" :class="selectedClips.length === 0 ? 'text-ink-faint cursor-not-allowed' : 'text-ink hover:bg-line-soft'" class="p-2 rounded" title="Previous">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><rect x="5" y="4" width="2" height="16"></rect></svg>
+          </button>
+          <button type="button" @click="playQueue()" :disabled="selectedClips.length === 0" :class="selectedClips.length === 0 ? 'bg-line text-ink-faint cursor-not-allowed' : 'bg-indigo text-white hover:bg-indigo-deep'" class="p-2 rounded-full w-9 h-9 flex items-center justify-center" :title="queuePlaying ? 'Pause' : 'Play queue'">
+            <svg x-show="!queuePlaying" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <svg x-show="queuePlaying" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          </button>
+          <button type="button" @click="playNext()" :disabled="selectedClips.length === 0" :class="selectedClips.length === 0 ? 'text-ink-faint cursor-not-allowed' : 'text-ink hover:bg-line-soft'" class="p-2 rounded" title="Next">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><rect x="17" y="4" width="2" height="16"></rect></svg>
+          </button>
+          <button type="button" @click="shuffleMode = !shuffleMode" :class="shuffleMode ? 'bg-indigo-soft text-indigo' : 'text-ink-soft hover:bg-line-soft'" class="p-2 rounded" title="Shuffle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+          </button>
+          <button type="button" @click="repeatMode = !repeatMode" :class="repeatMode ? 'bg-indigo-soft text-indigo' : 'text-ink-soft hover:bg-line-soft'" class="p-2 rounded" title="Repeat">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+          </button>
+          <span class="text-caption text-ink-soft ml-2" x-show="queuePlaying" x-cloak>
+            Playing <span x-text="(currentQueueIndex + 1) + ' / ' + queue.length"></span>
+          </span>
+        </div>
+
         <div class="card overflow-hidden" id="clipList">
           {% for clip in clips %}
           <div class="border-b border-line last:border-b-0 transition-colors clip-row"
@@ -285,6 +308,11 @@ function clipLibrary() {
     activeLibrary: 'all',
     selectedClips: [],
     addToPlaylistId: null,
+    queue: [],
+    currentQueueIndex: 0,
+    queuePlaying: false,
+    shuffleMode: false,
+    repeatMode: false,
     init() {
       window.addEventListener('audio-play', (e) => {
         document.querySelectorAll('audio').forEach(a => {
