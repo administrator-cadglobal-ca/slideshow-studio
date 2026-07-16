@@ -97,7 +97,7 @@
     <div class="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6">
 
       {#  Folder sidebar  #}
-      <aside class="space-y-1">
+      <aside class="space-y-1 hidden md:block">
         <div class="flex items-center justify-between px-2 mb-1">
           <p class="text-caption text-ink-faint uppercase tracking-wider">Libraries</p>
           <button type="button" @click="folderDialog = { open: true, mode: 'create', id: null, name: '', color: '#2E3271' }"
@@ -147,6 +147,15 @@
       </aside>
 
       {#  Song list  #}
+      <div class="md:hidden mb-3">
+        <select x-model.number="activeLibrary"
+                class="input w-full text-small">
+          <option value="'all'">All songs ({{ songs|length }})</option>
+          {% for lib in libraries %}
+          <option value="{{ lib.id }}">{{ lib.name }} ({{ songs | selectattr('library_id', 'equalto', lib.id) | list | length }})</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="min-w-0"
            @dragover.prevent="dragActive = true"
            @dragleave.prevent="dragActive = false"
