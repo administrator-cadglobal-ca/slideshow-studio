@@ -101,6 +101,16 @@
         <button type="button"
                 @click="playlistDialog = { open: true, mode: 'create', id: null, name: '', color: '#2E3271' }"
                 class="btn-secondary text-small flex-shrink-0" title="New playlist">+</button>
+        <button type="button"
+                x-show="activePlaylist"
+                @click="editCurrentPlaylist()"
+                class="btn-secondary text-small flex-shrink-0"
+                title="Edit playlist">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+        </button>
       </div>
 
       {% if playlists|length == 0 %}
@@ -293,6 +303,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
+window._PLAYLISTS = [{% for pl in playlists %}{id: {{ pl.id }}, name: '{{ pl.name|e }}', color: '{{ pl.color }}'}{{ ',' if not loop.last }}{% endfor %}];
+
 function playlistsPage() {
   return {
     activePlaylist: {{ playlists[0].id if playlists else 'null' }},
@@ -371,6 +383,13 @@ function playlistsPage() {
       document.querySelectorAll('.pl-clip-checkbox').forEach(cb => cb.checked = false);
       this.selectedClips = [];
       this.copyToPlaylistId = '';
+    },
+    editCurrentPlaylist() {
+      if (!this.activePlaylist) return;
+      const pls = window._PLAYLISTS || [];
+      const pl = pls.find(p => p.id === this.activePlaylist);
+      if (!pl) { alert('Playlist not found'); return; }
+      this.playlistDialog = { open: true, mode: 'edit', id: pl.id, name: pl.name, color: pl.color };
     },
     parseTimeToSec(str) {
       if (!str) return 0;

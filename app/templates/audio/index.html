@@ -146,6 +146,16 @@
           {% endfor %}
         </select>
         <button type="button" @click="folderDialog = { open: true, mode: 'create', id: null, name: '', color: '#2E3271' }" class="btn-secondary text-small flex-shrink-0" title="New library">+</button>
+        <button type="button"
+                x-show="activeLibrary !== 'all'"
+                @click="editCurrentLibrary()"
+                class="btn-secondary text-small flex-shrink-0"
+                title="Edit library">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+        </button>
       </div>
       <div class="min-w-0"
            @dragover.prevent="dragActive = true"
@@ -385,6 +395,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
+window._LIBRARIES = [{% for lib in libraries %}{id: {{ lib.id }}, name: '{{ lib.name|e }}', color: '{{ lib.color }}'}{{ ',' if not loop.last }}{% endfor %}];
+
 function audioLibrary() {
   return {
     activeLibrary: 'all',
@@ -484,6 +496,13 @@ function audioLibrary() {
       document.querySelectorAll('.song-checkbox').forEach(cb => cb.checked = false);
       this.selectedSongs = [];
       this.moveToLibraryId = '';
+    },
+    editCurrentLibrary() {
+      if (this.activeLibrary === 'all') return;
+      const libs = window._LIBRARIES || [];
+      const lib = libs.find(l => l.id === this.activeLibrary);
+      if (!lib) { alert('Library not found'); return; }
+      this.folderDialog = { open: true, mode: 'edit', id: lib.id, name: lib.name, color: lib.color };
     },
     buildQueue() {
       // Build queue in row order (from DOM), keeping only selected songs
