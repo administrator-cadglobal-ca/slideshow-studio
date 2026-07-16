@@ -267,44 +267,6 @@
                 </p>
               </div>
 
-              {# Folder assignment dropdown #}
-              <div class="relative" x-data="{ open: false }">
-                <button type="button"
-                        @click.stop="open = !open"
-                        class="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded-standard text-caption text-ink-soft hover:bg-line">
-                  {% if song.library_id %}
-                    {% for f in libraries %}
-                      {% if f.id == song.library_id %}
-                        <span class="w-2 h-2 rounded-full" style="background-color: {{ f.color }}"></span>
-                        <span>{{ f.name }}</span>
-                      {% endif %}
-                    {% endfor %}
-                  {% else %}
-                    <span class="w-2 h-2 rounded-full border border-line"></span>
-                    <span>No library</span>
-                  {% endif %}
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-0.5">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
-                <div x-show="open" x-cloak
-                     @click.outside="open = false"
-                     class="absolute right-0 top-full mt-1 w-48 bg-paper-raised border border-line rounded-comfortable shadow-lift overflow-hidden z-20 max-h-64 overflow-y-auto">
-                  <form method="POST" action="{{ url_for('audio.assign_song_library', song_id=song.id) }}">
-                    {% if csrf_token %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endif %}
-                    <button type="submit" name="library_id" value="" class="w-full text-left px-3 py-2 text-small hover:bg-line-soft flex items-center gap-2">
-                      <span class="w-2 h-2 rounded-full border border-line"></span>
-                      No folder
-                    </button>
-                    {% for f in libraries %}
-                    <button type="submit" name="library_id" value="{{ f.id }}" class="w-full text-left px-3 py-2 text-small hover:bg-line-soft flex items-center gap-2">
-                      <span class="w-2 h-2 rounded-full" style="background-color: {{ f.color }}"></span>
-                      {{ f.name }}
-                    </button>
-                    {% endfor %}
-                  </form>
-                </div>
-              </div>
 
               {# Delete #}
               <form method="POST" action="{{ url_for('audio.delete_song', song_id=song.id) }}"
