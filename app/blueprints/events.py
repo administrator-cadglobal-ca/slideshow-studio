@@ -76,6 +76,8 @@ def new():
         )
         db.session.add(evt)
         db.session.commit()
+        from app.models import log_activity
+        log_activity(evt, "event_created", {"name": name})
         flash(f"Event '{name}' created.", "success")
         return redirect(url_for("events.show", event_id=evt.id))
     return render_template("events/new.html", render_versions=RENDER_VERSIONS)
@@ -119,6 +121,8 @@ def save_settings(event_id):
     versions = request.form.getlist("render_versions")
     evt.render_versions       = ",".join(versions) if versions else "hd"
     db.session.commit()
+    from app.models import log_activity
+    log_activity(evt, "settings_saved", {"render_versions": evt.render_versions})
     flash("Settings saved.", "success")
     return redirect(url_for("events.show", event_id=evt.id))
 
@@ -127,9 +131,18 @@ def save_settings(event_id):
 def set_playlist(event_id):
     evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    from app.models import log_activity, Playlist
     pid_raw = request.form.get("playlist_id", "").strip()
-    evt.playlist_id = int(pid_raw) if pid_raw else None
+    new_pid = int(pid_raw) if pid_raw else None
+    old_pid = evt.playlist_id
+    evt.playlist_id = new_pid
     db.session.commit()
+    if old_pid != new_pid:
+        pl_name = ""
+        if new_pid:
+            pl = db.session.get(Playlist, new_pid)
+            pl_name = pl.name if pl else ""
+        log_activity(evt, "playlist_assigned", {"playlist_id": new_pid, "playlist_name": pl_name})
     return jsonify({"ok": True, "playlist_id": evt.playlist_id})
 
 @bp.route("/<event_id>/activities")
@@ -279,6 +292,8 @@ def process_photos(event_id):
 
     resolutions    = request.json.get("resolutions", ["hd"])
     allow_upscale  = request.json.get("allow_upscale", False)
+    from app.models import log_activity
+    log_activity(evt, "process_started", {"resolutions": resolutions, "allow_upscale": allow_upscale, "photo_count": len(evt.photos)})
 
     SIZES = {
         "sd": [(1280, 720),  (720,  1280)],
@@ -614,6 +629,8 @@ def render_mp4(event_id):
     version  = data.get("version", "hd-landscape")
     playlist_id = data.get("playlist_id")
     duration = float(data.get("duration", 4.0))
+    from app.models import log_activity
+    log_activity(evt, "render_started", {"version": version, "playlist_id": playlist_id, "duration": duration})
 
     from app.services import r2 as R2
     from app.services.storage import list_processed_versions_r2

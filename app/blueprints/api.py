@@ -131,6 +131,8 @@ def delete_all_photos(event_id):
             pass
         db.session.delete(photo)
     db.session.commit()
+    from app.models import log_activity
+    log_activity(evt, "photos_deleted_all", {"count": deleted})
     return jsonify({"ok": True, "deleted": deleted})
 
 
@@ -149,8 +151,11 @@ def delete_photo(event_id, photo_id):
         R2.delete(R2.thumb_key(current_user.id, event_id, f"thumb_{photo.filename}"))
     except Exception:
         pass
+    filename_for_log = photo.orig_name or photo.filename
     db.session.delete(photo)
     db.session.commit()
+    from app.models import log_activity
+    log_activity(evt, "photo_deleted", {"filename": filename_for_log})
     return jsonify({"ok": True})
 
 
@@ -216,6 +221,9 @@ def upload_photos(event_id):
 
     db.session.commit()
     skipped = len(files) - uploaded - len(errors)
+    if uploaded > 0:
+        from app.models import log_activity
+        log_activity(evt, "photos_uploaded", {"count": uploaded, "skipped": skipped, "errors": errors})
     return jsonify({
         "uploaded": uploaded,
         "skipped":  max(0, skipped),
