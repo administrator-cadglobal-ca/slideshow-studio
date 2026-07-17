@@ -188,7 +188,8 @@
           <div class="relative group rounded-standard overflow-hidden bg-line-soft aspect-square"
                :class="p.skipped ? 'opacity-40' : ''">
             <img :src="p.thumb_url" :alt="p.orig_name || p.filename"
-                 class="w-full h-full object-cover"
+                 @click="openLightbox(p.thumb_url.replace('/media/thumbs/', '/media/photos/').replace('thumb_', ''))"
+                 class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
                  loading="lazy"
                  @error="$event.target.style.display = 'none'">
             <div class="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -317,7 +318,7 @@
       <div class="space-y-2">
         <template x-for="photo in captionsPhotos" :key="photo.id">
           <div class="flex items-start gap-3 rounded-standard border border-line p-2">
-            <img :src="photo.thumb_url" :alt="photo.name" class="h-16 w-16 flex-none rounded object-cover bg-line-soft">
+            <img :src="photo.thumb_url" :alt="photo.name" @click="openLightbox(photo.thumb_url.replace('/media/thumbs/', '/media/photos/').replace('thumb_', ''))" class="h-16 w-16 flex-none rounded object-cover bg-line-soft cursor-pointer hover:opacity-80 transition">
             <div class="flex-1 min-w-0">
               <p class="text-caption text-ink-soft truncate" x-text="photo.name"></p>
               <input type="text" class="input mt-1 w-full text-small" x-model="photo.caption" @input="photo._dirty = true" placeholder="Add a caption&hellip;">
@@ -333,6 +334,20 @@
         </p>
       </div>
     </section>
+
+    {# Lightbox modal - full-size photo viewer #}
+    <div x-show="lightboxOpen" x-cloak
+         @click="closeLightbox()"
+         @keydown.escape.window="closeLightbox()"
+         class="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
+         x-transition.opacity>
+      <button type="button" @click.stop="closeLightbox()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80" title="Close (Esc)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <img :src="lightboxUrl" @click.stop class="max-w-full max-h-full object-contain">
+    </div>
 
   </div>
 
@@ -534,6 +549,8 @@ function eventsPage() {
     savingAllCaptions: false,
     eventCaptionSaved: false,
     captionError: '',
+    lightboxUrl: '',
+    lightboxOpen: false,
     autoFillFields: { place: true, country: true, date: true, time: false, camera: false, filename: false, settings: false },
     newEventModal: false,
 
@@ -907,6 +924,16 @@ function eventsPage() {
         p.caption = this.buildAutoCaption(p);
         p._dirty = true;
       });
+    },
+
+    openLightbox(url) {
+      this.lightboxUrl = url;
+      this.lightboxOpen = true;
+    },
+
+    closeLightbox() {
+      this.lightboxOpen = false;
+      this.lightboxUrl = '';
     },
 
     initCaptions() {
