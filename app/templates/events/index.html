@@ -274,9 +274,9 @@
 
 {% block scripts %}
 {% if selected_event %}
-<script id="initialPhotos" type="application/json">
-{{ [
-  {
+{% set _initial_photos = [] %}
+{% for p in selected_event.photos %}
+  {% set _ = _initial_photos.append({
     "id": p.id,
     "filename": p.filename,
     "orig_name": p.orig_name or "",
@@ -284,9 +284,9 @@
     "skipped": p.skipped,
     "is_portrait": p.is_portrait,
     "thumb_url": thumb_url(current_user.id, selected_event.id, p.filename)
-  } for p in selected_event.photos
-] | tojson | safe }}
-</script>
+  }) %}
+{% endfor %}
+<script id="initialPhotos" type="application/json">{{ _initial_photos | tojson | safe }}</script>
 {% endif %}
 <script>
 function eventsPage() {
