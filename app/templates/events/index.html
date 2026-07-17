@@ -335,20 +335,20 @@
       </div>
     </section>
 
-    {# Lightbox modal - full-size photo viewer #}
-    <div x-show="lightboxOpen" x-cloak
-         @click="closeLightbox()"
-         @keydown.escape.window="closeLightbox()"
-         class="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
-         x-transition.opacity>
-      <button type="button" @click.stop="closeLightbox()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80" title="Close (Esc)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-      <img :src="lightboxUrl" @click.stop class="max-w-full max-h-full object-contain">
-    </div>
+  </div>
 
+  {# Lightbox modal - full-size photo viewer (outside all tabs) #}
+  <div x-show="lightboxOpen" x-cloak
+       @click="closeLightbox()"
+       @keydown.escape.window="closeLightbox()"
+       class="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4"
+       x-transition.opacity>
+    <button type="button" @click.stop="closeLightbox()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80" title="Close (Esc)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <img :src="lightboxUrl" @click.stop class="max-w-[95vw] max-h-[95vh] object-contain">
   </div>
 
   {# Tab: Processed #}
