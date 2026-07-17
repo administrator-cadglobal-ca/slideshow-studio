@@ -16,6 +16,14 @@ body.fs-lock { overflow: hidden !important; }
 .fs-select { background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 8px; font-size: 13px; }
 .fs-btn { background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
 .fs-btn:hover { background: rgba(0,0,0,0.8); }
+/* Caption overlay */
+.caption-overlay { position: absolute; left: 0; right: 0; bottom: 0; padding: 2.5rem 1.25rem 1.25rem; background: linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0) 100%); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); pointer-events: none; z-index: 20; transition: opacity 0.4s ease; text-align: center; }
+.caption-overlay__title { font-size: 1.25rem; font-weight: 600; line-height: 1.2; }
+.caption-overlay__subtitle { font-size: 0.95rem; opacity: 0.9; margin-top: 0.15rem; }
+.caption-overlay__photo { margin-top: 0.35rem; font-size: 1.05rem; line-height: 1.3; }
+.fs-fake .caption-overlay { padding: 4rem 2rem 2rem; }
+.fs-fake .caption-overlay__title { font-size: 1.75rem; }
+.fs-fake .caption-overlay__photo { font-size: 1.35rem; }
 </style>
 {% endblock %}
 
@@ -178,6 +186,19 @@ body.fs-lock { overflow: hidden !important; }
           </button>
           <div class="fs-song" x-show="currentSong" x-text="currentSong ? currentSong.name : ''"></div>
         </div>
+      </div>
+
+      {# Caption overlay - MUST be descendant of stage (which gets .fs-fake) #}
+      <div class="caption-overlay" x-show="hasCaption" x-cloak>
+        <template x-if="captionTitle">
+          <div class="caption-overlay__title" x-text="captionTitle"></div>
+        </template>
+        <template x-if="captionSubtitle">
+          <div class="caption-overlay__subtitle" x-text="captionSubtitle"></div>
+        </template>
+        <template x-if="currentPhotoCaption">
+          <div class="caption-overlay__photo" x-text="currentPhotoCaption"></div>
+        </template>
       </div>
     </div>
   </div>
@@ -342,6 +363,18 @@ function previewPage() {
     playlistId: PREVIEW_EVENT_PLAYLIST_ID ? String(PREVIEW_EVENT_PLAYLIST_ID) : '',
     images: [],
     currentIndex: 0,
+
+    // Caption overlay
+    captionTitle: {{ (event.title_text or '')|tojson|safe }},
+    captionSubtitle: {{ (event.title_subtitle or '')|tojson|safe }},
+
+    get currentPhotoCaption() {
+      var img = this.images[this.currentIndex];
+      return (img && img.caption) ? img.caption : '';
+    },
+    get hasCaption() {
+      return !!(this.captionTitle || this.captionSubtitle || this.currentPhotoCaption);
+    },
     playing: false,
     slideDur: 3,
     slideTimer: null,

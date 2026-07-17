@@ -182,6 +182,7 @@ def preview(event_id):
     versions_data = {}
     processed_versions = []
     photos_ordered = sorted(evt.photos, key=lambda p: p.sort_order)
+    photo_captions = [p.caption or "" for p in photos_ordered]
     l2_mode = evt.caption_line2 or "date_location"
 
     # Always add "source" version using original uploaded photos
@@ -195,6 +196,7 @@ def preview(event_id):
                 "note":     p.note or "",
                 "line2":    p.auto_line2(l2_mode),
                 "date":     p.exif_date.strftime("%b %d, %Y") if p.exif_date else "",
+                "caption":  p.caption or "",
             }
             for p in photos_ordered
         ]
@@ -252,8 +254,9 @@ def preview(event_id):
                 "note":     "",
                 "line2":    "",
                 "date":     "",
+                "caption":  photo_captions[i] if i < len(photo_captions) else "",
             }
-            for f in frames
+            for i, f in enumerate(frames)
         ]
 
     all_events = db.session.query(Event)\
