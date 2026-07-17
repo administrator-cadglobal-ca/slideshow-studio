@@ -124,6 +124,13 @@
           </svg>
           Upload photos
         </button>
+        <button type="button" @click="deleteAllModal = true" class="btn-secondary text-danger" :disabled="photos.length === 0 || uploading" title="Delete all photos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+          </svg>
+          Delete all
+        </button>
         <button type="button" @click="processModal = true" class="btn-secondary" :disabled="photos.length === 0 || uploading" title="Process photos">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -241,6 +248,22 @@
     </div>
   </div>
 
+  {# Modal: Delete all photos #}
+  <div x-show="deleteAllModal" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+       @click.self="deleteAllModal = false">
+    <div class="bg-white rounded-comfortable p-6 max-w-md w-full">
+      <h2 class="text-h2 mb-2 text-danger">Delete all photos?</h2>
+      <p class="text-small text-ink-soft mb-4">
+        This will remove all <span x-text="photos.length"></span> photos from this event. Files will be removed from storage. This cannot be undone.
+      </p>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="deleteAllModal = false" class="btn-secondary">Cancel</button>
+        <button type="button" @click="runDeleteAll()" class="btn-danger">Delete all</button>
+      </div>
+    </div>
+  </div>
+
   {# Modal: Process photos #}
   {% if selected_event %}
   <div x-show="processModal" x-cloak
@@ -307,6 +330,7 @@ function eventsPage() {
 
     // Process
     processModal: false,
+    deleteAllModal: false,
     procResolutions: ['hd'],
     procAllowUpscale: false,
 
@@ -421,6 +445,24 @@ function eventsPage() {
     },
 
 
+
+    async runDeleteAll() {
+      if (!this.eventId) return;
+      this.deleteAllModal = false;
+      try {
+        var r = await fetch('/events/' + encodeURIComponent(this.eventId) + '/photos/delete-all', {
+          method: 'POST', credentials: 'same-origin'
+        });
+        if (r.ok) {
+          this.photos = [];
+          if (window.showToast) window.showToast('All photos deleted', 'success');
+        } else {
+          if (window.showToast) window.showToast('Delete failed', 'error');
+        }
+      } catch (e) {
+        console.error('Delete all failed', e);
+      }
+    },
 
     async runProcess() {
       if (this.procResolutions.length === 0) return;
