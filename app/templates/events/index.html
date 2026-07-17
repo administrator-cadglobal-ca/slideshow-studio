@@ -546,6 +546,10 @@
           <label class="flex items-center gap-2"><input type="checkbox" x-model="procResolutions" value="2k"> <span class="text-small">2K (2560x1440)</span></label>
           <label class="flex items-center gap-2"><input type="checkbox" x-model="procResolutions" value="4k"> <span class="text-small">4K (3840x2160)</span></label>
         </div>
+        <label class="flex items-center gap-2 mb-2">
+          <input type="checkbox" x-model="procEnhance">
+          <span class="text-small">Auto-enhance photos (brightness, contrast, sharpen, mild smoothing)</span>
+        </label>
         <label class="flex items-center gap-2 mb-4">
           <input type="checkbox" x-model="procAllowUpscale">
           <span class="text-small">Allow upscale for smaller source images</span>
@@ -658,6 +662,7 @@ function eventsPage() {
     activities: [],
     loadingActivities: false,
     procResolutions: ['hd'],
+    procEnhance: true,
     procAllowUpscale: false,
     processing: false,
     processDone: false,
@@ -922,7 +927,8 @@ function eventsPage() {
           credentials: 'same-origin',
           body: JSON.stringify({
             resolutions: this.procResolutions,
-            allow_upscale: this.procAllowUpscale
+            allow_upscale: this.procAllowUpscale,
+            enhance: this.procEnhance
           })
         });
         if (!r.ok) {

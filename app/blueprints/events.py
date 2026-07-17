@@ -299,6 +299,7 @@ def process_photos(event_id):
 
     resolutions    = request.json.get("resolutions", ["hd"])
     allow_upscale  = request.json.get("allow_upscale", False)
+    enhance        = request.json.get("enhance", False)
     from app.models import log_activity
     log_activity(evt, "process_started", {"resolutions": resolutions, "allow_upscale": allow_upscale, "photo_count": len(evt.photos)})
 
@@ -525,6 +526,8 @@ def process_photos(event_id):
                 tmp_path = tmp_dir / fname
                 R2.download_file(key, tmp_path)
                 img = Image.open(str(tmp_path)).convert("RGB")
+                if _enhance_flag:
+                    img = _auto_enhance(img)
                 items.append((fname, img, img.height > img.width))
             except Exception as e:
                 log(f"ERROR loading {fname}: {e}")
