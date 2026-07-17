@@ -31,7 +31,7 @@ def create_app(env: str = "default") -> Flask:
     # ── Blueprints ─────────────────────────────────────────────────────────────
     from app.blueprints.auth      import bp as auth_bp
     from app.blueprints.dashboard import bp as dash_bp
-    from app.blueprints.projects  import bp as proj_bp
+    from app.blueprints.events  import bp as proj_bp
     from app.blueprints.audio     import bp as audio_bp
     from app.blueprints.renders   import bp as render_bp
     from app.blueprints.admin     import bp as admin_bp

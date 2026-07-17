@@ -7,10 +7,10 @@ Production:  STORAGE_ROOT=/pcloud/slideshow
 Everything lives on pCloud in production:
     users/{id}/audio/original/        ← raw uploaded songs
     users/{id}/audio/clipped/         ← trimmed AudioClip_ versions
-    users/{id}/projects/{pid}/source/     ← uploaded photos (deleted post-render)
-    users/{id}/projects/{pid}/processed/  ← processed frame JPEGs (kept)
-    users/{id}/projects/{pid}/output/     ← final MP4s (kept)
-    users/{id}/projects/{pid}/logs/       ← render logs
+    users/{id}/events/{pid}/source/     ← uploaded photos (deleted post-render)
+    users/{id}/events/{pid}/processed/  ← processed frame JPEGs (kept)
+    users/{id}/events/{pid}/output/     ← final MP4s (kept)
+    users/{id}/events/{pid}/logs/       ← render logs
 
 Temp render working files (never on pCloud):
     TEMP_ROOT/render_{job_id}/            ← ffmpeg temp clips, deleted after concat
@@ -53,31 +53,31 @@ def audio_dir(user_id: int, sub: str = "original") -> Path:
     """sub = 'original' | 'clipped'"""
     return _d(user_dir(user_id) / "audio" / sub)
 
-def project_dir(user_id: int, project_id: str) -> Path:
-    return _d(user_dir(user_id) / "projects" / project_id)
+def project_dir(user_id: int, event_id: str) -> Path:
+    return _d(user_dir(user_id) / "projects" / event_id)
 
-def source_dir(user_id: int, project_id: str) -> Path:
-    return _d(project_dir(user_id, project_id) / "source")
+def source_dir(user_id: int, event_id: str) -> Path:
+    return _d(project_dir(user_id, event_id) / "source")
 
-def thumb_dir(user_id: int, project_id: str) -> Path:
-    return _d(project_dir(user_id, project_id) / "thumbs")
+def thumb_dir(user_id: int, event_id: str) -> Path:
+    return _d(project_dir(user_id, event_id) / "thumbs")
 
-def processed_dir(user_id: int, project_id: str, version: str = "") -> Path:
+def processed_dir(user_id: int, event_id: str, version: str = "") -> Path:
     """
     Processed frame JPEGs — saved to pCloud, kept after render.
     version e.g. '1920x1080_normal', '1080x1920_smart', '1080x1920_stack'
     """
-    base = project_dir(user_id, project_id) / "processed"
+    base = project_dir(user_id, event_id) / "processed"
     if version:
         return _d(base / version)
     return _d(base)
 
-def output_dir(user_id: int, project_id: str) -> Path:
+def output_dir(user_id: int, event_id: str) -> Path:
     """Final MP4s — kept on pCloud permanently."""
-    return _d(project_dir(user_id, project_id) / "output")
+    return _d(project_dir(user_id, event_id) / "output")
 
-def log_dir(user_id: int, project_id: str) -> Path:
-    return _d(project_dir(user_id, project_id) / "logs")
+def log_dir(user_id: int, event_id: str) -> Path:
+    return _d(project_dir(user_id, event_id) / "logs")
 
 def render_temp_dir(job_id: str) -> Path:
     """
@@ -90,7 +90,7 @@ def render_temp_dir(job_id: str) -> Path:
 
 # ── Photo upload ───────────────────────────────────────────────────────────────
 
-def save_uploaded_photo(file_storage, user_id: int, project_id: str) -> dict:
+def save_uploaded_photo(file_storage, user_id: int, event_id: str) -> dict:
     """
     Save uploaded photo to pCloud source dir.
     Fixes EXIF rotation, generates thumbnail.
@@ -98,7 +98,7 @@ def save_uploaded_photo(file_storage, user_id: int, project_id: str) -> dict:
     """
     ext      = Path(file_storage.filename).suffix.lower()
     filename = f"{uuid.uuid4()}{ext}"
-    src_path = source_dir(user_id, project_id) / filename
+    src_path = source_dir(user_id, event_id) / filename
 
     file_storage.save(str(src_path))
     file_size = src_path.stat().st_size
@@ -128,12 +128,12 @@ def save_uploaded_photo(file_storage, user_id: int, project_id: str) -> dict:
         # Generate thumbnail (320px) for list/filmstrip
         thumb = img.copy()
         thumb.thumbnail((320, 320), Image.LANCZOS)
-        thumb.save(str(thumb_dir(user_id, project_id) / f"thumb_{filename}"), quality=85)
+        thumb.save(str(thumb_dir(user_id, event_id) / f"thumb_{filename}"), quality=85)
 
         # Generate preview (1280px) for main stage display
         prev_img = img.copy()
         prev_img.thumbnail((1280, 1280), Image.LANCZOS)
-        prev_dir = _d(project_dir(user_id, project_id) / "previews")
+        prev_dir = _d(project_dir(user_id, event_id) / "previews")
         prev_img.save(str(prev_dir / f"prev_{filename}"), quality=88)
 
         # Reverse geocode GPS if present (runs in background thread to avoid blocking)
@@ -239,19 +239,19 @@ def save_uploaded_audio(file_storage, user_id: int) -> dict:
 
 # ── Cleanup ────────────────────────────────────────────────────────────────────
 
-def delete_source_photos(user_id: int, project_id: str):
+def delete_source_photos(user_id: int, event_id: str):
     """
     Delete source photos and thumbnails after successful render.
     Processed frames and output MP4s are KEPT on pCloud.
     """
-    for d in (source_dir(user_id, project_id),
-              thumb_dir(user_id, project_id)):
+    for d in (source_dir(user_id, event_id),
+              thumb_dir(user_id, event_id)):
         if d.exists():
             shutil.rmtree(d)
 
-def delete_project_files(user_id: int, project_id: str):
+def delete_project_files(user_id: int, event_id: str):
     """Delete ALL project files (source, processed, output, logs)."""
-    d = project_dir(user_id, project_id)
+    d = project_dir(user_id, event_id)
     if d.exists():
         shutil.rmtree(d)
 
@@ -297,17 +297,17 @@ def get_dir_size(path: Path) -> int:
 
 # ── URL helpers ────────────────────────────────────────────────────────────────
 
-def thumb_url(user_id: int, project_id: str, filename: str) -> str:
+def thumb_url(user_id: int, event_id: str, filename: str) -> str:
     """Flask route URL for serving a thumbnail."""
-    return f"/api/v1/media/thumbs/{user_id}/{project_id}/thumb_{filename}"
+    return f"/api/v1/media/thumbs/{user_id}/{event_id}/thumb_{filename}"
 
-def output_url(user_id: int, project_id: str, filename: str) -> str:
+def output_url(user_id: int, event_id: str, filename: str) -> str:
     """Flask route URL for downloading an output MP4."""
-    return f"/api/v1/media/output/{user_id}/{project_id}/{filename}"
+    return f"/api/v1/media/output/{user_id}/{event_id}/{filename}"
 
-def processed_url(user_id: int, project_id: str, version: str, filename: str) -> str:
+def processed_url(user_id: int, event_id: str, version: str, filename: str) -> str:
     """Flask route URL for viewing a processed frame JPEG."""
-    return f"/api/v1/media/processed/{user_id}/{project_id}/{version}/{filename}"
+    return f"/api/v1/media/processed/{user_id}/{event_id}/{version}/{filename}"
 
 
 # ── Caption rendering ──────────────────────────────────────────────────────────
@@ -418,7 +418,7 @@ def burn_caption(img: "Image.Image", note: str, style: dict, line2: str = "") ->
 
 # ── R2-aware functions ────────────────────────────────────────────────────────
 
-def save_uploaded_photo_r2(file_storage, user_id: int, project_id: str) -> dict:
+def save_uploaded_photo_r2(file_storage, user_id: int, event_id: str) -> dict:
     """
     Save uploaded photo to R2.
     Fixes EXIF rotation, generates thumbnail, uploads both to R2.
@@ -473,9 +473,9 @@ def save_uploaded_photo_r2(file_storage, user_id: int, project_id: str) -> dict:
         thumb_bytes = tbuf.getvalue()
 
         # Upload original + thumbnail to R2
-        R2.upload_bytes(R2.photo_key(user_id, project_id, filename),
+        R2.upload_bytes(R2.photo_key(user_id, event_id, filename),
                         corrected, "image/jpeg")
-        R2.upload_bytes(R2.thumb_key(user_id, project_id, f"thumb_{filename}"),
+        R2.upload_bytes(R2.thumb_key(user_id, event_id, f"thumb_{filename}"),
                         thumb_bytes, "image/jpeg")
         print(f"[R2] Uploaded photo+thumb: {filename}")
 
@@ -490,7 +490,7 @@ def save_uploaded_photo_r2(file_storage, user_id: int, project_id: str) -> dict:
 
     except Exception as e:
         print(f"[R2] Photo processing error: {e}, uploading raw")
-        R2.upload_bytes(R2.photo_key(user_id, project_id, filename),
+        R2.upload_bytes(R2.photo_key(user_id, event_id, filename),
                         raw, "image/jpeg")
         # Generate thumbnail from raw
         try:
@@ -498,7 +498,7 @@ def save_uploaded_photo_r2(file_storage, user_id: int, project_id: str) -> dict:
             thumb2.thumbnail((320, 320), Image.LANCZOS)
             tbuf2 = io.BytesIO()
             thumb2.convert("RGB").save(tbuf2, format="JPEG", quality=85)
-            R2.upload_bytes(R2.thumb_key(user_id, project_id, f"thumb_{filename}"),
+            R2.upload_bytes(R2.thumb_key(user_id, event_id, f"thumb_{filename}"),
                             tbuf2.getvalue(), "image/jpeg")
         except Exception as e2:
             print(f"[R2] Thumbnail fallback error: {e2}")
@@ -514,27 +514,27 @@ def save_uploaded_photo_r2(file_storage, user_id: int, project_id: str) -> dict:
     }
 
 
-def get_photo_url_r2(user_id: int, project_id: str, filename: str,
+def get_photo_url_r2(user_id: int, event_id: str, filename: str,
                      thumb: bool = False, expires: int = 3600) -> str:
     """Get presigned URL for a photo from R2."""
     from app.services import r2 as R2
-    key = R2.thumb_key(user_id, project_id, f"thumb_{filename}") if thumb           else R2.photo_key(user_id, project_id, filename)
+    key = R2.thumb_key(user_id, event_id, f"thumb_{filename}") if thumb           else R2.photo_key(user_id, event_id, filename)
     return R2.presigned_url(key, expires)
 
 
-def get_processed_url_r2(user_id: int, project_id: str, version: str,
+def get_processed_url_r2(user_id: int, event_id: str, version: str,
                           filename: str, thumb: bool = False,
                           expires: int = 3600) -> str:
     """Get presigned URL for a processed frame from R2."""
     from app.services import r2 as R2
-    key = R2.processed_thumb_key(user_id, project_id, version, filename) if thumb           else R2.processed_key(user_id, project_id, version, filename)
+    key = R2.processed_thumb_key(user_id, event_id, version, filename) if thumb           else R2.processed_key(user_id, event_id, version, filename)
     return R2.presigned_url(key, expires)
 
 
-def list_processed_versions_r2(user_id: int, project_id: str) -> dict:
+def list_processed_versions_r2(user_id: int, event_id: str) -> dict:
     """List all processed versions and their frames from R2."""
     from app.services import r2 as R2
-    prefix = f"users/{user_id}/projects/{project_id}/processed/"
+    prefix = f"users/{user_id}/events/{event_id}/processed/"
     all_keys = R2.list_keys(prefix)
 
     versions = {}

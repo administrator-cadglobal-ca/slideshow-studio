@@ -40,23 +40,23 @@ def bucket():
 
 # ── Key helpers ───────────────────────────────────────────────────────────────
 
-def photo_key(user_id, project_id, filename):
-    return f"users/{user_id}/projects/{project_id}/photos/{filename}"
+def photo_key(user_id, event_id, filename):
+    return f"users/{user_id}/events/{event_id}/photos/{filename}"
 
-def thumb_key(user_id, project_id, filename):
-    return f"users/{user_id}/projects/{project_id}/thumbs/{filename}"
+def thumb_key(user_id, event_id, filename):
+    return f"users/{user_id}/events/{event_id}/thumbs/{filename}"
 
-def processed_key(user_id, project_id, version, filename):
-    return f"users/{user_id}/projects/{project_id}/processed/{version}/{filename}"
+def processed_key(user_id, event_id, version, filename):
+    return f"users/{user_id}/events/{event_id}/processed/{version}/{filename}"
 
-def processed_thumb_key(user_id, project_id, version, filename):
-    return f"users/{user_id}/projects/{project_id}/processed/{version}/thumbs/{filename}"
+def processed_thumb_key(user_id, event_id, version, filename):
+    return f"users/{user_id}/events/{event_id}/processed/{version}/thumbs/{filename}"
 
 def audio_key(user_id, filename):
     return f"users/{user_id}/audio/{filename}"
 
-def output_key(user_id, project_id, filename):
-    return f"users/{user_id}/projects/{project_id}/output/{filename}"
+def output_key(user_id, event_id, filename):
+    return f"users/{user_id}/events/{event_id}/output/{filename}"
 
 
 # ── Upload ────────────────────────────────────────────────────────────────────

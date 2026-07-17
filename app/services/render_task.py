@@ -17,7 +17,7 @@ def run_render(self, job_id: str):
     if not job:
         return
 
-    project = job.project
+    project = job.event
     user_id = project.user_id
 
     job.status     = "running"
@@ -219,7 +219,7 @@ def _notify(job: RenderJob, project: Project):
             recipients=[email],
             body=f"Your slideshow '{project.name}' has finished rendering.\n\n"
                  f"Download your videos at:\n"
-                 f"{current_app.config['APP_URL']}/projects/{project.id}/output\n\n"
+                 f"{current_app.config['APP_URL']}/events/{project.id}/output\n\n"
                  f"Slideshow Studio",
         )
         mail.send(msg)

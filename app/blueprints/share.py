@@ -1,7 +1,7 @@
 """Public share routes — no login required."""
 from flask import Blueprint, render_template, abort, request, jsonify
 from app.extensions import db
-from app.models.project import Project, ShareToken
+from app.models.event import Project, ShareToken
 from app.models.audio import AudioLabel
 from app.services.storage import processed_dir, thumb_url, processed_url, audio_dir
 import json
@@ -17,7 +17,7 @@ def public_player(token):
     if st.is_expired:
         abort(410)  # Gone
 
-    proj = db.session.get(Project, st.project_id)
+    proj = db.session.get(Project, st.event_id)
     if not proj:
         abort(404)
 
@@ -119,7 +119,7 @@ def public_media(token, version, filename):
     if not st or st.is_expired:
         abort(403)
     # Try thumb first, fall back to full
-    proc = processed_dir(st.created_by, st.project_id, version)
+    proc = processed_dir(st.created_by, st.event_id, version)
     path = proc / "thumbs" / filename
     if not path.exists():
         path = proc / filename
@@ -136,9 +136,9 @@ def public_source(token, filename):
     st = db.session.query(ShareToken).filter_by(token=token, share_type="public").first()
     if not st or st.is_expired:
         abort(403)
-    path = source_dir(st.created_by, st.project_id).parent / "thumbs" / filename
+    path = source_dir(st.created_by, st.event_id).parent / "thumbs" / filename
     if not path.exists():
-        path = source_dir(st.created_by, st.project_id) / filename
+        path = source_dir(st.created_by, st.event_id) / filename
     if not path.exists():
         abort(404)
     return send_file(str(path))
