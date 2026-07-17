@@ -256,8 +256,12 @@ def preview(event_id):
             for f in frames
         ]
 
+    all_events = db.session.query(Event)\
+                    .filter_by(user_id=current_user.id)\
+                    .order_by(Event.updated_at.desc()).all()
     return render_template("events/preview.html",
         event=evt,
+        all_events=all_events,
         processed_versions=processed_versions,
         versions_data=versions_data,
         songs_data=songs_data,

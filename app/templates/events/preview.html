@@ -22,9 +22,14 @@
 
   {# Header #}
   <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-    <div class="flex items-center gap-3">
-      <a href="{{ url_for('events.index') }}?event={{ event.id }}" class="btn-secondary text-small">Back</a>
-      <h1 class="text-h1">{{ event.name }}</h1>
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+      <a href="{{ url_for('events.index') }}?event={{ event.id }}" class="btn-secondary text-small flex-shrink-0" title="Back to Events">Back</a>
+      <select class="input text-h2 font-semibold flex-1 max-w-md"
+              @change="if ($event.target.value) window.location.href = '/events/' + encodeURIComponent($event.target.value) + '/preview'">
+        {% for e in all_events %}
+          <option value="{{ e.id }}" {% if e.id == event.id %}selected{% endif %}>{{ e.name }}</option>
+        {% endfor %}
+      </select>
     </div>
     <div class="flex items-center gap-2">
       <button type="button" @click="shareModal = true" class="btn-primary">
