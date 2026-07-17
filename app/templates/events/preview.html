@@ -178,11 +178,11 @@
 <script>
 const PREVIEW_VERSIONS = {{ versions_data | tojson | safe }};
 const PREVIEW_LABELS_CLIPS = {{ labels_clips | tojson | safe }};
-const PREVIEW_ALL_PLAYLISTS = [
-  {% for label in all_labels %}
-  { id: {{ label.id }}, name: {{ label.name|tojson }} }{% if not loop.last %},{% endif %}
-  {% endfor %}
-];
+{% set _playlist_list = [] %}
+{% for label in all_labels %}
+  {% set _ = _playlist_list.append({"id": label.id, "name": label.name}) %}
+{% endfor %}
+const PREVIEW_ALL_PLAYLISTS = {{ _playlist_list | tojson | safe }};
 const PREVIEW_EVENT_PLAYLIST_ID = {{ event_playlist_id or 'null' }};
 
 function previewPage() {
