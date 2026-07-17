@@ -435,7 +435,7 @@ function eventsPage() {
     async deletePhoto(photoId) {
       if (!confirm('Delete this photo?')) return;
       try {
-        await fetch('/events/' + encodeURIComponent(this.eventId) + '/photos/' + photoId + '/delete', {
+        await fetch('/api/v1/events/' + encodeURIComponent(this.eventId) + '/photos/' + photoId + '/delete', {
           method: 'POST', credentials: 'same-origin'
         });
         this.photos = this.photos.filter(function(p) { return p.id !== photoId; });
@@ -450,7 +450,7 @@ function eventsPage() {
       if (!this.eventId) return;
       this.deleteAllModal = false;
       try {
-        var r = await fetch('/events/' + encodeURIComponent(this.eventId) + '/photos/delete-all', {
+        var r = await fetch('/api/v1/events/' + encodeURIComponent(this.eventId) + '/photos/delete-all', {
           method: 'POST', credentials: 'same-origin'
         });
         if (r.ok) {
