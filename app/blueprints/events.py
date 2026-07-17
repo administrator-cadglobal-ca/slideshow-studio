@@ -649,6 +649,19 @@ def process_frames(event_id):
 
 
 
+@bp.route("/<event_id>/processed-frames/<version>")
+@login_required
+def list_processed_frames(event_id, version):
+    """List processed frame URLs for a specific version."""
+    from app.services.storage import list_processed_versions_r2
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    versions_map = list_processed_versions_r2(current_user.id, event_id)
+    frames = versions_map.get(version, [])
+    urls = [f"/api/v1/media/processed/{current_user.id}/{event_id}/{version}/{f}" for f in frames]
+    return jsonify({"frames": urls})
+
+
 @bp.route("/<event_id>/versions-r2")
 @login_required
 def list_r2_versions(event_id):

@@ -352,10 +352,43 @@
   </div>
 
   {# Tab: Processed #}
-  <div x-show="activeTab === 'processed'" x-cloak>
-    <div class="rounded-comfortable border border-line p-12 text-center text-ink-soft">
-      <p>Processed photos preview coming soon.</p>
-    </div>
+  <div x-show="activeTab === 'processed'" x-cloak class="space-y-4">
+
+    <section class="rounded-comfortable border border-line p-4 bg-white">
+      <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <div>
+          <h3 class="text-small font-semibold text-ink">Processed photos</h3>
+          <p class="text-caption text-ink-soft">Photos with brightness, contrast, sharpen and face-smoothing enhancement applied during processing.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-caption text-ink-soft">Version:</label>
+          <select x-model="processedVersion" @change="loadProcessedFrames()" class="input text-small py-1">
+            <option value="">-- select --</option>
+            <template x-for="v in renderVersions" :key="v">
+              <option :value="v" x-text="v"></option>
+            </template>
+          </select>
+          <button type="button" @click="loadProcessedFrames()" class="btn-secondary text-small" title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 4v6h-6M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+        <template x-for="(frame, i) in processedFrames" :key="i">
+          <div class="relative group rounded-standard overflow-hidden bg-line-soft aspect-video cursor-pointer"
+               @click="openLightbox(frame)">
+            <img :src="frame" class="w-full h-full object-cover pointer-events-none" loading="lazy">
+          </div>
+        </template>
+      </div>
+      <p class="text-caption text-ink-soft text-center py-8" x-show="!processedVersion">Select a version above to view processed frames.</p>
+      <p class="text-caption text-ink-soft text-center py-8" x-show="processedVersion && processedFrames.length === 0">No frames found for this version. Try processing photos first.</p>
+    </section>
+
   </div>
 
   {# Tab: Renders #}
@@ -643,6 +676,8 @@ function eventsPage() {
     renderStarted: false,
     renderError: '',
     renders: [],
+    processedVersion: '',
+    processedFrames: [],
     autoFillFields: { place: true, country: true, date: true, time: false, camera: false, filename: false, settings: false },
     newEventModal: false,
 
@@ -1055,6 +1090,21 @@ function eventsPage() {
         this.renders = data.files || [];
       } catch (e) {
         console.error('load renders', e);
+      }
+    },
+
+    async loadProcessedFrames() {
+      if (!this.processedVersion) {
+        this.processedFrames = [];
+        return;
+      }
+      try {
+        const r = await fetch('/events/' + this.eventId + '/processed-frames/' + encodeURIComponent(this.processedVersion), {credentials: 'same-origin'});
+        const data = await r.json();
+        this.processedFrames = data.frames || [];
+      } catch (e) {
+        console.error('load processed frames', e);
+        this.processedFrames = [];
       }
     },
 
