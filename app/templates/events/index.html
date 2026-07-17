@@ -275,6 +275,10 @@
               <input type="checkbox" x-model="autoFillFields.camera" @change="refreshAutoCaptions()" class="w-4 h-4">
               <span>Camera</span>
             </label>
+            <label class="flex items-center gap-1.5 text-small">
+              <input type="checkbox" x-model="autoFillFields.filename" @change="refreshAutoCaptions()" class="w-4 h-4">
+              <span>Filename</span>
+            </label>
           </div>
           <button type="button" class="btn-secondary text-small" @click="refreshAutoCaptions()" title="Reset all captions from selected metadata">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline align-text-bottom mr-1">
@@ -499,7 +503,7 @@ function eventsPage() {
     savingAllCaptions: false,
     eventCaptionSaved: false,
     captionError: '',
-    autoFillFields: { place: true, country: true, date: true, camera: false },
+    autoFillFields: { place: true, country: true, date: true, camera: false, filename: false },
     newEventModal: false,
 
     // Photos
@@ -842,6 +846,7 @@ function eventsPage() {
       if (placeParts.length > 0) parts.push(placeParts.join(', '));
       if (this.autoFillFields.date && photo.exif_date_str) parts.push(photo.exif_date_str);
       if (this.autoFillFields.camera && photo.camera_model) parts.push(photo.camera_model);
+      if (this.autoFillFields.filename && photo.name) parts.push(photo.name);
       return parts.join(' — ');
     },
 
