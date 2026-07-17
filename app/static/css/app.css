@@ -192,8 +192,8 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
 .otp-phone{text-align:center;font-size:13px;color:#8a9bb0;margin-bottom:20px}
 .otp-phone strong{color:#374151}
 
-/* ── Projects grid ── */
-.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+/* ── Events grid ── */
+.events-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
 .proj-card{background:#fff;border:1px solid #e8e5e0;border-radius:12px;
   overflow:hidden;transition:border-color .15s,box-shadow .15s;cursor:pointer}
 .proj-card:hover{border-color:#c8c4be;box-shadow:0 2px 12px rgba(0,0,0,.06)}
@@ -211,7 +211,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
   background:#fff;cursor:pointer;transition:.15s}
 .proj-new-card:hover{border-color:#a8c4dc;color:#1e3a52;background:#f5f9fc}
 
-/* ── Project workspace tabs ── */
+/* ── Event workspace tabs ── */
 .tab-bar{display:flex;gap:2px;border-bottom:1px solid #e8e5e0;margin-bottom:20px;overflow-x:auto}
 .tab-btn{padding:9px 16px;font-size:13px;font-weight:500;color:#8a9bb0;
   border:none;background:none;border-bottom:2px solid transparent;
@@ -368,7 +368,7 @@ table.data-table{width:100%;border-collapse:collapse;font-size:13px}
   .nav-links{display:none}
   .page,.page-sm{padding:16px}
   .stat-grid{grid-template-columns:repeat(2,1fr)}
-  .projects-grid{grid-template-columns:repeat(2,1fr)}
+  .events-grid{grid-template-columns:repeat(2,1fr)}
   .photo-grid{grid-template-columns:repeat(auto-fill,minmax(70px,1fr))}
   .data-table th:nth-child(n+4),
   .data-table td:nth-child(n+4){display:none}

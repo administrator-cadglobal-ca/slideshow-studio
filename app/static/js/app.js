@@ -129,12 +129,12 @@ function handlePhotoUpload(input) {
   console.log('[UPLOAD] handlePhotoUpload called, files:', input.files.length);
   if (!input.files.length) return;
   const zone = document.getElementById('uploadZone');
-  const projectId = zone ? zone.dataset.project : null;
-  if (!projectId) { alert('Project ID missing'); return; }
-  _doPhotoUpload(input.files, projectId, zone);
+  const eventId = zone ? zone.dataset.event : null;
+  if (!eventId) { alert('Event ID missing'); return; }
+  _doPhotoUpload(input.files, eventId, zone);
 }
 
-function _doPhotoUpload(files, projectId, zone) {
+function _doPhotoUpload(files, eventId, zone) {
   // Show progress
   let progEl = document.getElementById('photoUploadProgress');
   if (!progEl) {
@@ -164,7 +164,7 @@ function _doPhotoUpload(files, projectId, zone) {
       batch.forEach(f => fd.append('photos', f));
       try {
         console.log('[UPLOAD] posting batch', Math.floor(i/BATCH)+1);
-        const r = await fetch('/api/v1/projects/'+projectId+'/photos/upload', {
+        const r = await fetch('/api/v1/events/'+eventId+'/photos/upload', {
           method: 'POST', body: fd
         });
         console.log('[UPLOAD] status:', r.status);
@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function handleFiles(files) {
     if (!files.length) return;
-    const projectId = zone.dataset.project;
+    const eventId = zone.dataset.event;
 
     // Show progress overlay above the zone
     let progEl = document.getElementById('photoUploadProgress');
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function uploadBatch(batch) {
       const fd = new FormData();
       batch.forEach(f => fd.append('photos', f));
-      const r = await fetch('/api/v1/projects/' + projectId + '/photos/upload', {
+      const r = await fetch('/api/v1/events/' + eventId + '/photos/upload', {
         method: 'POST', body: fd
       });
       return r.json();
