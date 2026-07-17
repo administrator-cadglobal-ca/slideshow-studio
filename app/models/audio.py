@@ -26,9 +26,6 @@ class Library(db.Model):
     user     = db.relationship("User")
     songs    = db.relationship("AudioFile", backref="library", lazy="dynamic",
                                foreign_keys="AudioFile.library_id")
-    playlists = db.relationship("Playlist", backref="library", lazy="dynamic",
-                                foreign_keys="Playlist.library_id",
-                                cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
