@@ -210,11 +210,11 @@ def preview(event_id):
         songs_data = [
             {
                 "id":    c.id,
-                "name":  c.display_name,
+                "name":  c.name,
                 "url":   f"/api/v1/media/audio/{current_user.id}/original/{c.song.filename}",
-                "dur":   c.duration_display,
-                "start": c.start_s or 0,
-                "end":   c.end_s,
+                "dur":   c.trim_end or "--:--",
+                "start": c.trim_start or "0",
+                "end":   c.trim_end,
             }
             for c in default_label.clips
         ]
@@ -228,11 +228,11 @@ def preview(event_id):
         for c in label.clips:
             clips.append({
                 "id":    c.id,
-                "name":  c.display_name,
+                "name":  c.name,
                 "url":   f"/api/v1/media/audio/{current_user.id}/original/{c.song.filename}",
-                "dur":   c.duration_display,
-                "start": c.start_s or 0,
-                "end":   c.end_s,
+                "dur":   c.trim_end or "--:--",
+                "start": c.trim_start or "0",
+                "end":   c.trim_end,
             })
             if c.song.id not in seen_songs:
                 seen_songs.add(c.song.id)
