@@ -185,11 +185,11 @@ function viewerPage() {
     overlayTimer: null,
 
     init() {
-      if (this.version) this.loadVersion();
-      else if (this.availableVersions.length > 0) {
-        this.version = this.availableVersions[0];
-        this.loadVersion();
+      // If default version isn't available, fall back to first available
+      if (!this.version || !this.availableVersions.includes(this.version)) {
+        this.version = this.availableVersions[0] || '';
       }
+      if (this.version) this.loadVersion();
       // Default playlist: use provided or first available
       if (!this.playlistId && this.playlists.length > 0) {
         this.playlistId = String(this.playlists[0].id);
