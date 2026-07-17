@@ -57,6 +57,8 @@ class Event(db.Model):
     updated_at      = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
                                 onupdate=lambda: datetime.now(timezone.utc))
 
+    playlist_id  = db.Column(db.Integer, db.ForeignKey("playlists.id"), nullable=True)
+
     # ── Relationships ─────────────────────────────────────────────────────────
     user            = db.relationship("User", back_populates="events")
     photos          = db.relationship("Photo", back_populates="event",
@@ -65,9 +67,7 @@ class Event(db.Model):
     render_jobs     = db.relationship("RenderJob", back_populates="event",
                                       cascade="all, delete-orphan",
                                       order_by="RenderJob.created_at.desc()")
-    audio_label     = db.relationship("AudioLabel", back_populates="event",
-                                      foreign_keys="AudioLabel.event_id",
-                                      uselist=False)
+    playlist        = db.relationship("Playlist", foreign_keys=["events.playlist_id"])
     selected_songs  = db.relationship("AudioFile",
                                       secondary="event_songs",
                                       order_by="event_songs.c.sort_order")

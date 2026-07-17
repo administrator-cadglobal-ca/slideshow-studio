@@ -74,8 +74,8 @@ class AudioClip(db.Model):
     sort_order  = db.Column(db.Integer, nullable=False, default=0)
     sort_order  = db.Column(db.Integer, nullable=False, default=0)
 
-    labels = db.relationship("AudioLabel",
-                             secondary="audio_clip_labels",
+    playlists = db.relationship("Playlist",
+                             secondary="playlist_clips",
                              back_populates="clips")
 
     def to_dict(self):
@@ -131,8 +131,8 @@ class PlaylistClip(db.Model):
     added_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-class AudioLabel(db.Model):
-    __tablename__ = "audio_labels"
+class Playlist(db.Model):
+    __tablename__ = "playlists"
 
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -143,23 +143,21 @@ class AudioLabel(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user    = db.relationship("User")
-    event = db.relationship("Event", back_populates="audio_label",
-                              foreign_keys=[event_id])
     clips   = db.relationship("AudioClip",
-                              secondary="audio_clip_labels",
-                              order_by="audio_clip_labels.c.sort_order",
-                              back_populates="labels")
+                              secondary="playlist_clips",
+                              order_by="playlist_clips.c.sort_order",
+                              back_populates="playlists")
 
     def clips_by_key(self):
         """Return dict keyed by clip id for O(1) lookup."""
         return {c.id: c for c in self.clips}
 
 
-class AudioClipLabel(db.Model):
-    __tablename__ = "audio_clip_labels"
+class PlaylistClip(db.Model):
+    __tablename__ = "playlist_clips"
 
     clip_id    = db.Column(db.Integer, db.ForeignKey("audio_clips.id"), primary_key=True)
-    label_id   = db.Column(db.Integer, db.ForeignKey("audio_labels.id"), primary_key=True)
+    playlist_id   = db.Column(db.Integer, db.ForeignKey("audio_labels.id"), primary_key=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
 
 
