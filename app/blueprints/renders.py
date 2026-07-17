@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, abort
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.models import RenderJob, Project
+from app.models import RenderJob, Event
 from app.services.storage import output_url
 
 bp = Blueprint("renders", __name__)
@@ -10,8 +10,8 @@ bp = Blueprint("renders", __name__)
 @login_required
 def index():
     jobs = db.session.query(RenderJob)\
-             .join(Project)\
-             .filter(Project.user_id == current_user.id)\
+             .join(Event)\
+             .filter(Event.user_id == current_user.id)\
              .order_by(RenderJob.created_at.desc()).limit(50).all()
     return render_template("renders/index.html", jobs=jobs)
 

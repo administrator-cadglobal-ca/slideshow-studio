@@ -509,7 +509,7 @@ def delete_clip(clip_id):
 @login_required
 def playlists_page():
     """Renamed from labels_page. Underlying AudioLabel model unchanged for now -
-    render pipeline (projects.py) still calls them 'labels' internally."""
+    render pipeline (events.py) still calls them 'labels' internally."""
     labels = AudioLabel.query.filter_by(user_id=current_user.id)\
                              .order_by(AudioLabel.sort_order, AudioLabel.name).all()
     songs  = AudioFile.query.filter_by(user_id=current_user.id)\

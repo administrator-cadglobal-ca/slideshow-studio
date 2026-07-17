@@ -2,29 +2,29 @@ from flask       import Blueprint, jsonify, Response, stream_with_context, \
                         request, abort
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.models  import RenderJob, Project, Photo
+from app.models  import RenderJob, Event, Photo
 import time, json
 
 bp = Blueprint("api", __name__)
 
 
-# ── Set project label ────────────────────────────────────────────────────────
+# ── Set event label ────────────────────────────────────────────────────────
 @bp.route("/events/<event_id>/label", methods=["POST"])
 @login_required
-def set_project_label(event_id):
-    from app.models import Project
+def set_event_label(event_id):
+    from app.models import Event
     from app.models.audio import AudioLabel
-    proj = db.session.query(Project)             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    evt = db.session.query(Event)             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     label_id = request.json.get("label_id")
-    # Clear any existing project label assignment for this project
-    old_label = db.session.query(AudioLabel)                  .filter_by(event_id=proj.id).first()
+    # Clear any existing event label assignment for this event
+    old_label = db.session.query(AudioLabel)                  .filter_by(event_id=evt.id).first()
     if old_label:
         old_label.event_id = None
     if label_id:
         label = db.session.get(AudioLabel, int(label_id))
         if not label or label.user_id != current_user.id:
             return jsonify({"error": "Label not found"}), 404
-        label.event_id = proj.id
+        label.event_id = evt.id
     db.session.commit()
     return jsonify({"ok": True})
 
@@ -99,10 +99,10 @@ def serve_source_photo(user_id, event_id, filename):
 def serve_preview_photo(user_id, event_id, filename):
     from flask import send_file
     from pathlib import Path
-    from app.services.storage import project_dir
+    from app.services.storage import event_dir
     if user_id != current_user.id:
         abort(403)
-    path = project_dir(user_id, event_id) / "previews" / filename
+    path = event_dir(user_id, event_id) / "previews" / filename
     if not path.exists():
         # Fall back to source
         from app.services.storage import source_dir
@@ -118,11 +118,11 @@ def serve_preview_photo(user_id, event_id, filename):
 def delete_all_photos(event_id):
     from app.services import r2 as R2
     from app.models import Photo
-    proj = db.session.get(Project, event_id)
-    if not proj or proj.user_id != current_user.id:
+    evt = db.session.get(Event, event_id)
+    if not evt or evt.user_id != current_user.id:
         return jsonify({"error": "not found"}), 404
     deleted = 0
-    for photo in proj.photos:
+    for photo in evt.photos:
         try:
             R2.delete(R2.photo_key(current_user.id, event_id, photo.filename))
             R2.delete(R2.thumb_key(current_user.id, event_id, f"thumb_{photo.filename}"))
@@ -140,9 +140,9 @@ def delete_all_photos(event_id):
 def delete_photo(event_id, photo_id):
     from app.services import r2 as R2
     from app.models import Photo
-    proj  = db.session.get(Project, event_id)
+    evt  = db.session.get(Event, event_id)
     photo = db.session.get(Photo, photo_id)
-    if not proj or proj.user_id != current_user.id or not photo or photo.event_id != event_id:
+    if not evt or evt.user_id != current_user.id or not photo or photo.event_id != event_id:
         return jsonify({"error": "not found"}), 404
     try:
         R2.delete(R2.photo_key(current_user.id, event_id, photo.filename))
@@ -159,22 +159,22 @@ def delete_photo(event_id, photo_id):
 @login_required
 def upload_photos(event_id):
     from app.services.storage import save_uploaded_photo_r2 as save_uploaded_photo
-    proj = db.session.get(Project, event_id)
-    if not proj or proj.user_id != current_user.id:
+    evt = db.session.get(Event, event_id)
+    if not evt or evt.user_id != current_user.id:
         return jsonify({"error": "not found"}), 404
 
     files    = request.files.getlist("photos")
     uploaded = 0
     errors   = []
 
-    # Get existing filenames in this project to detect duplicates
-    existing_names = {p.orig_name for p in proj.photos}
+    # Get existing filenames in this event to detect duplicates
+    existing_names = {p.orig_name for p in evt.photos}
 
     for f in files:
         if not f or not f.filename:
             continue
         print(f"[UPLOAD] Processing: {f.filename}")
-        # Skip duplicate — same original filename already in project
+        # Skip duplicate — same original filename already in event
         if f.filename in existing_names:
             print(f"[UPLOAD] Skipping duplicate: {f.filename}")
             continue
@@ -191,7 +191,7 @@ def upload_photos(event_id):
                 width        = result.get("width"),
                 height       = result.get("height"),
                 orientation  = result.get("orientation", "landscape"),
-                sort_order   = len(proj.photos) + uploaded,
+                sort_order   = len(evt.photos) + uploaded,
                 exif_date    = result.get("exif_date"),
                 exif_date_str= result.get("exif_date_str"),
                 camera_make  = result.get("camera_make"),
@@ -220,7 +220,7 @@ def upload_photos(event_id):
         "uploaded": uploaded,
         "skipped":  max(0, skipped),
         "errors":   errors,
-        "total":    len(proj.photos),
+        "total":    len(evt.photos),
     })
 
 @bp.route("/renders/<job_id>/progress")
@@ -251,15 +251,15 @@ def render_progress(job_id: str):
 @bp.route("/events/<event_id>/render", methods=["POST"])
 @login_required
 def start_render(event_id: str):
-    project = db.session.query(Project).filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    event = db.session.query(Event).filter_by(id=event_id, user_id=current_user.id).first_or_404()
     mode = request.json.get("mode", "production")
-    job  = RenderJob(event_id=project.id, mode=mode)
+    job  = RenderJob(event_id=event.id, mode=mode)
     if mode == "dev":
         job.dev_images          = request.json.get("dev_images", 20)
         job.dev_songs           = request.json.get("dev_songs", 4)
         job.dev_images_per_song = request.json.get("dev_images_per_song", 5)
     db.session.add(job)
-    project.status = "rendering"
+    event.status = "rendering"
     db.session.commit()
     from app.services.render_task import run_render
     task = run_render.delay(job.id)
@@ -283,10 +283,10 @@ def cancel_render(job_id: str):
 @bp.route("/events/<event_id>/photos/reorder", methods=["POST"])
 @login_required
 def reorder_photos(event_id: str):
-    project = db.session.query(Project).filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    event = db.session.query(Event).filter_by(id=event_id, user_id=current_user.id).first_or_404()
     for i, photo_id in enumerate(request.json.get("order", [])):
         photo = db.session.get(Photo, photo_id)
-        if photo and photo.event_id == project.id:
+        if photo and photo.event_id == event.id:
             photo.sort_order = i
     db.session.commit()
     return jsonify({"ok": True})
@@ -386,9 +386,9 @@ def serve_audio(uid, sub, filename):
 @bp.route("/v1/events/<event_id>/photos/<int:photo_id>/note", methods=["POST"])
 @login_required
 def save_photo_note(event_id, photo_id):
-    from app.models import Project, Photo
-    proj  = db.session.get(Project, event_id)
-    if not proj or proj.user_id != current_user.id:
+    from app.models import Event, Photo
+    evt  = db.session.get(Event, event_id)
+    if not evt or evt.user_id != current_user.id:
         return jsonify({"error": "not found"}), 404
     photo = db.session.get(Photo, photo_id)
     if not photo or photo.event_id != event_id:
@@ -403,10 +403,10 @@ def save_photo_note(event_id, photo_id):
 @bp.route("/v1/events/<event_id>/caption-style", methods=["POST"])
 @login_required
 def save_caption_style(event_id):
-    from app.models import Project
+    from app.models import Event
     import json
-    proj = db.session.get(Project, event_id)
-    if not proj or proj.user_id != current_user.id:
+    evt = db.session.get(Event, event_id)
+    if not evt or evt.user_id != current_user.id:
         return jsonify({"error": "not found"}), 404
     style = {
         "position":      request.json.get("position",      "bottom"),
@@ -415,7 +415,7 @@ def save_caption_style(event_id):
         "background":    request.json.get("background",    "gradient"),
         "burn_captions": request.json.get("burn_captions", True),
     }
-    proj.caption_style = json.dumps(style)
+    evt.caption_style = json.dumps(style)
     db.session.commit()
     return jsonify({"ok": True})
 
@@ -424,9 +424,9 @@ def save_caption_style(event_id):
 @bp.route("/v1/events/<event_id>/photos/<int:photo_id>/meta")
 @login_required
 def photo_meta(event_id, photo_id):
-    from app.models import Project, Photo
-    proj  = db.session.get(Project, event_id)
-    if not proj or proj.user_id != current_user.id:
+    from app.models import Event, Photo
+    evt  = db.session.get(Event, event_id)
+    if not evt or evt.user_id != current_user.id:
         return jsonify({"error": "not found"}), 404
     photo = db.session.get(Photo, photo_id)
     if not photo or photo.event_id != event_id:
@@ -438,11 +438,11 @@ def photo_meta(event_id, photo_id):
 @bp.route("/v1/events/<event_id>/photos/<int:photo_id>/reextract", methods=["POST"])
 @login_required
 def reextract_exif(event_id, photo_id):
-    from app.models import Project, Photo
+    from app.models import Event, Photo
     from app.services.storage import source_dir
     from app.services.exif import extract_metadata, reverse_geocode
-    proj  = db.session.get(Project, event_id)
-    if not proj or proj.user_id != current_user.id:
+    evt  = db.session.get(Event, event_id)
+    if not evt or evt.user_id != current_user.id:
         return jsonify({"error": "not found"}), 404
     photo = db.session.get(Photo, photo_id)
     if not photo or photo.event_id != event_id:

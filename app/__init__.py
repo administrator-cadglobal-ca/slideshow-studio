@@ -39,7 +39,7 @@ def create_app(env: str = "default") -> Flask:
 
     app.register_blueprint(auth_bp,   url_prefix="/auth")
     app.register_blueprint(dash_bp,   url_prefix="/")
-    app.register_blueprint(proj_bp,   url_prefix="/projects")
+    app.register_blueprint(proj_bp,   url_prefix="/events")
     app.register_blueprint(audio_bp,  url_prefix="/audio")
     app.register_blueprint(render_bp, url_prefix="/renders")
     app.register_blueprint(admin_bp,  url_prefix="/admin")

@@ -53,31 +53,31 @@ def audio_dir(user_id: int, sub: str = "original") -> Path:
     """sub = 'original' | 'clipped'"""
     return _d(user_dir(user_id) / "audio" / sub)
 
-def project_dir(user_id: int, event_id: str) -> Path:
-    return _d(user_dir(user_id) / "projects" / event_id)
+def event_dir(user_id: int, event_id: str) -> Path:
+    return _d(user_dir(user_id) / "events" / event_id)
 
 def source_dir(user_id: int, event_id: str) -> Path:
-    return _d(project_dir(user_id, event_id) / "source")
+    return _d(event_dir(user_id, event_id) / "source")
 
 def thumb_dir(user_id: int, event_id: str) -> Path:
-    return _d(project_dir(user_id, event_id) / "thumbs")
+    return _d(event_dir(user_id, event_id) / "thumbs")
 
 def processed_dir(user_id: int, event_id: str, version: str = "") -> Path:
     """
     Processed frame JPEGs — saved to pCloud, kept after render.
     version e.g. '1920x1080_normal', '1080x1920_smart', '1080x1920_stack'
     """
-    base = project_dir(user_id, event_id) / "processed"
+    base = event_dir(user_id, event_id) / "processed"
     if version:
         return _d(base / version)
     return _d(base)
 
 def output_dir(user_id: int, event_id: str) -> Path:
     """Final MP4s — kept on pCloud permanently."""
-    return _d(project_dir(user_id, event_id) / "output")
+    return _d(event_dir(user_id, event_id) / "output")
 
 def log_dir(user_id: int, event_id: str) -> Path:
-    return _d(project_dir(user_id, event_id) / "logs")
+    return _d(event_dir(user_id, event_id) / "logs")
 
 def render_temp_dir(job_id: str) -> Path:
     """
@@ -133,7 +133,7 @@ def save_uploaded_photo(file_storage, user_id: int, event_id: str) -> dict:
         # Generate preview (1280px) for main stage display
         prev_img = img.copy()
         prev_img.thumbnail((1280, 1280), Image.LANCZOS)
-        prev_dir = _d(project_dir(user_id, event_id) / "previews")
+        prev_dir = _d(event_dir(user_id, event_id) / "previews")
         prev_img.save(str(prev_dir / f"prev_{filename}"), quality=88)
 
         # Reverse geocode GPS if present (runs in background thread to avoid blocking)
@@ -249,9 +249,9 @@ def delete_source_photos(user_id: int, event_id: str):
         if d.exists():
             shutil.rmtree(d)
 
-def delete_project_files(user_id: int, event_id: str):
-    """Delete ALL project files (source, processed, output, logs)."""
-    d = project_dir(user_id, event_id)
+def delete_event_files(user_id: int, event_id: str):
+    """Delete ALL event files (source, processed, output, logs)."""
+    d = event_dir(user_id, event_id)
     if d.exists():
         shutil.rmtree(d)
 

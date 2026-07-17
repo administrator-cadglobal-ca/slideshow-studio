@@ -1,7 +1,7 @@
 """Public share routes — no login required."""
 from flask import Blueprint, render_template, abort, request, jsonify
 from app.extensions import db
-from app.models.event import Project, ShareToken
+from app.models.event import Event, ShareToken
 from app.models.audio import AudioLabel
 from app.services.storage import processed_dir, thumb_url, processed_url, audio_dir
 import json
@@ -17,8 +17,8 @@ def public_player(token):
     if st.is_expired:
         abort(410)  # Gone
 
-    proj = db.session.get(Project, st.event_id)
-    if not proj:
+    evt = db.session.get(Event, st.event_id)
+    if not evt:
         abort(404)
 
     # Update usage stats
@@ -27,7 +27,7 @@ def public_player(token):
     db.session.commit()
 
     # Get processed versions
-    proc_base = processed_dir(st.created_by, proj.id)
+    proc_base = processed_dir(st.created_by, evt.id)
     processed_versions = []
     processed_images = {}
     if proc_base.exists():
@@ -51,19 +51,19 @@ def public_player(token):
         labels_query = labels_query.filter(AudioLabel.id.in_(allowed_label_ids))
     all_labels = labels_query.all()
 
-    # Default label = project's assigned label
-    project_label = proj.audio_label
+    # Default label = event's assigned label
+    event_label = evt.audio_label
 
     # Build source images (fallback if no processed)
-    photos_ordered = sorted(proj.photos, key=lambda p: p.sort_order)
+    photos_ordered = sorted(evt.photos, key=lambda p: p.sort_order)
 
     return render_template("share/player.html",
-        token=st, project=proj,
+        token=st, event=evt,
         processed_versions=processed_versions,
         processed_images=processed_images,
         default_version=default_version,
         all_labels=all_labels,
-        project_label=project_label,
+        event_label=event_label,
         photos=photos_ordered,
         user_id=st.created_by,
         thumb_url=thumb_url,
@@ -77,7 +77,7 @@ def public_label_clips(token, label_id):
     st = db.session.query(ShareToken).filter_by(token=token, share_type="public").first()
     if not st or st.is_expired:
         abort(403)
-    # Verify label belongs to project owner
+    # Verify label belongs to event owner
     label = db.session.get(AudioLabel, label_id)
     if not label or label.user_id != st.created_by:
         abort(403)

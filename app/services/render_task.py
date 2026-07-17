@@ -4,7 +4,7 @@ Progress is written to the RenderJob record in the DB and
 streamed to the browser via the /api/v1/renders/<job_id>/progress endpoint.
 """
 from app.extensions  import celery_app, db
-from app.models      import RenderJob, RenderVersion, RenderOutput, Project
+from app.models      import RenderJob, RenderVersion, RenderOutput, Event
 from app.services.storage import source_dir, audio_dir, output_dir, log_dir
 from datetime        import datetime, timezone
 from pathlib         import Path
@@ -17,8 +17,8 @@ def run_render(self, job_id: str):
     if not job:
         return
 
-    project = job.event
-    user_id = project.user_id
+    event = job.event
+    user_id = event.user_id
 
     job.status     = "running"
     job.started_at = datetime.now(timezone.utc)
@@ -26,18 +26,18 @@ def run_render(self, job_id: str):
     db.session.commit()
 
     try:
-        _run(job, project, user_id)
+        _run(job, event, user_id)
         job.status       = "complete"
         job.completed_at = datetime.now(timezone.utc)
         job.progress_pct = 100.0
         job.append_log(f"[{_ts()}] All versions complete.\n")
 
-        # Update project status
-        project.status = "complete"
+        # Update event status
+        event.status = "complete"
         db.session.commit()
 
         # Send notification email
-        _notify(job, project)
+        _notify(job, event)
 
     except Exception as exc:
         job.status    = "failed"
@@ -47,20 +47,20 @@ def run_render(self, job_id: str):
         raise
 
 
-def _run(job: RenderJob, project: Project, user_id: int):
+def _run(job: RenderJob, event: Event, user_id: int):
     """Build the slideshow_maker.py command and run it."""
     from flask import current_app
 
     maker_path = current_app.config["SLIDESHOW_MAKER_PATH"]
-    src_dir    = source_dir(user_id, project.id)
+    src_dir    = source_dir(user_id, event.id)
     aud_dir    = audio_dir(user_id, "clipped")
-    out_dir    = output_dir(user_id, project.id)
-    log_path   = log_dir(user_id, project.id) / f"{job.id[:8]}.txt"
+    out_dir    = output_dir(user_id, event.id)
+    log_path   = log_dir(user_id, event.id) / f"{job.id[:8]}.txt"
 
     # Output file path — version suffix added by slideshow_maker.py
-    out_file = out_dir / f"{project.slug}.mp4"
+    out_file = out_dir / f"{event.slug}.mp4"
 
-    versions = ",".join(project.render_versions_list)
+    versions = ",".join(event.render_versions_list)
 
     cmd = [
         sys.executable, str(maker_path),
@@ -68,36 +68,36 @@ def _run(job: RenderJob, project: Project, user_id: int):
         "--music",           str(aud_dir),
         "--output",          str(out_file),
         "--render-versions", versions,
-        "--duration",        str(project.image_duration),
-        "--fps",             str(project.fps),
-        "--fade-duration",   str(project.fade_duration),
-        "--transition",      project.transition,
-        "--image-fit",       project.image_fit,
-        "--title-text",      project.title_text or "",
-        "--title-subtitle",  project.title_subtitle or "",
-        "--title-duration",  str(project.title_duration),
-        "--title-bg",        project.title_bg,
-        "--title-color",     project.title_color,
-        "--end-text",        project.end_text or "",
-        "--end-duration",    str(project.end_duration),
-        "--end-bg",          project.end_bg,
-        "--end-color",       project.end_color,
-        "--max-hold-duration", str(project.max_hold_duration),
-        "--audio-order",     project.audio_order,
-        "--image-order",     project.image_order,
+        "--duration",        str(event.image_duration),
+        "--fps",             str(event.fps),
+        "--fade-duration",   str(event.fade_duration),
+        "--transition",      event.transition,
+        "--image-fit",       event.image_fit,
+        "--title-text",      event.title_text or "",
+        "--title-subtitle",  event.title_subtitle or "",
+        "--title-duration",  str(event.title_duration),
+        "--title-bg",        event.title_bg,
+        "--title-color",     event.title_color,
+        "--end-text",        event.end_text or "",
+        "--end-duration",    str(event.end_duration),
+        "--end-bg",          event.end_bg,
+        "--end-color",       event.end_color,
+        "--max-hold-duration", str(event.max_hold_duration),
+        "--audio-order",     event.audio_order,
+        "--image-order",     event.image_order,
     ]
 
-    if project.auto_timing:
+    if event.auto_timing:
         cmd.append("--auto-timing")
-    if project.complete_last_song:
+    if event.complete_last_song:
         cmd.append("--complete-last-song")
-    if project.loop_audio:
+    if event.loop_audio:
         cmd.append("--loop-audio")
-    if project.stitch_portraits:
+    if event.stitch_portraits:
         cmd.append("--stitch-portraits")
-    if project.save_processed_images:
+    if event.save_processed_images:
         cmd.append("--save-images")
-    if project.save_images_confirm:
+    if event.save_images_confirm:
         cmd.append("--save-images-confirm")
 
     if job.mode == "dev":
@@ -133,7 +133,7 @@ def _run(job: RenderJob, project: Project, user_id: int):
         raise RuntimeError(f"slideshow_maker.py exited with code {proc.returncode}")
 
     # Register output files
-    _register_outputs(job, project, out_dir)
+    _register_outputs(job, event, out_dir)
 
 
 def _parse_progress(job: RenderJob, line: str):
@@ -155,7 +155,7 @@ def _parse_progress(job: RenderJob, line: str):
         job.current_step = line.strip()
 
 
-def _register_outputs(job: RenderJob, project: Project, out_dir: Path):
+def _register_outputs(job: RenderJob, event: Event, out_dir: Path):
     """Scan output folder and register RenderOutput records."""
     from app.models import RenderOutput
 
@@ -202,24 +202,24 @@ def _ts() -> str:
     return datetime.now(timezone.utc).strftime("%H:%M:%S")
 
 
-def _notify(job: RenderJob, project: Project):
+def _notify(job: RenderJob, event: Event):
     """Send completion email if configured."""
     try:
         from flask_mail import Message
         from app.extensions import mail
         from flask import current_app, render_template_string
 
-        user = project.user
+        user = event.user
         email = user.notify_email or user.email
         if not email or not current_app.config.get("MAIL_USERNAME"):
             return
 
         msg = Message(
-            subject=f"Render complete — {project.name}",
+            subject=f"Render complete — {event.name}",
             recipients=[email],
-            body=f"Your slideshow '{project.name}' has finished rendering.\n\n"
+            body=f"Your slideshow '{event.name}' has finished rendering.\n\n"
                  f"Download your videos at:\n"
-                 f"{current_app.config['APP_URL']}/events/{project.id}/output\n\n"
+                 f"{current_app.config['APP_URL']}/events/{event.id}/output\n\n"
                  f"Slideshow Studio",
         )
         mail.send(msg)

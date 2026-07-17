@@ -2,11 +2,11 @@ from pathlib import Path
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, send_file, jsonify, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
-from app.models import Project, Photo
-from app.services.storage import project_dir, source_dir, processed_dir, output_dir, thumb_url, processed_url, output_url, save_uploaded_photo
+from app.models import Event, Photo
+from app.services.storage import event_dir, source_dir, processed_dir, output_dir, thumb_url, processed_url, output_url, save_uploaded_photo
 import uuid
 
-bp = Blueprint("projects", __name__)
+bp = Blueprint("events", __name__)
 
 
 def _slugify(text: str) -> str:
@@ -34,10 +34,10 @@ RENDER_VERSIONS = {
 @bp.route("/")
 @login_required
 def index():
-    projects = db.session.query(Project)\
+    events = db.session.query(Event)\
                  .filter_by(user_id=current_user.id)\
-                 .order_by(Project.updated_at.desc()).all()
-    return render_template("events/index.html", projects=projects, loop_colors=LOOP_COLORS)
+                 .order_by(Event.updated_at.desc()).all()
+    return render_template("events/index.html", events=events, loop_colors=LOOP_COLORS)
 
 @bp.route("/new", methods=["GET","POST"])
 @login_required
@@ -45,10 +45,10 @@ def new():
     if request.method == "POST":
         name    = request.form.get("name","").strip()
         if not name:
-            flash("Project name is required.","error")
+            flash("Event name is required.","error")
             return render_template("events/new.html", render_versions=RENDER_VERSIONS)
         versions = ",".join(request.form.getlist("render_versions")) or "hd,4k,phone_smart,phone_stack"
-        proj = Project(
+        evt = Event(
             id=str(uuid.uuid4()), user_id=current_user.id,
             name=name, slug=_slugify(name),
             title_text=request.form.get("title_text","").strip() or name,
@@ -59,16 +59,16 @@ def new():
             transition=current_user.pref_transition,
             fps=current_user.pref_fps,
         )
-        db.session.add(proj)
+        db.session.add(evt)
         db.session.commit()
-        flash(f"Project '{name}' created.", "success")
-        return redirect(url_for("projects.show", event_id=proj.id))
+        flash(f"Event '{name}' created.", "success")
+        return redirect(url_for("events.show", event_id=evt.id))
     return render_template("events/new.html", render_versions=RENDER_VERSIONS)
 
 @bp.route("/<event_id>")
 @login_required
 def show(event_id):
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     # Processed versions
     from app.services.storage import list_processed_versions_r2
@@ -77,75 +77,75 @@ def show(event_id):
     from flask import current_app
     from app.models.audio import AudioLabel
     all_labels = db.session.query(AudioLabel)                   .filter_by(user_id=current_user.id)                   .order_by(AudioLabel.name).all()
-    project_label = proj.audio_label  # AudioLabel with event_id=proj.id, or None
+    event_label = evt.audio_label  # AudioLabel with event_id=evt.id, or None
 
-    return render_template("events/show.html", project=proj,
+    return render_template("events/show.html", event=evt,
         processed_versions=processed_versions, processed_images=processed_images,
         max_upload_mb=current_app.config.get("MAX_UPLOAD_MB",50),
         thumb_url=thumb_url, processed_url=processed_url, output_url=output_url,
-        all_labels=all_labels, project_label=project_label)
+        all_labels=all_labels, event_label=event_label)
 
 @bp.route("/<event_id>/settings", methods=["GET","POST"])
 @login_required
 def settings(event_id):
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    return render_template("events/settings.html", project=proj, render_versions=RENDER_VERSIONS)
+    return render_template("events/settings.html", event=evt, render_versions=RENDER_VERSIONS)
 
 @bp.route("/<event_id>/settings/save", methods=["POST"])
 @login_required
 def save_settings(event_id):
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    proj.name                  = request.form.get("name", proj.name).strip()
-    proj.slug                  = request.form.get("slug", proj.slug).strip()
-    proj.title_text            = request.form.get("title_text","")
-    proj.title_subtitle        = request.form.get("title_subtitle","")
-    proj.title_duration        = float(request.form.get("title_duration",5))
-    proj.title_bg              = request.form.get("title_bg","#0d1b2a")
-    proj.end_text              = request.form.get("end_text","")
-    proj.end_duration          = float(request.form.get("end_duration",4))
-    proj.image_duration        = float(request.form.get("image_duration",3))
-    proj.fps                   = int(request.form.get("fps",24))
-    proj.transition            = request.form.get("transition","fade")
-    proj.fade_duration         = float(request.form.get("fade_duration",1))
-    proj.image_order           = request.form.get("image_order","sequential")
-    proj.auto_timing           = "auto_timing"         in request.form
-    proj.complete_last_song    = "complete_last_song"  in request.form
-    proj.stitch_portraits      = "stitch_portraits"    in request.form
-    proj.save_processed_images = "save_processed_images" in request.form
-    proj.save_images_confirm   = "save_images_confirm" in request.form
+    evt.name                  = request.form.get("name", evt.name).strip()
+    evt.slug                  = request.form.get("slug", evt.slug).strip()
+    evt.title_text            = request.form.get("title_text","")
+    evt.title_subtitle        = request.form.get("title_subtitle","")
+    evt.title_duration        = float(request.form.get("title_duration",5))
+    evt.title_bg              = request.form.get("title_bg","#0d1b2a")
+    evt.end_text              = request.form.get("end_text","")
+    evt.end_duration          = float(request.form.get("end_duration",4))
+    evt.image_duration        = float(request.form.get("image_duration",3))
+    evt.fps                   = int(request.form.get("fps",24))
+    evt.transition            = request.form.get("transition","fade")
+    evt.fade_duration         = float(request.form.get("fade_duration",1))
+    evt.image_order           = request.form.get("image_order","sequential")
+    evt.auto_timing           = "auto_timing"         in request.form
+    evt.complete_last_song    = "complete_last_song"  in request.form
+    evt.stitch_portraits      = "stitch_portraits"    in request.form
+    evt.save_processed_images = "save_processed_images" in request.form
+    evt.save_images_confirm   = "save_images_confirm" in request.form
     versions = request.form.getlist("render_versions")
-    proj.render_versions       = ",".join(versions) if versions else "hd"
+    evt.render_versions       = ",".join(versions) if versions else "hd"
     db.session.commit()
     flash("Settings saved.", "success")
-    return redirect(url_for("projects.show", event_id=proj.id))
+    return redirect(url_for("events.show", event_id=evt.id))
 
 @bp.route("/<event_id>/delete", methods=["GET","POST"])
 @login_required
 def delete(event_id):
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    from app.services.storage import delete_project_files
-    delete_project_files(current_user.id, event_id)
-    db.session.delete(proj)
+    from app.services.storage import delete_event_files
+    delete_event_files(current_user.id, event_id)
+    db.session.delete(evt)
     db.session.commit()
-    flash(f"Project '{proj.name}' deleted.", "success")
-    return redirect(url_for("projects.index"))
+    flash(f"Event '{evt.name}' deleted.", "success")
+    return redirect(url_for("events.index"))
 
 @bp.route("/<event_id>/preview")
 @login_required
 def preview(event_id):
     from flask import current_app
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
     # Build processed versions dict: {version_name: [{url, name}]}
     proc_base = processed_dir(current_user.id, event_id)
     versions_data = {}
     processed_versions = []
-    photos_ordered = sorted(proj.photos, key=lambda p: p.sort_order)
-    l2_mode = proj.caption_line2 or "date_location"
+    photos_ordered = sorted(evt.photos, key=lambda p: p.sort_order)
+    l2_mode = evt.caption_line2 or "date_location"
 
     # Always add "source" version using original uploaded photos
     if photos_ordered:
@@ -167,7 +167,7 @@ def preview(event_id):
     all_labels = db.session.query(AudioLabel)                   .filter_by(user_id=current_user.id)                   .order_by(AudioLabel.name).all()
 
     # Build songs_data — flat list for the default label (or first label)
-    default_label = proj.audio_label or (all_labels[0] if all_labels else None)
+    default_label = evt.audio_label or (all_labels[0] if all_labels else None)
     songs_data = []
     if default_label:
         songs_data = [
@@ -220,13 +220,13 @@ def preview(event_id):
         ]
 
     return render_template("events/preview.html",
-        project=proj,
+        event=evt,
         processed_versions=processed_versions,
         versions_data=versions_data,
         songs_data=songs_data,
         all_labels=all_labels,
         labels_clips=labels_clips,
-        project_label_id=proj.audio_label.id if proj.audio_label else None,
+        event_label_id=evt.audio_label.id if evt.audio_label else None,
         audio_files=audio_files,
     )
 
@@ -235,11 +235,11 @@ def preview(event_id):
 @login_required
 def notes(event_id):
     from app.services.storage import thumb_url as _thumb_url
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     return render_template("events/notes.html",
-        project=proj,
-        photos=proj.photos,
+        event=evt,
+        photos=evt.photos,
         thumb_url=_thumb_url,
     )
 
@@ -251,7 +251,7 @@ def process_photos(event_id):
     from PIL import Image, ImageFilter
     import threading
 
-    proj = db.session.query(Project)             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    evt = db.session.query(Event)             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
     resolutions    = request.json.get("resolutions", ["hd"])
     allow_upscale  = request.json.get("allow_upscale", False)
@@ -280,7 +280,7 @@ def process_photos(event_id):
     if not jobs:
         return jsonify({"error": "No valid resolutions"}), 400
 
-    photos = sorted(proj.photos, key=lambda p: p.sort_order)
+    photos = sorted(evt.photos, key=lambda p: p.sort_order)
     if not photos:
         return jsonify({"error": "No photos"}), 400
 
@@ -434,7 +434,7 @@ def process_photos(event_id):
 
     from pathlib import Path
     import datetime
-    # Log file in local temp dir (R2 mode has no local project dirs)
+    # Log file in local temp dir (R2 mode has no local event dirs)
     import tempfile as _tmp_log
     from pathlib import Path as _Path2
     import pathlib as _pl2
@@ -521,7 +521,7 @@ def process_photos(event_id):
 def process_status(event_id):
     """Check processing status - count frames per version."""
     from app.services.storage import processed_dir as proc_dir
-    db.session.query(Project)      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    db.session.query(Event)      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     result = {}
     base = proc_dir(current_user.id, event_id)
     if base.exists():
@@ -538,7 +538,7 @@ def process_status(event_id):
 def process_log(event_id):
     """Return current processing log content."""
     from app.services.storage import processed_dir as proc_dir
-    db.session.query(Project)      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    db.session.query(Event)      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     import tempfile as _tl
     import pathlib as _pl
     log_path = _pl.Path(_tl.gettempdir()) / "slideshow_logs" / f"{event_id}.log"
@@ -557,7 +557,7 @@ def process_log(event_id):
 def process_frames(event_id):
     """Return processed frame filenames grouped by version for AJAX refresh."""
     from app.services.storage import processed_dir as proc_dir
-    db.session.query(Project)      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    db.session.query(Event)      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     result = {}
     base = proc_dir(current_user.id, event_id)
     if base.exists():
@@ -583,7 +583,7 @@ def render_mp4(event_id):
     from pathlib import Path
     from app.services.storage import processed_dir, output_dir as _output_dir
 
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
     data     = request.json or {}
@@ -726,9 +726,9 @@ def render_mp4(event_id):
 @bp.route("/<event_id>/output-files")
 @login_required
 def list_output_files(event_id):
-    """List rendered MP4 files for this project."""
+    """List rendered MP4 files for this event."""
     from app.services.storage import output_dir as _output_dir
-    db.session.query(Project)\
+    db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     out_dir = _output_dir(current_user.id, event_id)
     files = []
@@ -748,7 +748,7 @@ def download_output(event_id, filename):
     """Download rendered MP4."""
     from flask import send_file
     from app.services.storage import output_dir as _output_dir
-    db.session.query(Project)\
+    db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     path = _output_dir(current_user.id, event_id) / filename
     if not path.exists():
@@ -762,10 +762,10 @@ def download_output(event_id, filename):
 @bp.route("/<event_id>/share", methods=["POST"])
 @login_required
 def create_share_token(event_id):
-    """Generate a public share token for this project."""
+    """Generate a public share token for this event."""
     import secrets, json
     from app.models.event import ShareToken
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
     data       = request.json or {}
@@ -777,7 +777,7 @@ def create_share_token(event_id):
     token = secrets.token_urlsafe(24)
     share = ShareToken(
         token      = token,
-        event_id = proj.id,
+        event_id = evt.id,
         created_by = current_user.id,
         share_type = "public",
         role       = "viewer",
@@ -794,11 +794,11 @@ def create_share_token(event_id):
 @bp.route("/<event_id>/share", methods=["GET"])
 @login_required
 def list_share_tokens(event_id):
-    """List existing share tokens for this project."""
+    """List existing share tokens for this event."""
     from app.models.event import ShareToken
-    proj = db.session.query(Project)\
+    evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    tokens = proj.share_tokens.filter_by(share_type="public")\
+    tokens = evt.share_tokens.filter_by(share_type="public")\
                                .order_by(ShareToken.created_at.desc()).all()
     return jsonify({"tokens": [
         {"token": t.token, "url": t.public_url,
@@ -815,7 +815,7 @@ def update_share_password(event_id, token):
     """Update password on an existing share token."""
     import hashlib, requests as req_lib, json
     from app.models.event import ShareToken
-    db.session.query(Project)      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    db.session.query(Event)      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
     data     = request.json or {}
     password = data.get('password', 'WELCOME')
@@ -851,7 +851,7 @@ def update_share_password(event_id, token):
 def revoke_share_token(event_id, token):
     """Revoke a share token."""
     from app.models.event import ShareToken
-    db.session.query(Project)\
+    db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     st = db.session.query(ShareToken).filter_by(token=token, event_id=event_id).first_or_404()
     db.session.delete(st)
@@ -869,7 +869,7 @@ def share_to_cloud(event_id):
     from app.services.storage import processed_dir, audio_dir
     from app.models.audio import AudioLabel
 
-    proj = db.session.query(Project)             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    evt = db.session.query(Event)             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
     data         = request.json or {}
     label_ids    = data.get("label_ids")
@@ -920,7 +920,7 @@ def share_to_cloud(event_id):
             audio_files.add(c.song.filename)
         clips_by_label[label.id] = {"name": label.name, "clips": clips}
 
-    # Check if existing token exists for this project
+    # Check if existing token exists for this event
     existing = None
     try:
         import requests as req_lib
@@ -952,7 +952,7 @@ def share_to_cloud(event_id):
     )
 
     meta = {
-        "project_name":     proj.name,
+        "event_name":     evt.name,
         "versions":         {v: d["frames"] for v, d in all_versions.items()},
         "default_version":  default_version,
         "labels":           [{"id": str(l.id), "name": l.name} for l in labels],
@@ -990,7 +990,7 @@ def share_to_cloud(event_id):
             log(f"boto3 error: {e}"); return
 
         log("=" * 55)
-        log(f"CLOUD SHARE: {proj.name} → share.calgarydhamaka.com/s/{token}")
+        log(f"CLOUD SHARE: {evt.name} → share.calgarydhamaka.com/s/{token}")
         log(f"Versions: {list(all_versions.keys())}")
 
         total_frames = sum(len(d["frames"]) for d in all_versions.values())
@@ -1062,8 +1062,8 @@ def share_to_cloud(event_id):
             d1_hdr = {"Authorization": f"Bearer {cf_token}", "Content-Type": "application/json"}
 
             req_lib.post(d1_url, headers=d1_hdr, json={
-                "sql": "INSERT OR REPLACE INTO slideshow_tokens (token,event_id,user_id,project_name,meta_json,expires_at,password_hash) VALUES (?,?,?,?,?,?,?)",
-                "params": [token, event_id, user_id, proj.name, json.dumps(meta), expires_at, password_hash]
+                "sql": "INSERT OR REPLACE INTO slideshow_tokens (token,event_id,user_id,event_name,meta_json,expires_at,password_hash) VALUES (?,?,?,?,?,?,?)",
+                "params": [token, event_id, user_id, evt.name, json.dumps(meta), expires_at, password_hash]
             }, timeout=15)
 
             for lid, ldata in clips_by_label.items():
