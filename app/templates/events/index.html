@@ -108,6 +108,11 @@
             class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px whitespace-nowrap">
       Renders
     </button>
+    <button type="button" @click="switchToLogsTab()"
+            :class="activeTab === 'logs' ? 'border-indigo text-indigo' : 'border-transparent text-ink-soft hover:text-ink'"
+            class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px whitespace-nowrap">
+      Logs
+    </button>
   </div>
 
   {# Tab: Originals #}
@@ -227,6 +232,56 @@
       <p>Render workflow coming soon.</p>
     </div>
   </div>
+
+  {# Tab: Logs #}
+  <div x-show="activeTab === 'logs'" x-cloak>
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-small text-ink-soft">
+        <span x-show="activities.length > 0"><span x-text="activities.length"></span> activit<span x-show="activities.length !== 1">ies</span><span x-show="activities.length === 1">y</span></span>
+        <span x-show="activities.length === 0 && !loadingActivities">No activity yet</span>
+        <span x-show="loadingActivities">Loading&hellip;</span>
+      </p>
+      <button type="button" @click="loadActivities()" class="btn-secondary text-small" :disabled="loadingActivities" title="Refresh">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        Refresh
+      </button>
+    </div>
+
+    <div x-show="activities.length === 0 && !loadingActivities" x-cloak
+         class="rounded-comfortable border border-line p-12 text-center">
+      <div class="mx-auto w-14 h-14 rounded-full bg-line-soft flex items-center justify-center mb-4">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <h2 class="text-h2 mb-1">No activity yet</h2>
+      <p class="text-small text-ink-soft">Actions on this event will show up here.</p>
+    </div>
+
+    <div x-show="activities.length > 0" x-cloak class="space-y-2">
+      <template x-for="a in activities" :key="a.id">
+        <div class="flex items-start gap-3 p-3 rounded-standard border border-line bg-white">
+          <div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+               :class="actionColor(a.action)">
+            <span x-text="actionIcon(a.action)" class="text-small font-semibold"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <p class="text-small font-medium" x-text="actionLabel(a.action)"></p>
+              <p class="text-caption text-ink-soft flex-shrink-0" x-text="relativeTime(a.created_at)" :title="a.created_at"></p>
+            </div>
+            <p class="text-caption text-ink-soft" x-text="actionSubtitle(a)"></p>
+            <p class="text-caption text-ink-faint mt-0.5" x-show="a.user_name" x-text="'by ' + a.user_name"></p>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
   {% endif %}
 
   {# Modal: New event #}
@@ -331,6 +386,8 @@ function eventsPage() {
     // Process
     processModal: false,
     deleteAllModal: false,
+    activities: [],
+    loadingActivities: false,
     procResolutions: ['hd'],
     procAllowUpscale: false,
 
@@ -462,6 +519,118 @@ function eventsPage() {
       } catch (e) {
         console.error('Delete all failed', e);
       }
+    },
+
+    switchToLogsTab() {
+      this.activeTab = 'logs';
+      this.loadActivities();
+    },
+
+    async loadActivities() {
+      if (!this.eventId) return;
+      this.loadingActivities = true;
+      try {
+        var r = await fetch('/events/' + encodeURIComponent(this.eventId) + '/activities?limit=100', {
+          credentials: 'same-origin'
+        });
+        if (r.ok) {
+          var data = await r.json();
+          this.activities = Array.isArray(data.activities) ? data.activities : [];
+        } else {
+          console.error('Failed to load activities', r.status);
+        }
+      } catch (e) {
+        console.error('Failed to load activities', e);
+      } finally {
+        this.loadingActivities = false;
+      }
+    },
+
+    actionLabel(action) {
+      var labels = {
+        'event_created':      'Event created',
+        'settings_saved':     'Settings saved',
+        'playlist_assigned':  'Playlist assigned',
+        'photos_uploaded':    'Photos uploaded',
+        'photo_deleted':      'Photo deleted',
+        'photos_deleted_all': 'All photos deleted',
+        'process_started':    'Processing started',
+        'render_started':     'Render started',
+      };
+      return labels[action] || action;
+    },
+
+    actionIcon(action) {
+      var icons = {
+        'event_created':      '+',
+        'settings_saved':     'S',
+        'playlist_assigned':  'P',
+        'photos_uploaded':    '\u2191',
+        'photo_deleted':      '\u00d7',
+        'photos_deleted_all': '\u00d7',
+        'process_started':    'P',
+        'render_started':     'R',
+      };
+      return icons[action] || '\u2022';
+    },
+
+    actionColor(action) {
+      var colors = {
+        'event_created':      'bg-indigo-soft text-indigo',
+        'settings_saved':     'bg-indigo-soft text-indigo',
+        'playlist_assigned':  'bg-indigo-soft text-indigo',
+        'photos_uploaded':    'bg-emerald-100 text-emerald-700',
+        'photo_deleted':      'bg-rose-100 text-rose-700',
+        'photos_deleted_all': 'bg-rose-100 text-rose-700',
+        'process_started':    'bg-amber-100 text-amber-700',
+        'render_started':     'bg-purple-100 text-purple-700',
+      };
+      return colors[action] || 'bg-line-soft text-ink-soft';
+    },
+
+    actionSubtitle(a) {
+      var d = a.details || {};
+      switch (a.action) {
+        case 'event_created':
+          return d.name || '';
+        case 'settings_saved':
+          if (d.render_versions) return 'Render versions: ' + d.render_versions;
+          return '';
+        case 'playlist_assigned':
+          return d.playlist_name ? ('Assigned "' + d.playlist_name + '"') : 'Cleared playlist';
+        case 'photos_uploaded':
+          var msg = d.count + ' photo' + (d.count !== 1 ? 's' : '') + ' uploaded';
+          if (d.skipped) msg += ', ' + d.skipped + ' skipped';
+          if (d.errors && d.errors.length) msg += ', ' + d.errors.length + ' errors';
+          return msg;
+        case 'photo_deleted':
+          return d.filename || '';
+        case 'photos_deleted_all':
+          return d.count + ' photo' + (d.count !== 1 ? 's' : '') + ' removed';
+        case 'process_started':
+          var res = (d.resolutions || []).join(', ').toUpperCase();
+          return d.photo_count + ' photos, resolutions: ' + res;
+        case 'render_started':
+          return 'Version: ' + (d.version || 'unknown');
+        default:
+          return '';
+      }
+    },
+
+    relativeTime(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      var now = new Date();
+      var s = Math.floor((now - d) / 1000);
+      if (s < 30) return 'just now';
+      if (s < 60) return s + 's ago';
+      var m = Math.floor(s / 60);
+      if (m < 60) return m + ' min ago';
+      var h = Math.floor(m / 60);
+      if (h < 24) return h + 'h ago';
+      var days = Math.floor(h / 24);
+      if (days < 30) return days + 'd ago';
+      return d.toLocaleDateString();
     },
 
     async runProcess() {
