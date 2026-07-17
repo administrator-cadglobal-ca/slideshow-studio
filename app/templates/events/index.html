@@ -359,10 +359,88 @@
   </div>
 
   {# Tab: Renders #}
-  <div x-show="activeTab === 'renders'" x-cloak>
-    <div class="rounded-comfortable border border-line p-12 text-center text-ink-soft">
-      <p>Render workflow coming soon.</p>
-    </div>
+  <div x-show="activeTab === 'renders'" x-cloak class="space-y-6">
+
+    {# Render controls #}
+    <section class="rounded-comfortable border border-line p-6 bg-white">
+      <div class="mb-4">
+        <h3 class="text-small font-semibold text-ink">Render MP4</h3>
+        <p class="text-caption text-ink-soft">Server generates video from processed frames + selected playlist.</p>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-3">
+        <label class="block">
+          <span class="text-caption text-ink-soft">Version</span>
+          <select x-model="renderVersion" class="input mt-1 w-full text-small">
+            <template x-for="v in renderVersions" :key="v">
+              <option :value="v" x-text="v"></option>
+            </template>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="text-caption text-ink-soft">Playlist</span>
+          <select x-model="renderPlaylistId" class="input mt-1 w-full text-small">
+            <option value="">No music</option>
+            {% for pl in playlists %}
+            <option value="{{ pl.id }}">{{ pl.name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="text-caption text-ink-soft">Seconds per photo</span>
+          <input type="number" x-model.number="renderDuration" min="1" max="30" step="0.5" class="input mt-1 w-full text-small">
+        </label>
+      </div>
+
+      <div class="mt-4 flex items-center gap-3">
+        <button type="button" class="btn-primary text-small" @click="startRender()" :disabled="rendering || renderVersions.length === 0">
+          <span x-show="!rendering">Start render</span>
+          <span x-show="rendering" x-cloak>Rendering&hellip;</span>
+        </button>
+        <span class="text-caption text-emerald-700" x-show="renderStarted" x-transition x-cloak>Render started - check back in a few minutes</span>
+        <span class="text-caption text-rose-700" x-show="renderError" x-text="renderError" x-cloak></span>
+        <span class="text-caption text-ink-soft" x-show="renderVersions.length === 0">Process photos first to enable rendering.</span>
+      </div>
+    </section>
+
+    {# Rendered MP4s list #}
+    <section class="rounded-comfortable border border-line p-6 bg-white">
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <h3 class="text-small font-semibold text-ink">Rendered videos</h3>
+          <p class="text-caption text-ink-soft">Completed MP4 files ready to download.</p>
+        </div>
+        <button type="button" class="btn-secondary text-small" @click="loadRenders()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline align-text-bottom mr-1">
+            <path d="M23 4v6h-6M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <template x-for="file in renders" :key="file.name">
+          <div class="flex items-center gap-3 p-3 rounded-standard border border-line">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-soft flex-none">
+              <polygon points="23 7 16 12 23 17 23 7"></polygon>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+            <div class="flex-1 min-w-0">
+              <p class="text-small text-ink truncate" x-text="file.name"></p>
+              <p class="text-caption text-ink-soft" x-text="file.size_mb + ' MB'"></p>
+            </div>
+            <a :href="file.url" class="btn-secondary text-small flex-none" download>Download</a>
+          </div>
+        </template>
+        <p class="text-caption text-ink-soft text-center py-6" x-show="renders.length === 0">
+          No rendered videos yet.
+        </p>
+      </div>
+    </section>
+
   </div>
 
   {# Tab: Logs #}
@@ -551,6 +629,16 @@ function eventsPage() {
     captionError: '',
     lightboxUrl: '',
     lightboxOpen: false,
+
+    // Renders tab state
+    renderVersions: [],
+    renderVersion: '',
+    renderPlaylistId: '',
+    renderDuration: 4.0,
+    rendering: false,
+    renderStarted: false,
+    renderError: '',
+    renders: [],
     autoFillFields: { place: true, country: true, date: true, time: false, camera: false, filename: false, settings: false },
     newEventModal: false,
 
@@ -590,6 +678,8 @@ function eventsPage() {
         }
       }
       this.initCaptions();
+      this.loadRenderVersions();
+      this.loadRenders();
     },
 
     switchEvent(eventId) {
@@ -934,6 +1024,60 @@ function eventsPage() {
     closeLightbox() {
       this.lightboxOpen = false;
       this.lightboxUrl = '';
+    },
+
+    // ─── Renders ─────────────────────────────────────────────────────────
+    async loadRenderVersions() {
+      try {
+        const r = await fetch('/events/' + this.eventId + '/process/frames', {credentials: 'same-origin'});
+        const data = await r.json();
+        this.renderVersions = Object.keys(data.versions || {});
+        if (this.renderVersions.length > 0 && !this.renderVersion) {
+          this.renderVersion = this.renderVersions.includes('hd-landscape')
+            ? 'hd-landscape'
+            : this.renderVersions[0];
+        }
+      } catch (e) {
+        console.error('load render versions', e);
+      }
+    },
+
+    async loadRenders() {
+      try {
+        const r = await fetch('/events/' + this.eventId + '/output-files', {credentials: 'same-origin'});
+        const data = await r.json();
+        this.renders = data.files || [];
+      } catch (e) {
+        console.error('load renders', e);
+      }
+    },
+
+    async startRender() {
+      this.rendering = true;
+      this.renderError = '';
+      this.renderStarted = false;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/render-mp4', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            version: this.renderVersion,
+            playlist_id: this.renderPlaylistId ? parseInt(this.renderPlaylistId, 10) : null,
+            duration: this.renderDuration,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.renderStarted = true;
+        setTimeout(() => { this.renderStarted = false; }, 5000);
+        // Refresh renders list after 5 seconds
+        setTimeout(() => this.loadRenders(), 5000);
+      } catch (e) {
+        this.renderError = 'Render failed: ' + e.message;
+      } finally {
+        this.rendering = false;
+      }
     },
 
     initCaptions() {
