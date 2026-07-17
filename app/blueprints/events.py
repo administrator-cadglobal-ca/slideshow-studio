@@ -813,6 +813,24 @@ def create_share_token(event_id):
     evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
+    # Reuse existing active share for this event if one exists
+    from datetime import datetime
+    existing = db.session.query(ShareToken)\
+                 .filter_by(event_id=evt.id, share_type="public")\
+                 .order_by(ShareToken.created_at.desc()).first()
+    if existing and (not existing.expires_at or existing.expires_at > datetime.utcnow()):
+        from flask import request as _req0
+        scheme = _req0.headers.get("X-Forwarded-Proto") or _req0.scheme
+        absolute_url = f"{scheme}://{_req0.host}/s/{existing.token}"
+        return jsonify({
+            "ok": True,
+            "reused": True,
+            "token": existing.token,
+            "url": f"/s/{existing.token}",
+            "absolute_url": absolute_url,
+            "password": existing.plain_password or "WELCOME",
+        })
+
     data       = request.json or {}
     expires_in    = data.get("expires_days")   # None = no expiry
     playlist_ids  = data.get("playlist_ids")   # None = all playlists

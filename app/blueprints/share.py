@@ -26,7 +26,7 @@ def view_share(token):
     """Public viewer: password gate, then slideshow."""
     st = _load_share(token)
     if not st:
-        return render_template("share/invalid.html"), 404
+        return render_template("share/invalid.html", is_share_view=True), 404
 
     session_key = _session_key(token)
 
@@ -43,11 +43,11 @@ def view_share(token):
             db.session.commit()
             return redirect(url_for("share.view_share", token=token))
         else:
-            return render_template("share/password.html", token=token, error="Incorrect password. Try again.", description=st.description)
+            return render_template("share/password.html", token=token, error="Incorrect password. Try again.", description=st.description, is_share_view=True)
 
     # If not yet authenticated, show password page
     if not session.get(session_key):
-        return render_template("share/password.html", token=token, error=None, description=st.description)
+        return render_template("share/password.html", token=token, error=None, description=st.description, is_share_view=True)
 
     # Authenticated - show slideshow
     from app.services.storage import list_processed_versions_r2, thumb_url
@@ -56,7 +56,7 @@ def view_share(token):
 
     evt = db.session.get(Event, st.event_id)
     if not evt:
-        return render_template("share/invalid.html"), 404
+        return render_template("share/invalid.html", is_share_view=True), 404
 
     # Build versions_data (source + processed)
     versions_data = {}
@@ -128,6 +128,7 @@ def view_share(token):
         labels_clips=labels_clips,
         default_version=default_version,
         default_playlist_id=default_playlist_id,
+        is_share_view=True,
     )
 
 

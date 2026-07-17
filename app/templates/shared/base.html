@@ -65,17 +65,17 @@
   {% endif %}
 
   {# ── Desktop sidebar (md and up) ────────────────────────────────────── #}
-  {% if current_user.is_authenticated %}
+  {% if current_user.is_authenticated and not is_share_view %}
     {% include 'shared/_desktop_sidebar.html' %}
   {% endif %}
 
   {# ── Main content area ─────────────────────────────────────────────── #}
   <div class="flex-1 flex flex-col min-w-0
-              {% if current_user.is_authenticated %}md:pl-60{% endif %}">
+              {% if current_user.is_authenticated and not is_share_view %}md:pl-60{% endif %}">
 
     {# Page header (sticky on mobile) #}
     {% block header %}
-      {% if current_user.is_authenticated %}
+      {% if current_user.is_authenticated and not is_share_view %}
         {% include 'shared/_header.html' %}
       {% endif %}
     {% endblock %}
@@ -88,7 +88,7 @@
     </main>
 
     {# Mobile bottom nav (hidden on md and up) #}
-    {% if current_user.is_authenticated %}
+    {% if current_user.is_authenticated and not is_share_view %}
       {% block bottom_nav %}
         {% include 'shared/_bottom_nav.html' %}
       {% endblock %}
