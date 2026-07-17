@@ -279,6 +279,10 @@
               <input type="checkbox" x-model="autoFillFields.filename" @change="refreshAutoCaptions()" class="w-4 h-4">
               <span>Filename</span>
             </label>
+            <label class="flex items-center gap-1.5 text-small">
+              <input type="checkbox" x-model="autoFillFields.settings" @change="refreshAutoCaptions()" class="w-4 h-4">
+              <span>Photo settings</span>
+            </label>
           </div>
           <button type="button" class="btn-secondary text-small" @click="refreshAutoCaptions()" title="Reset all captions from selected metadata">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline align-text-bottom mr-1">
@@ -488,7 +492,11 @@
     "gps_place": p.gps_place or "",
     "gps_country": p.gps_country or "",
     "exif_date_str": p.exif_date_str or "",
-    "camera_model": p.camera_model or ""
+    "camera_model": p.camera_model or "",
+    "focal_length": p.focal_length or "",
+    "aperture": p.aperture or "",
+    "shutter_speed": p.shutter_speed or "",
+    "iso": p.iso or ""
   }) %}
 {% endfor %}
 <script id="initialPhotos" type="application/json">{{ _initial_photos | tojson | safe }}</script>
@@ -507,7 +515,7 @@ function eventsPage() {
     savingAllCaptions: false,
     eventCaptionSaved: false,
     captionError: '',
-    autoFillFields: { place: true, country: true, date: true, camera: false, filename: false },
+    autoFillFields: { place: true, country: true, date: true, camera: false, filename: false, settings: false },
     newEventModal: false,
 
     // Photos
@@ -851,6 +859,14 @@ function eventsPage() {
       if (this.autoFillFields.date && photo.exif_date_str) parts.push(photo.exif_date_str);
       if (this.autoFillFields.camera && photo.camera_model) parts.push(photo.camera_model);
       if (this.autoFillFields.filename && photo.name) parts.push(photo.name);
+      if (this.autoFillFields.settings) {
+        var settings = [];
+        if (photo.focal_length) settings.push(photo.focal_length + 'mm');
+        if (photo.aperture) settings.push('f/' + photo.aperture);
+        if (photo.shutter_speed) settings.push(photo.shutter_speed + 's');
+        if (photo.iso) settings.push('ISO ' + photo.iso);
+        if (settings.length > 0) parts.push(settings.join(' · '));
+      }
       return parts.join(' — ');
     },
 
