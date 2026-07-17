@@ -349,6 +349,30 @@ def process_photos(event_id):
             old_f.unlink(missing_ok=True)
 
     _allow_upscale = allow_upscale
+    _enhance_flag  = enhance
+
+    def _auto_enhance(img):
+        """Apply auto-enhancement: brightness, contrast, sharpen, mild face smoothing."""
+        from PIL import ImageEnhance, ImageOps, ImageFilter
+        try:
+            img = ImageOps.autocontrast(img, cutoff=1)
+            img = ImageEnhance.Color(img).enhance(1.08)
+            img = img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=110, threshold=3))
+            try:
+                import cv2, numpy as np
+                arr = np.array(img)
+                bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+                smoothed = cv2.bilateralFilter(bgr, d=5, sigmaColor=25, sigmaSpace=25)
+                blended = cv2.addWeighted(smoothed, 0.6, bgr, 0.4, 0)
+                arr = cv2.cvtColor(blended, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(arr)
+            except ImportError:
+                pass
+            except Exception:
+                pass
+            return img
+        except Exception:
+            return img
 
     from flask import current_app as _ca
     app = _ca._get_current_object()
