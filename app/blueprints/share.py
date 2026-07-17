@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, abort, request, jsonify
 from app.extensions import db
 from app.models.event import Event, ShareToken
-from app.models.audio import AudioLabel
+from app.models.audio import Playlist
 from app.services.storage import processed_dir, thumb_url, processed_url, audio_dir
 import json
 from datetime import datetime
@@ -43,16 +43,16 @@ def public_player(token):
     default_version = st.version or (processed_versions[0] if processed_versions else "source")
 
     # Get allowed labels
-    allowed_label_ids = json.loads(st.label_ids) if st.label_ids else None
-    labels_query = db.session.query(AudioLabel)\
+    allowed_playlist_ids = json.loads(st.playlist_ids) if st.playlist_ids else None
+    labels_query = db.session.query(Playlist)\
                      .filter_by(user_id=st.created_by)\
-                     .order_by(AudioLabel.name)
-    if allowed_label_ids:
-        labels_query = labels_query.filter(AudioLabel.id.in_(allowed_label_ids))
+                     .order_by(Playlist.name)
+    if allowed_playlist_ids:
+        labels_query = labels_query.filter(Playlist.id.in_(allowed_playlist_ids))
     all_labels = labels_query.all()
 
     # Default label = event's assigned label
-    event_label = evt.audio_label
+    event_playlist = evt.playlist
 
     # Build source images (fallback if no processed)
     photos_ordered = sorted(evt.photos, key=lambda p: p.sort_order)
@@ -63,7 +63,7 @@ def public_player(token):
         processed_images=processed_images,
         default_version=default_version,
         all_labels=all_labels,
-        event_label=event_label,
+        event_playlist=event_playlist,
         photos=photos_ordered,
         user_id=st.created_by,
         thumb_url=thumb_url,
@@ -71,20 +71,20 @@ def public_player(token):
     )
 
 
-@bp.route("/s/<token>/clips/<int:label_id>")
-def public_label_clips(token, label_id):
+@bp.route("/s/<token>/clips/<int:playlist_id>")
+def public_label_clips(token, playlist_id):
     """Return clips for a label — public, token-gated."""
     st = db.session.query(ShareToken).filter_by(token=token, share_type="public").first()
     if not st or st.is_expired:
         abort(403)
     # Verify label belongs to event owner
-    label = db.session.get(AudioLabel, label_id)
+    label = db.session.get(Playlist, playlist_id)
     if not label or label.user_id != st.created_by:
         abort(403)
     # Verify label is allowed
-    if st.label_ids:
-        allowed = json.loads(st.label_ids)
-        if label_id not in allowed:
+    if st.playlist_ids:
+        allowed = json.loads(st.playlist_ids)
+        if playlist_id not in allowed:
             abort(403)
     clips = []
     for c in label.clips:

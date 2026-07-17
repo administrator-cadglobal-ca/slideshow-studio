@@ -11,17 +11,17 @@ bp = Blueprint("api", __name__)
 # ── Set event label ────────────────────────────────────────────────────────
 @bp.route("/events/<event_id>/label", methods=["POST"])
 @login_required
-def set_event_label(event_id):
+def set_event_playlist(event_id):
     from app.models import Event
-    from app.models.audio import AudioLabel
+    from app.models.audio import Playlist
     evt = db.session.query(Event)             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    label_id = request.json.get("label_id")
+    playlist_id = request.json.get("playlist_id")
     # Clear any existing event label assignment for this event
-    old_label = db.session.query(AudioLabel)                  .filter_by(event_id=evt.id).first()
+    old_label = db.session.query(Playlist)                  .filter_by(event_id=evt.id).first()
     if old_label:
         old_label.event_id = None
-    if label_id:
-        label = db.session.get(AudioLabel, int(label_id))
+    if playlist_id:
+        label = db.session.get(Playlist, int(playlist_id))
         if not label or label.user_id != current_user.id:
             return jsonify({"error": "Label not found"}), 404
         label.event_id = evt.id
@@ -30,11 +30,11 @@ def set_event_label(event_id):
 
 
 # ── Single label clips ───────────────────────────────────────────────────────
-@bp.route("/labels/<int:label_id>/clips")
+@bp.route("/labels/<int:playlist_id>/clips")
 @login_required
-def get_label_clips(label_id):
-    from app.models.audio import AudioLabel
-    label = db.session.get(AudioLabel, label_id)
+def get_label_clips(playlist_id):
+    from app.models.audio import Playlist
+    label = db.session.get(Playlist, playlist_id)
     if not label or label.user_id != current_user.id:
         return jsonify({"error": "not found"}), 404
     clips = [{
@@ -56,8 +56,8 @@ def get_label_clips(label_id):
 @bp.route("/labels")
 @login_required
 def get_labels():
-    from app.models.audio import AudioLabel
-    labels = db.session.query(AudioLabel)               .filter_by(user_id=current_user.id)               .order_by(AudioLabel.name).all()
+    from app.models.audio import Playlist
+    labels = db.session.query(Playlist)               .filter_by(user_id=current_user.id)               .order_by(Playlist.name).all()
     result = []
     for label in labels:
         result.append({

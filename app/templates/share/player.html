@@ -44,7 +44,7 @@ body{background:#0f172a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,
     <select id="labelSel" onchange="switchLabel(this.value)">
       <option value="">No music</option>
       {% for label in all_labels %}
-      <option value="{{ label.id }}" {% if event_label and label.id == event_label.id %}selected{% endif %}>
+      <option value="{{ label.id }}" {% if event_playlist and label.id == event_playlist.id %}selected{% endif %}>
         {{ label.name }}
       </option>
       {% endfor %}

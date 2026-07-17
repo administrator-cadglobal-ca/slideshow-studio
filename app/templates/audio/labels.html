@@ -60,10 +60,10 @@
         <div class="label-card-meta">
           {{ label.clip_count }} clip{{ 's' if label.clip_count != 1 }}
           {% if label.total_duration_display != '--:--' %}· {{ label.total_duration_display }} total{% endif %}
-          {% if label.is_event_label %} · 📁 Event label{% endif %}
+          {% if label.is_event_playlist %} · 📁 Event label{% endif %}
         </div>
       </div>
-      {% if not label.is_event_label %}
+      {% if not label.is_event_playlist %}
       <span class="label-card-badge">Manual</span>
       {% else %}
       <span class="label-card-badge" style="border-color:#a7f3d0;color:#059669">Event</span>
@@ -86,7 +86,7 @@
       <button class="import-btn" onclick="showImport({{ label.id }}, '{{ label.name }}')">
         ⬇ Import from label
       </button>
-      {% if not label.is_event_label %}
+      {% if not label.is_event_playlist %}
       <button class="import-btn" onclick="editLabel({{ label.id }}, '{{ label.name }}', '{{ label.color }}')">✏</button>
       <button class="import-btn" style="color:#dc2626"
               onclick="deleteLabel({{ label.id }}, '{{ label.name }}')">🗑</button>
@@ -159,7 +159,7 @@
 const ALL_LABELS = [
   {% for l in labels %}
   { id:{{ l.id }}, name:{{ l.name|tojson|safe }}, color:'{{ l.color }}',
-    isEvent:{{ 'true' if l.is_event_label else 'false' }} },
+    isEvent:{{ 'true' if l.is_event_playlist else 'false' }} },
   {% endfor %}
 ];
 let nlColor = '#1e3a52', elColor = '#1e3a52', editLabelId = null, importTargetId = null;

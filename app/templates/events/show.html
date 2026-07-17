@@ -217,7 +217,7 @@
       style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:13px;outline:none;min-width:200px">
       <option value="">— Select a label —</option>
       {% for label in all_labels %}
-      <option value="{{ label.id }}" {% if event_label and label.id == event_label.id %}selected{% endif %}>
+      <option value="{{ label.id }}" {% if event_playlist and label.id == event_playlist.id %}selected{% endif %}>
         {{ label.name }} ({{ label.clip_count }} clips)
       </option>
       {% endfor %}
@@ -339,7 +339,7 @@
         <select id="renderLabel" style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:12px;outline:none">
           <option value="">— No audio —</option>
           {% for label in all_labels %}
-          <option value="{{ label.id }}" {% if event_label and label.id == event_label.id %}selected{% endif %}>
+          <option value="{{ label.id }}" {% if event_playlist and label.id == event_playlist.id %}selected{% endif %}>
             {{ label.name }} ({{ label.clip_count }} clips)
           </option>
           {% endfor %}
@@ -483,7 +483,7 @@
         <select id="modalRenderLabel" class="form-control">
           <option value="">— No audio —</option>
           {% for label in all_labels %}
-          <option value="{{ label.id }}" {% if event_label and label.id == event_label.id %}selected{% endif %}>
+          <option value="{{ label.id }}" {% if event_playlist and label.id == event_playlist.id %}selected{% endif %}>
             {{ label.name }} ({{ label.clip_count }} clips)
           </option>
           {% endfor %}
@@ -874,7 +874,7 @@ function startRenderMp4(){
   fetch('/events/{{ event.id }}/render-mp4', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({version: ver, label_id: labelId||null, duration: dur})
+    body: JSON.stringify({version: ver, playlist_id: labelId||null, duration: dur})
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
@@ -1080,7 +1080,7 @@ function saveEventLabel() {
   fetch('/api/v1/events/{{ event.id }}/label', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({label_id: labelId ? parseInt(labelId) : null})
+    body: JSON.stringify({playlist_id: labelId ? parseInt(labelId) : null})
   })
   .then(function(r){ return r.json(); })
   .then(function(d){

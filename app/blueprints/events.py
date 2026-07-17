@@ -75,15 +75,15 @@ def show(event_id):
     processed_images   = list_processed_versions_r2(current_user.id, event_id)
     processed_versions = sorted(processed_images.keys())
     from flask import current_app
-    from app.models.audio import AudioLabel
-    all_labels = db.session.query(AudioLabel)                   .filter_by(user_id=current_user.id)                   .order_by(AudioLabel.name).all()
-    event_label = evt.audio_label  # AudioLabel with event_id=evt.id, or None
+    from app.models.audio import Playlist
+    all_labels = db.session.query(Playlist)                   .filter_by(user_id=current_user.id)                   .order_by(Playlist.name).all()
+    event_playlist = evt.playlist  # Playlist with event_id=evt.id, or None
 
     return render_template("events/show.html", event=evt,
         processed_versions=processed_versions, processed_images=processed_images,
         max_upload_mb=current_app.config.get("MAX_UPLOAD_MB",50),
         thumb_url=thumb_url, processed_url=processed_url, output_url=output_url,
-        all_labels=all_labels, event_label=event_label)
+        all_labels=all_labels, event_playlist=event_playlist)
 
 @bp.route("/<event_id>/settings", methods=["GET","POST"])
 @login_required
@@ -163,11 +163,11 @@ def preview(event_id):
         ]
 
     # Get audio labels for preview player
-    from app.models.audio import AudioLabel
-    all_labels = db.session.query(AudioLabel)                   .filter_by(user_id=current_user.id)                   .order_by(AudioLabel.name).all()
+    from app.models.audio import Playlist
+    all_labels = db.session.query(Playlist)                   .filter_by(user_id=current_user.id)                   .order_by(Playlist.name).all()
 
     # Build songs_data — flat list for the default label (or first label)
-    default_label = evt.audio_label or (all_labels[0] if all_labels else None)
+    default_label = evt.playlist or (all_labels[0] if all_labels else None)
     songs_data = []
     if default_label:
         songs_data = [
@@ -226,7 +226,7 @@ def preview(event_id):
         songs_data=songs_data,
         all_labels=all_labels,
         labels_clips=labels_clips,
-        event_label_id=evt.audio_label.id if evt.audio_label else None,
+        event_playlist_id=evt.playlist.id if evt.playlist else None,
         audio_files=audio_files,
     )
 
@@ -588,7 +588,7 @@ def render_mp4(event_id):
 
     data     = request.json or {}
     version  = data.get("version", "hd-landscape")
-    label_id = data.get("label_id")
+    playlist_id = data.get("playlist_id")
     duration = float(data.get("duration", 4.0))
 
     from app.services import r2 as R2
@@ -599,9 +599,9 @@ def render_mp4(event_id):
         return jsonify({"error": f"No frames in {version}. Process photos first."}), 400
 
     clips = []
-    if label_id:
-        from app.models.audio import AudioLabel
-        label = db.session.get(AudioLabel, int(label_id))
+    if playlist_id:
+        from app.models.audio import Playlist
+        label = db.session.get(Playlist, int(playlist_id))
         if label and label.user_id == current_user.id:
             for c in label.clips:
                 clips.append({
@@ -770,7 +770,7 @@ def create_share_token(event_id):
 
     data       = request.json or {}
     expires_in = data.get("expires_days")   # None = no expiry
-    label_ids  = data.get("label_ids")      # None = all labels
+    playlist_ids  = data.get("playlist_ids")      # None = all labels
     version    = data.get("version")        # default processed version
 
     from datetime import datetime, timedelta
@@ -782,7 +782,7 @@ def create_share_token(event_id):
         share_type = "public",
         role       = "viewer",
         version    = version,
-        label_ids  = json.dumps(label_ids) if label_ids else None,
+        playlist_ids  = json.dumps(playlist_ids) if playlist_ids else None,
         expires_at = datetime.utcnow() + timedelta(days=int(expires_in))
                      if expires_in else None,
     )
@@ -867,12 +867,12 @@ def share_to_cloud(event_id):
     """Upload ALL processed versions + audio to R2. One link, all versions."""
     import threading, secrets, json
     from app.services.storage import processed_dir, audio_dir
-    from app.models.audio import AudioLabel
+    from app.models.audio import Playlist
 
     evt = db.session.query(Event)             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
     data         = request.json or {}
-    label_ids    = data.get("label_ids")
+    playlist_ids    = data.get("playlist_ids")
     expires_days = data.get("expires_days")
     force_upload = data.get("force_upload", False)
     password     = data.get("password") or "WELCOME"
@@ -905,9 +905,9 @@ def share_to_cloud(event_id):
         return jsonify({"error": "No processed frames found. Process photos first."}), 400
 
     # Get labels
-    labels_q = db.session.query(AudioLabel).filter_by(user_id=current_user.id)
-    if label_ids:
-        labels_q = labels_q.filter(AudioLabel.id.in_(label_ids))
+    labels_q = db.session.query(Playlist).filter_by(user_id=current_user.id)
+    if playlist_ids:
+        labels_q = labels_q.filter(Playlist.id.in_(playlist_ids))
     labels = labels_q.all()
 
     clips_by_label = {}
@@ -956,7 +956,7 @@ def share_to_cloud(event_id):
         "versions":         {v: d["frames"] for v, d in all_versions.items()},
         "default_version":  default_version,
         "labels":           [{"id": str(l.id), "name": l.name} for l in labels],
-        "default_label_id": str(labels[0].id) if labels else "",
+        "default_playlist_id": str(labels[0].id) if labels else "",
     }
 
     import tempfile as _tmp_s
@@ -1068,7 +1068,7 @@ def share_to_cloud(event_id):
 
             for lid, ldata in clips_by_label.items():
                 req_lib.post(d1_url, headers=d1_hdr, json={
-                    "sql": "INSERT OR REPLACE INTO slideshow_clips (token,label_id,label_name,clips_json) VALUES (?,?,?,?)",
+                    "sql": "INSERT OR REPLACE INTO slideshow_clips (token,playlist_id,label_name,clips_json) VALUES (?,?,?,?)",
                     "params": [token, str(lid), ldata["name"], json.dumps(ldata["clips"])]
                 }, timeout=15)
 

@@ -121,7 +121,7 @@ class ShareToken(db.Model):
     share_type     = db.Column(db.String(16), default="public")
     target_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     role           = db.Column(db.String(16), default="viewer")
-    label_ids      = db.Column(db.Text, nullable=True)
+    playlist_ids      = db.Column(db.Text, nullable=True)
     version        = db.Column(db.String(32), nullable=True)
     expires_at     = db.Column(db.DateTime, nullable=True)
     created_at     = db.Column(db.DateTime, default=db.func.now())

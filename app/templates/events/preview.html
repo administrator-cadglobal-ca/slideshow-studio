@@ -379,11 +379,11 @@
         </div>
         <div style="display:flex;align-items:center;gap:5px">
           <span style="font-size:10px;color:#9ca3af;flex-shrink:0">Label:</span>
-          <select id="audioLabelSel" onchange="switchAudioLabel(this.value)"
+          <select id="audioLabelSel" onchange="switchPlaylist(this.value)"
             style="flex:1;border:1px solid #e8e5e0;border-radius:5px;padding:3px 6px;font-size:11px;outline:none;background:#fff">
             <option value="">All songs</option>
             {% for label in all_labels %}
-            <option value="{{ label.id }}" {% if label.id == event_label_id %}selected{% endif %}>{{ label.name }}</option>
+            <option value="{{ label.id }}" {% if label.id == event_playlist_id %}selected{% endif %}>{{ label.name }}</option>
             {% endfor %}
           </select>
           <button onclick="refreshLabels()" title="Refresh label list"
@@ -584,7 +584,7 @@
 const VERSIONS     = {{ versions_data | tojson | safe }};
 const LABELS_CLIPS = {{ labels_clips | tojson | safe }};
 const ALL_LABELS   = {{ all_labels | map(attribute='id') | list | tojson | safe if all_labels else '[]' }}; // ids only
-const EVENT_LABEL_ID = {{ event_label_id or 'null' }};
+const EVENT_LABEL_ID = {{ event_playlist_id or 'null' }};
 const CAPTION_STYLE = {{ event.caption_style | tojson | safe if event.caption_style else '{}' }};
 const SONGS    = {{ songs_data | tojson | safe }};
 
@@ -899,8 +899,8 @@ function setBg(cls){
 }
 
 // ── Audio ─────────────────────────────────────────────────────────────────────────
-function switchAudioLabel(labelId) {
-  console.log('[PREVIEW] switchAudioLabel called with:', labelId);
+function switchPlaylist(labelId) {
+  console.log('[PREVIEW] switchPlaylist called with:', labelId);
   var sel = document.getElementById('audioLabelSel');
   if(sel) sel.disabled = true;
   if (!labelId) {
@@ -1120,7 +1120,7 @@ function updateFsSong(){
 document.addEventListener('DOMContentLoaded',()=>{
   const sel=document.getElementById('versionSelect');
   if(sel?.value) loadVersion(sel.value);
-  if(EVENT_LABEL_ID){ switchAudioLabel(EVENT_LABEL_ID); } else if(SONGS.length){ loadSong(0); updateFsSong(); }
+  if(EVENT_LABEL_ID){ switchPlaylist(EVENT_LABEL_ID); } else if(SONGS.length){ loadSong(0); updateFsSong(); }
   // Default: filmstrip on
   filmstripOn=true;
   document.getElementById('filmstripBtn').classList.add('on');

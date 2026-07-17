@@ -2,7 +2,7 @@ from flask       import Blueprint, render_template, request, jsonify, abort, red
 from flask_login import login_required, current_user
 
 from app.extensions      import db
-from app.models.audio    import AudioFile, AudioClip, AudioLabel, Library, Playlist, PlaylistClip
+from app.models.audio    import AudioFile, AudioClip, Playlist, Library, Playlist, PlaylistClip
 from app.services.storage import (
     save_uploaded_audio_r2 as save_uploaded_audio,
     audio_dir,
@@ -21,9 +21,9 @@ def index():
     songs     = db.session.query(AudioFile)\
                   .filter_by(user_id=current_user.id)\
                   .order_by(AudioFile.sort_order, AudioFile.id).all()
-    labels    = db.session.query(AudioLabel)\
+    labels    = db.session.query(Playlist)\
                   .filter_by(user_id=current_user.id)\
-                  .order_by(AudioLabel.sort_order, AudioLabel.name).all()
+                  .order_by(Playlist.sort_order, Playlist.name).all()
     libraries = db.session.query(Library)\
                   .filter_by(user_id=current_user.id)\
                   .order_by(Library.sort_order, Library.name).all()
@@ -303,9 +303,9 @@ def clips():
                   .order_by(AudioClip.sort_order, AudioClip.id).all()
     libraries = Library.query.filter_by(user_id=current_user.id)\
                   .order_by(Library.sort_order, Library.name).all()
-    # Playlists (AudioLabel rows under Path B naming) for the "Add to playlist" picker
-    playlists = AudioLabel.query.filter_by(user_id=current_user.id)\
-                                .order_by(AudioLabel.sort_order, AudioLabel.name).all()
+    # Playlists (Playlist rows under Path B naming) for the "Add to playlist" picker
+    playlists = Playlist.query.filter_by(user_id=current_user.id)\
+                                .order_by(Playlist.sort_order, Playlist.name).all()
     return render_template("audio/clips.html",
                            songs=songs, clips=all_clips,
                            libraries=libraries, playlists=playlists)
@@ -508,10 +508,10 @@ def delete_clip(clip_id):
 @bp.route("/playlists")
 @login_required
 def playlists_page():
-    """Renamed from labels_page. Underlying AudioLabel model unchanged for now -
+    """Renamed from labels_page. Underlying Playlist model unchanged for now -
     render pipeline (events.py) still calls them 'labels' internally."""
-    labels = AudioLabel.query.filter_by(user_id=current_user.id)\
-                             .order_by(AudioLabel.sort_order, AudioLabel.name).all()
+    labels = Playlist.query.filter_by(user_id=current_user.id)\
+                             .order_by(Playlist.sort_order, Playlist.name).all()
     songs  = AudioFile.query.filter_by(user_id=current_user.id)\
                             .order_by(AudioFile.orig_name).all()
     all_clips = AudioClip.query\
@@ -529,7 +529,7 @@ def create_label():
     name = (data.get("name") or "").strip()[:50]
     if not name:
         return jsonify({"error": "name required"}), 400
-    label = AudioLabel(
+    label = Playlist(
         user_id    = current_user.id,
         name       = name,
         color      = data.get("color", "#B4761F"),
@@ -540,10 +540,10 @@ def create_label():
     return jsonify({"ok": True, "id": label.id})
 
 
-@bp.route("/labels/<int:label_id>", methods=["PUT"])
+@bp.route("/labels/<int:playlist_id>", methods=["PUT"])
 @login_required
-def update_label(label_id):
-    label = db.session.get(AudioLabel, label_id)
+def update_label(playlist_id):
+    label = db.session.get(Playlist, playlist_id)
     if not label or label.user_id != current_user.id:
         abort(404)
     data = request.json or {}
@@ -554,10 +554,10 @@ def update_label(label_id):
     return jsonify({"ok": True})
 
 
-@bp.route("/labels/<int:label_id>", methods=["DELETE"])
+@bp.route("/labels/<int:playlist_id>", methods=["DELETE"])
 @login_required
-def delete_label(label_id):
-    label = db.session.get(AudioLabel, label_id)
+def delete_label(playlist_id):
+    label = db.session.get(Playlist, playlist_id)
     if not label or label.user_id != current_user.id:
         abort(404)
     # Enforce empty-first rule
@@ -571,12 +571,12 @@ def delete_label(label_id):
     return jsonify({"ok": True})
 
 
-@bp.route("/labels/<int:label_id>/clips/batch", methods=["POST"])
+@bp.route("/labels/<int:playlist_id>/clips/batch", methods=["POST"])
 @login_required
-def batch_add_clips_to_label(label_id):
+def batch_add_clips_to_label(playlist_id):
     """Add multiple clips to a playlist (label) in one call.
     Body: {"clip_ids": [1, 2, 3]}"""
-    label = db.session.get(AudioLabel, label_id)
+    label = db.session.get(Playlist, playlist_id)
     if not label or label.user_id != current_user.id:
         abort(404)
     data = request.json or {}
@@ -593,33 +593,33 @@ def batch_add_clips_to_label(label_id):
     return jsonify({"ok": True, "added": added, "playlist_size": len(label.clips)})
 
 
-@bp.route("/labels/<int:label_id>/clips/reorder", methods=["POST"])
+@bp.route("/labels/<int:playlist_id>/clips/reorder", methods=["POST"])
 @login_required
-def reorder_playlist_clips(label_id):
+def reorder_playlist_clips(playlist_id):
     """Reorder clips within a playlist (label).
     Body: {"clip_ids": [3, 1, 2]} means clip 3 first, then 1, then 2."""
-    label = db.session.get(AudioLabel, label_id)
+    label = db.session.get(Playlist, playlist_id)
     if not label or label.user_id != current_user.id:
         abort(404)
     data = request.json or {}
     clip_ids = data.get("clip_ids", [])
-    # Update sort_order in the audio_clip_labels join table directly.
+    # Update sort_order in the playlist_clips join table directly.
     from sqlalchemy import text
     for idx, cid in enumerate(clip_ids):
         db.session.execute(
-            text("UPDATE audio_clip_labels SET sort_order = :so "
-                 "WHERE label_id = :lid AND clip_id = :cid"),
-            {"so": idx + 1, "lid": label_id, "cid": int(cid)}
+            text("UPDATE playlist_clips SET sort_order = :so "
+                 "WHERE playlist_id = :lid AND clip_id = :cid"),
+            {"so": idx + 1, "lid": playlist_id, "cid": int(cid)}
         )
     db.session.commit()
     return jsonify({"ok": True, "reordered": len(clip_ids)})
 
 
-@bp.route("/labels/<int:label_id>/clips/<int:clip_id>", methods=["DELETE"])
+@bp.route("/labels/<int:playlist_id>/clips/<int:clip_id>", methods=["DELETE"])
 @login_required
-def remove_clip_from_label(label_id, clip_id):
+def remove_clip_from_label(playlist_id, clip_id):
     """Remove a clip from a playlist (label). Clip itself is not deleted."""
-    label = db.session.get(AudioLabel, label_id)
+    label = db.session.get(Playlist, playlist_id)
     if not label or label.user_id != current_user.id:
         abort(404)
     clip = db.session.get(AudioClip, clip_id)
@@ -631,10 +631,10 @@ def remove_clip_from_label(label_id, clip_id):
     return jsonify({"ok": True})
 
 
-@bp.route("/labels/<int:label_id>/clips", methods=["POST"])
+@bp.route("/labels/<int:playlist_id>/clips", methods=["POST"])
 @login_required
-def add_clip_to_label(label_id):
-    label = db.session.get(AudioLabel, label_id)
+def add_clip_to_label(playlist_id):
+    label = db.session.get(Playlist, playlist_id)
     if not label or label.user_id != current_user.id:
         abort(404)
     data = request.json or {}
@@ -648,11 +648,11 @@ def add_clip_to_label(label_id):
     return jsonify({"ok": True})
 
 
-@bp.route("/labels/<int:label_id>/import/<int:source_label_id>", methods=["POST"])
+@bp.route("/labels/<int:playlist_id>/import/<int:source_playlist_id>", methods=["POST"])
 @login_required
-def import_from_label(label_id, source_label_id):
-    label  = db.session.get(AudioLabel, label_id)
-    source = db.session.get(AudioLabel, source_label_id)
+def import_from_label(playlist_id, source_playlist_id):
+    label  = db.session.get(Playlist, playlist_id)
+    source = db.session.get(Playlist, source_playlist_id)
     if not label or not source: abort(404)
     if label.user_id != current_user.id or source.user_id != current_user.id:
         abort(404)

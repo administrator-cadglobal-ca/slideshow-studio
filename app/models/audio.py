@@ -7,7 +7,7 @@ Audio-related models.
 - Playlist:  collection of clips. Every Library gets a default Playlist.
              User can create additional playlists that reference clips.
 - PlaylistClip: many-to-many join between Playlist and AudioClip
-- AudioLabel: legacy label system (untouched)
+- (legacy AudioLabel comment removed)
 """
 from app.extensions import db
 from datetime import datetime
@@ -157,7 +157,7 @@ class PlaylistClip(db.Model):
     __tablename__ = "playlist_clips"
 
     clip_id    = db.Column(db.Integer, db.ForeignKey("audio_clips.id"), primary_key=True)
-    playlist_id   = db.Column(db.Integer, db.ForeignKey("audio_labels.id"), primary_key=True)
+    playlist_id   = db.Column(db.Integer, db.ForeignKey("playlists.id"), primary_key=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
 
 
