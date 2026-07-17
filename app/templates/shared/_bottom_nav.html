@@ -43,17 +43,17 @@
       </a>
     </li>
 
-    {# Projects #}
+    {# Events #}
     <li class="flex-1">
-      <a href="{{ url_for('projects.index') }}"
+      <a href="{{ url_for('events.index') }}"
          class="flex flex-col items-center justify-center gap-1 py-2
-                {% if section == 'projects' %}text-indigo{% else %}text-ink-soft{% endif %}"
-         aria-current="{% if section == 'projects' %}page{% endif %}">
+                {% if section == 'events' %}text-indigo{% else %}text-ink-soft{% endif %}"
+         aria-current="{% if section == 'events' %}page{% endif %}">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
         </svg>
-        <span class="text-micro">Projects</span>
+        <span class="text-micro">Events</span>
       </a>
     </li>
 

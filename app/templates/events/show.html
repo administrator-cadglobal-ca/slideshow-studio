@@ -1,5 +1,5 @@
 {% extends "shared/base.html" %}
-{% block title %}{{ project.name }} — Slideshow Studio{% endblock %}
+{% block title %}{{ event.name }} — Slideshow Studio{% endblock %}
 
 {% block head %}
 <style>
@@ -92,38 +92,38 @@
 {% endblock %}
 
 {% block content %}
-{# ── Project header ── #}
+{# ── Event header ── #}
 <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
   <div>
     <div style="font-size:12px;color:#9ca3af;margin-bottom:2px">
-      <a href="{{ url_for('projects.index') }}" style="color:#9ca3af;text-decoration:none">Projects</a>
+      <a href="{{ url_for('events.index') }}" style="color:#9ca3af;text-decoration:none">Events</a>
       <span style="margin:0 5px">›</span>
-      <span style="color:#374151">{{ project.name }}</span>
+      <span style="color:#374151">{{ event.name }}</span>
     </div>
-    <h1 style="font-size:22px;font-weight:700;color:#1a1a18;margin:0">{{ project.name }}</h1>
+    <h1 style="font-size:22px;font-weight:700;color:#1a1a18;margin:0">{{ event.name }}</h1>
     <div style="font-size:12px;color:#9ca3af;margin-top:3px">
-      {{ project.photo_count }} photo{{ 's' if project.photo_count != 1 }}
-      · {{ project.selected_songs|length if project.selected_songs else 0 }} songs
-      {% if project.render_versions_list %}· {{ project.render_versions_list|join(', ') }}{% endif %}
+      {{ event.photo_count }} photo{{ 's' if event.photo_count != 1 }}
+      · {{ event.selected_songs|length if event.selected_songs else 0 }} songs
+      {% if event.render_versions_list %}· {{ event.render_versions_list|join(', ') }}{% endif %}
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
-    <a href="{{ url_for('projects.preview', project_id=project.id) }}" class="btn btn-sm">▶ Preview</a>
+    <a href="{{ url_for('events.preview', event_id=event.id) }}" class="btn btn-sm">▶ Preview</a>
     <button class="btn btn-sm" id="shareModalBtn" onclick="openModal('shareModal')">🔗 Share</button>
     <button class="btn btn-sm btn-primary" onclick="openModal('renderModal')">▷ Render</button>
-    <a href="{{ url_for('projects.settings', project_id=project.id) }}" class="btn btn-sm" title="Settings">⚙</a>
+    <a href="{{ url_for('events.settings', event_id=event.id) }}" class="btn btn-sm" title="Settings">⚙</a>
   </div>
 </div>
 
 {# ── Tab bar ── #}
 <div class="tab-bar">
   <button class="tab-btn active" data-tab="photos"   onclick="switchTab('photos')">
-    📷 Photos ({{ project.photo_count }})
+    📷 Photos ({{ event.photo_count }})
   </button>
   <button class="tab-btn" data-tab="audio" onclick="switchTab('audio');onAudioTab();">🎵 Audio</button>
   <button class="tab-btn" data-tab="captions"  onclick="switchTab('captions')">
     💬 Captions
-    {% set note_count = project.photos | selectattr('has_note') | list | length %}
+    {% set note_count = event.photos | selectattr('has_note') | list | length %}
     {% if note_count %}<span style="background:#1e3a52;color:#fff;font-size:9px;padding:1px 5px;border-radius:20px;margin-left:3px">{{ note_count }}</span>{% endif %}
   </button>
   <button class="tab-btn" data-tab="processed" onclick="switchTab('processed');">🖼 Processed Photos</button>
@@ -137,7 +137,7 @@
 <div class="tab-panel active" id="photos">
 
   {# Upload zone #}
-  <label id="uploadZone" class="upload-zone" data-project="{{ project.id }}" style="cursor:pointer;display:block">
+  <label id="uploadZone" class="upload-zone" data-event="{{ event.id }}" style="cursor:pointer;display:block">
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     <p>Drag photos here or click to browse</p>
     <small>JPG, PNG, HEIC supported · Max {{ max_upload_mb }} MB per file</small>
@@ -146,7 +146,7 @@
   </label>
 
   {# Process panel #}
-  {% if project.photos %}
+  {% if event.photos %}
   <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin:12px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:700;color:#166534;letter-spacing:.5px">⚙ PROCESS:</span>
     {% for res in ['SD','HD','2K','4K'] %}
@@ -165,9 +165,9 @@
 
   {# Photo grid #}
   <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px">
-    <div style="font-size:12px;color:#8a9bb0">{{ project.photo_count }} photo{{ 's' if project.photo_count != 1 }} · Drag to reorder</div>
+    <div style="font-size:12px;color:#8a9bb0">{{ event.photo_count }} photo{{ 's' if event.photo_count != 1 }} · Drag to reorder</div>
     <div style="display:flex;gap:6px;align-items:center">
-      <a href="{{ url_for('projects.preview', project_id=project.id) }}#source"
+      <a href="{{ url_for('events.preview', event_id=event.id) }}#source"
          class="btn btn-sm btn-primary" style="text-decoration:none">
         ▶ Slideshow
       </a>
@@ -177,9 +177,9 @@
     </div>
   </div>
   <div class="photo-grid" id="photoGrid">
-    {% for photo in project.photos %}
+    {% for photo in event.photos %}
     <div class="photo-thumb {% if photo.skipped %}skipped{% endif %}" data-id="{{ photo.id }}" draggable="true">
-      <img src="{{ thumb_url(current_user.id, project.id, photo.filename) }}" alt="{{ photo.orig_name }}" onerror="this.style.display='none'">
+      <img src="{{ thumb_url(current_user.id, event.id, photo.filename) }}" alt="{{ photo.orig_name }}" onerror="this.style.display='none'">
       <div class="thumb-overlay">
         <button class="btn-icon" style="width:24px;height:24px;font-size:10px;border:none" onclick="skipPhoto({{ photo.id }})" title="{{ 'Include' if photo.skipped else 'Skip' }}">
           {{ '✓' if photo.skipped else '⊘' }}
@@ -204,7 +204,7 @@
 <div class="tab-panel" id="audio">
 
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <div class="section-title">Audio label for this project</div>
+    <div class="section-title">Audio label for this event</div>
     <div style="display:flex;gap:8px">
       <a href="{{ url_for('audio.playlists_page') }}" class="btn btn-sm">Manage labels</a>
       <a href="{{ url_for('audio.clips') }}" class="btn btn-sm">Manage clips</a>
@@ -213,16 +213,16 @@
 
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
     <label style="font-size:12px;font-weight:600;color:#374151">Label:</label>
-    <select id="projectLabelSel" onchange="loadLabelClips(this.value)"
+    <select id="eventLabelSel" onchange="loadLabelClips(this.value)"
       style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:13px;outline:none;min-width:200px">
       <option value="">— Select a label —</option>
       {% for label in all_labels %}
-      <option value="{{ label.id }}" {% if project_label and label.id == project_label.id %}selected{% endif %}>
+      <option value="{{ label.id }}" {% if event_label and label.id == event_label.id %}selected{% endif %}>
         {{ label.name }} ({{ label.clip_count }} clips)
       </option>
       {% endfor %}
     </select>
-    <button onclick="saveProjectLabel()" class="btn btn-sm btn-primary">Set as default</button>
+    <button onclick="saveEventLabel()" class="btn btn-sm btn-primary">Set as default</button>
   </div>
 
   {# Mini player #}
@@ -240,7 +240,7 @@
   </div>
   <audio id="clipAudio"></audio>
 
-  <div id="projectClipsList">
+  <div id="eventClipsList">
     <div class="empty-state">
       <p style="color:#b0bec5">Select a label above to see its clips.</p>
     </div>
@@ -256,20 +256,20 @@
     <div>
       <div class="section-title">Photo captions</div>
       <div style="font-size:11px;color:#9ca3af;margin-top:2px">
-        {% set note_count = project.photos|selectattr('has_note')|list|length %}
+        {% set note_count = event.photos|selectattr('has_note')|list|length %}
         {{ note_count }} caption{{ 's' if note_count != 1 }} added
       </div>
     </div>
-    <a href="{{ url_for('projects.notes', project_id=project.id) }}"
+    <a href="{{ url_for('events.notes', event_id=event.id) }}"
        class="btn btn-sm btn-primary" style="text-decoration:none">
       ✏ Edit captions
     </a>
   </div>
   <div class="notes-grid">
-    {% for photo in project.photos %}
+    {% for photo in event.photos %}
     <div class="note-card {% if photo.has_note %}has-note{% endif %}">
       <div class="nc-thumb">
-        <img src="{{ thumb_url(project.user_id, project.id, photo.filename) }}" alt="{{ photo.orig_name }}" onerror="this.style.display='none'">
+        <img src="{{ thumb_url(event.user_id, event.id, photo.filename) }}" alt="{{ photo.orig_name }}" onerror="this.style.display='none'">
         <div class="nc-num">{{ loop.index }}</div>
         {% if photo.has_note %}
         <div class="nc-caption-preview">
@@ -339,7 +339,7 @@
         <select id="renderLabel" style="border:1px solid #e8e5e0;border-radius:7px;padding:5px 10px;font-size:12px;outline:none">
           <option value="">— No audio —</option>
           {% for label in all_labels %}
-          <option value="{{ label.id }}" {% if project_label and label.id == project_label.id %}selected{% endif %}>
+          <option value="{{ label.id }}" {% if event_label and label.id == event_label.id %}selected{% endif %}>
             {{ label.name }} ({{ label.clip_count }} clips)
           </option>
           {% endfor %}
@@ -376,9 +376,9 @@
     <span id="logStatus" style="font-size:11px;color:#6b7280"></span>
   </div>
   <div id="processLogBox" style="background:#0f172a;color:#94a3b8;font-family:monospace;font-size:11px;padding:14px;border-radius:8px;min-height:400px;max-height:80vh;overflow-y:auto;white-space:pre-wrap">No processing log yet. Run ⚙ Process photos to start.</div>
-  {% if project.latest_job and project.latest_job.log_text %}
+  {% if event.latest_job and event.latest_job.log_text %}
   <div style="margin-top:16px;font-size:12px;font-weight:600;color:#374151">Last render log</div>
-  <div class="render-log" style="margin-top:8px">{{ project.latest_job.log_text }}</div>
+  <div class="render-log" style="margin-top:8px">{{ event.latest_job.log_text }}</div>
   {% endif %}
 </div>{# /log #}
 
@@ -405,7 +405,7 @@
     <div style="display:flex;flex-direction:column;gap:12px">
       <div>
         <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Description (shown in copy message)</label>
-        <input type="text" id="shareDescription" class="form-control" placeholder="{{ project.name }}" value="{{ project.name }}">
+        <input type="text" id="shareDescription" class="form-control" placeholder="{{ event.name }}" value="{{ event.name }}">
       </div>
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 12px;font-size:12px;color:#166534">
         ✓ All {{ processed_versions|length }} version(s) will be uploaded:
@@ -459,7 +459,7 @@
 <div class="modal-overlay" id="renderModal">
   <div class="modal-box" style="background:#fff;border-radius:14px;padding:24px;width:440px;max-width:95vw">
     <div class="modal-title" style="font-size:16px;font-weight:700;margin-bottom:4px">🎬 Render to MP4</div>
-    <div class="modal-sub" style="font-size:12px;color:#9ca3af;margin-bottom:18px">{{ project.name }}</div>
+    <div class="modal-sub" style="font-size:12px;color:#9ca3af;margin-bottom:18px">{{ event.name }}</div>
 
     <div style="display:flex;flex-direction:column;gap:14px">
       <div>
@@ -483,7 +483,7 @@
         <select id="modalRenderLabel" class="form-control">
           <option value="">— No audio —</option>
           {% for label in all_labels %}
-          <option value="{{ label.id }}" {% if project_label and label.id == project_label.id %}selected{% endif %}>
+          <option value="{{ label.id }}" {% if event_label and label.id == event_label.id %}selected{% endif %}>
             {{ label.name }} ({{ label.clip_count }} clips)
           </option>
           {% endfor %}
@@ -516,8 +516,8 @@
 {% block scripts %}
 
 <script>
-const PROJECT_PHOTO_COUNT = {{ project.photo_count }};
-const PROJECT_ID = '{{ project.id }}';
+const EVENT_PHOTO_COUNT = {{ event.photo_count }};
+const EVENT_ID = '{{ event.id }}';
 
 
 
@@ -558,7 +558,7 @@ function submitShare(){
 function createShareLink(){
   var ver = document.getElementById('shareVersion').value;
   var exp = document.getElementById('shareExpiry').value;
-  fetch('/projects/{{ project.id }}/share', {
+  fetch('/events/{{ event.id }}/share', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({expires_days: exp ? parseInt(exp) : null, password: document.getElementById('sharePassword').value || null, description: document.getElementById('shareDescription').value || ''})
@@ -582,7 +582,7 @@ function createCloudShare(){
   btn.disabled = true;
   btn.textContent = '⏳ Uploading to R2...';
   document.getElementById('shareUploadStatus').textContent = 'Uploading frames to Cloudflare R2... check Log tab for progress';
-  fetch('/projects/{{ project.id }}/share-cloud', {
+  fetch('/events/{{ event.id }}/share-cloud', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({expires_days: exp ? parseInt(exp) : null, password: document.getElementById('sharePassword').value || null, description: document.getElementById('shareDescription').value || ''})
@@ -617,7 +617,7 @@ function copyShareMessage(){
   var link = document.getElementById('shareLinkInput').value;
   var desc = document.getElementById('shareDescription').value;
   var pwd  = document.getElementById('sharePassword').value;
-  var msg  = buildShareMessage(desc || '{{ project.name }}', link, pwd);
+  var msg  = buildShareMessage(desc || '{{ event.name }}', link, pwd);
   navigator.clipboard.writeText(msg).then(function(){
     showToast('Message copied! Paste in WhatsApp or email.', 'success');
   }).catch(function(){
@@ -630,7 +630,7 @@ function copyShareMessage(){
 
 function copyTokenMessage(t){
   var link = 'https://share.calgarydhamaka.com/s/' + t.token;
-  var msg  = buildShareMessage(t.description || '{{ project.name }}', link, t.plain_password);
+  var msg  = buildShareMessage(t.description || '{{ event.name }}', link, t.plain_password);
   navigator.clipboard.writeText(msg).then(function(){
     showToast('Message copied!', 'success');
   }).catch(function(){
@@ -666,7 +666,7 @@ function buildShareMessage(desc, link, pwd){
 }
 
 function loadExistingShares(){
-  fetch('/projects/{{ project.id }}/share')
+  fetch('/events/{{ event.id }}/share')
   .then(function(r){ return r.json(); })
   .then(function(d){
     var el = document.getElementById('existingShares');
@@ -714,7 +714,7 @@ function saveNewPwd(token){
   var inp = document.getElementById('pwd-input-' + token);
   var pwd = inp ? inp.value.trim() : '';
   if(!pwd){ inp.value = 'WELCOME'; pwd = 'WELCOME'; }
-  fetch('/projects/{{ project.id }}/share/' + token + '/password', {
+  fetch('/events/{{ event.id }}/share/' + token + '/password', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({password: pwd})
@@ -732,7 +732,7 @@ function saveNewPwd(token){
 }
 
 function revokeShare(token){
-  fetch('/projects/{{ project.id }}/share/' + token, {method:'DELETE'})
+  fetch('/events/{{ event.id }}/share/' + token, {method:'DELETE'})
   .then(function(){ loadExistingShares(); showToast('Link revoked', 'success'); });
 }
 
@@ -773,7 +773,7 @@ function updateEstDuration(){
 function deletePhoto(photoId, btn) {
   if (!confirm('Delete this photo? This removes the file from pCloud.')) return;
   btn.disabled = true;
-  fetch('/api/v1/projects/' + PROJECT_ID + '/photos/' + photoId + '/delete', { method: 'POST' })
+  fetch('/api/v1/events/' + EVENT_ID + '/photos/' + photoId + '/delete', { method: 'POST' })
   .then(r => r.json())
   .then(d => {
     if (d.ok) {
@@ -788,8 +788,8 @@ function deletePhoto(photoId, btn) {
   .catch(() => { showToast('Delete failed', 'error'); btn.disabled = false; });
 }
 function deleteAllPhotos() {
-  if (!confirm('Delete ALL ' + PROJECT_PHOTO_COUNT + ' photos from this project?\n\nThis removes files from pCloud and cannot be undone.')) return;
-  fetch('/api/v1/projects/' + PROJECT_ID + '/photos/delete-all', { method: 'POST' })
+  if (!confirm('Delete ALL ' + EVENT_PHOTO_COUNT + ' photos from this event?\n\nThis removes files from pCloud and cannot be undone.')) return;
+  fetch('/api/v1/events/' + EVENT_ID + '/photos/delete-all', { method: 'POST' })
   .then(r => r.json())
   .then(d => {
     showToast('Deleted ' + d.deleted + ' photos', 'success');
@@ -798,7 +798,7 @@ function deleteAllPhotos() {
   .catch(() => showToast('Delete failed', 'error'));
 }
 function skipPhoto(photoId) {
-  fetch('/api/v1/projects/' + PROJECT_ID + '/photos/' + photoId + '/skip', { method:'POST' })
+  fetch('/api/v1/events/' + EVENT_ID + '/photos/' + photoId + '/skip', { method:'POST' })
   .then(r => r.json())
   .then(d => {
     const el = document.querySelector('[data-id="' + photoId + '"]');
@@ -806,8 +806,8 @@ function skipPhoto(photoId) {
   });
 }
 
-function toggleSong(projectId, songId, checked) {
-  fetch('/api/v1/projects/' + projectId + '/songs/' + songId + '/', {
+function toggleSong(eventId, songId, checked) {
+  fetch('/api/v1/events/' + eventId + '/songs/' + songId + '/', {
     method: checked ? 'POST' : 'DELETE'
   });
 }
@@ -838,7 +838,7 @@ function uploadYouTube(outputId, title) {
 // ── Processed frames viewer ──────────────────────────────────────────────────
 var PROC_IMAGES   = {{ processed_images | tojson | safe }};
 var PROC_USER_ID  = {{ current_user.id }};
-var PROC_PROJ_ID  = '{{ project.id }}';
+var PROC_PROJ_ID  = '{{ event.id }}';
 
 function showProcVersion(ver){
   var grid = document.getElementById('procFramesGrid');
@@ -871,7 +871,7 @@ function startRenderMp4(){
   if(!ver){ alert('Select a version first'); return; }
   btn.disabled = true;
   btn.textContent = '⏳ Rendering...';
-  fetch('/projects/{{ project.id }}/render-mp4', {
+  fetch('/events/{{ event.id }}/render-mp4', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({version: ver, label_id: labelId||null, duration: dur})
@@ -885,7 +885,7 @@ function startRenderMp4(){
       // Poll for output file
       var poll = setInterval(function(){
         loadOutputFiles();
-        fetch('/projects/{{ project.id }}/process/log')
+        fetch('/events/{{ event.id }}/process/log')
         .then(function(r){ return r.json(); })
         .then(function(l){
           if(l.log && (l.log.includes('DONE') || l.log.includes('FAILED'))){
@@ -911,7 +911,7 @@ function startRenderMp4(){
 }
 
 function loadOutputFiles(){
-  fetch('/projects/{{ project.id }}/output-files')
+  fetch('/events/{{ event.id }}/output-files')
   .then(function(r){ return r.json(); })
   .then(function(d){
     var el = document.getElementById('outputFilesList');
@@ -938,8 +938,8 @@ function loadOutputFiles(){
 document.querySelector('[data-tab="output"]').addEventListener('click', loadOutputFiles);
 
 function onAudioTab(){
-  var s = document.getElementById('projectLabelSel');
-  var list = document.getElementById('projectClipsList');
+  var s = document.getElementById('eventLabelSel');
+  var list = document.getElementById('eventClipsList');
   if(s && s.value && list && !list.querySelector('.audio-row')){
     loadLabelClips(s.value);
   }
@@ -950,7 +950,7 @@ var _clipIdx = -1;
 var _clipAudio = null;
 
 function loadLabelClips(labelId) {
-  var list = document.getElementById('projectClipsList');
+  var list = document.getElementById('eventClipsList');
   if (!labelId) {
     list.innerHTML = '<div class="empty-state"><p>Select a label to see its clips.</p></div>';
     if(typeof stopClip === 'function') stopClip();
@@ -1074,10 +1074,10 @@ function playAllClips(){ if(_clips.length) playClip(0); }
 
 function fmt(s){ if(!s||!isFinite(s))return'0:00'; var m=Math.floor(s/60),sec=Math.floor(s%60); return m+':'+(sec<10?'0':'')+sec; }
 
-function saveProjectLabel() {
-  var labelId = document.getElementById('projectLabelSel').value;
-  var btn = document.querySelector('[onclick="saveProjectLabel()"]');
-  fetch('/api/v1/projects/{{ project.id }}/label', {
+function saveEventLabel() {
+  var labelId = document.getElementById('eventLabelSel').value;
+  var btn = document.querySelector('[onclick="saveEventLabel()"]');
+  fetch('/api/v1/events/{{ event.id }}/label', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({label_id: labelId ? parseInt(labelId) : null})
@@ -1092,7 +1092,7 @@ function saveProjectLabel() {
 }
 
 function refreshProcessedFrames(){
-  fetch('/projects/{{ project.id }}/process/frames')
+  fetch('/events/{{ event.id }}/process/frames')
   .then(function(r){ return r.json(); })
   .then(function(d){
     var el = document.getElementById('procFramesContent');
@@ -1126,7 +1126,7 @@ function refreshProcessedFrames(){
       var res = ver.split('-')[0].toUpperCase();
       if(!resShown[res]){
         resShown[res] = true;
-        var url = '/projects/' + d.project_id + '/preview#' + ver;
+        var url = '/events/' + d.event_id + '/preview#' + ver;
         html += '<a href="' + url + '" class="btn btn-sm btn-primary" style="text-decoration:none;margin-right:6px;margin-bottom:8px">▶ ' + res + ' Slideshow</a>';
       }
     });
@@ -1136,7 +1136,7 @@ function refreshProcessedFrames(){
       html += '<div id="proc-' + ver + '" style="' + (idx>0?'display:none':'') + '">';
       html += '<div class="photo-grid">';
       frames.forEach(function(f){
-        var url = '/api/v1/media/processed/' + d.user_id + '/' + d.project_id + '/' + ver + '/' + f;
+        var url = '/api/v1/media/processed/' + d.user_id + '/' + d.event_id + '/' + ver + '/' + f;
         html += '<div class="photo-thumb"><img src="' + url + '" loading="lazy" alt="' + f + '">';
         html += '<div class="thumb-overlay"><a href="' + url + '" target="_blank" class="btn-icon" style="width:24px;height:24px;border:none;font-size:12px">⤢</a></div></div>';
       });
@@ -1149,7 +1149,7 @@ function refreshProcessedFrames(){
 var _logPollInterval = null;
 
 function refreshProcessLog(){
-  fetch('/projects/{{ project.id }}/process/log')
+  fetch('/events/{{ event.id }}/process/log')
   .then(function(r){ return r.json(); })
   .then(function(d){
     var box = document.getElementById('processLogBox');
@@ -1195,9 +1195,9 @@ document.addEventListener('DOMContentLoaded', function(){
   // Auto-select first processed version if any
   var sel = document.getElementById('procResSel');
   if(sel && sel.options.length > 1){ sel.selectedIndex = 1; showProcVersion(sel.value); }
-  // Auto-load clips for the project's default label
+  // Auto-load clips for the event's default label
   setTimeout(function(){
-    var sel = document.getElementById('projectLabelSel');
+    var sel = document.getElementById('eventLabelSel');
     if(sel && sel.value) loadLabelClips(sel.value);
   }, 100);
 });
@@ -1209,7 +1209,7 @@ function processPhotos(){
   var upscale = document.getElementById('proc_upscale').checked;
   btn.disabled = true;
   btn.textContent = '⚙ Submitting...';
-  fetch('/projects/{{ project.id }}/process', {
+  fetch('/events/{{ event.id }}/process', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({resolutions: selected, allow_upscale: upscale})

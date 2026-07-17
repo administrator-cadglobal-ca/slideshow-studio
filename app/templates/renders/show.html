@@ -1,19 +1,19 @@
 {% extends "shared/base.html" %}
-{% block title %}Render — {{ job.project.name }}{% endblock %}
+{% block title %}Render — {{ job.event.name }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div class="page-header-left">
     <div style="font-size:12px;color:#8a9bb0;margin-bottom:4px">
-      <a href="{{ url_for('projects.index') }}" style="color:#8a9bb0">Projects</a>
+      <a href="{{ url_for('events.index') }}" style="color:#8a9bb0">Events</a>
       <span style="margin:0 6px">›</span>
-      <a href="{{ url_for('projects.show', project_id=job.project.id) }}" style="color:#8a9bb0">{{ job.project.name }}</a>
+      <a href="{{ url_for('events.show', event_id=job.event.id) }}" style="color:#8a9bb0">{{ job.event.name }}</a>
       <span style="margin:0 6px">›</span>
       Render
     </div>
     <h1>{{ 'Render in progress' if job.is_active else 'Render ' + job.status }}</h1>
     <div class="page-sub">
-      {{ job.project.name }} · {{ job.mode|capitalize }} mode
+      {{ job.event.name }} · {{ job.mode|capitalize }} mode
       · Started {{ job.created_at | naturaltime }}
       {% if job.duration_s %}· Took {{ job.duration_s|round(0)|int }}s{% endif %}
     </div>
@@ -92,7 +92,7 @@
         <div class="output-meta">{{ out.resolution }} · {{ out.file_size_mb }} MB</div>
       </div>
       <div class="output-actions">
-        <a href="{{ output_url(job.project.user_id, job.project.id, out.filename) }}"
+        <a href="{{ output_url(job.event.user_id, job.event.id, out.filename) }}"
            class="btn btn-sm" download>Download</a>
         {% if not out.youtube_video_id and current_user.google_connected %}
         <button class="btn btn-sm" onclick="uploadYouTube({{ out.id }})">YouTube</button>
@@ -128,7 +128,7 @@ function cancelRender() {
 }
 
 function uploadYouTube(outputId) {
-  const title   = prompt('Video title:', '{{ job.project.name }}');
+  const title   = prompt('Video title:', '{{ job.event.name }}');
   if (!title) return;
   const privacy = prompt('Privacy:', 'unlisted');
   if (!privacy) return;

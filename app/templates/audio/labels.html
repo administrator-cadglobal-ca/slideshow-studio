@@ -60,13 +60,13 @@
         <div class="label-card-meta">
           {{ label.clip_count }} clip{{ 's' if label.clip_count != 1 }}
           {% if label.total_duration_display != '--:--' %}· {{ label.total_duration_display }} total{% endif %}
-          {% if label.is_project_label %} · 📁 Project label{% endif %}
+          {% if label.is_event_label %} · 📁 Event label{% endif %}
         </div>
       </div>
-      {% if not label.is_project_label %}
+      {% if not label.is_event_label %}
       <span class="label-card-badge">Manual</span>
       {% else %}
-      <span class="label-card-badge" style="border-color:#a7f3d0;color:#059669">Project</span>
+      <span class="label-card-badge" style="border-color:#a7f3d0;color:#059669">Event</span>
       {% endif %}
     </div>
     <div class="label-card-body">
@@ -86,7 +86,7 @@
       <button class="import-btn" onclick="showImport({{ label.id }}, '{{ label.name }}')">
         ⬇ Import from label
       </button>
-      {% if not label.is_project_label %}
+      {% if not label.is_event_label %}
       <button class="import-btn" onclick="editLabel({{ label.id }}, '{{ label.name }}', '{{ label.color }}')">✏</button>
       <button class="import-btn" style="color:#dc2626"
               onclick="deleteLabel({{ label.id }}, '{{ label.name }}')">🗑</button>
@@ -159,7 +159,7 @@
 const ALL_LABELS = [
   {% for l in labels %}
   { id:{{ l.id }}, name:{{ l.name|tojson|safe }}, color:'{{ l.color }}',
-    isProject:{{ 'true' if l.is_project_label else 'false' }} },
+    isEvent:{{ 'true' if l.is_event_label else 'false' }} },
   {% endfor %}
 ];
 let nlColor = '#1e3a52', elColor = '#1e3a52', editLabelId = null, importTargetId = null;
@@ -238,7 +238,7 @@ function showImport(targetId, targetName) {
     btn.onmouseleave = () => btn.style.background='#fff';
     btn.innerHTML = `<span style="width:12px;height:12px;border-radius:50%;background:${l.color};flex-shrink:0"></span>
       <span style="flex:1;font-weight:500">${l.name}</span>
-      <span style="color:#9ca3af">${l.isProject?'📁 Project':'Manual'}</span>`;
+      <span style="color:#9ca3af">${l.isEvent?'📁 Event':'Manual'}</span>`;
     btn.onclick = () => importFromLabel(l.id, l.name, btn);
     sources.appendChild(btn);
   });

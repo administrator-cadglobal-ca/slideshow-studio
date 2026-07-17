@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ project.name }} — Slideshow</title>
+<title>{{ event.name }} — Slideshow</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0f172a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -37,14 +37,14 @@ body{background:#0f172a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,
 
 <!-- Header -->
 <div class="hdr">
-  <div class="hdr-title">{{ project.name }}</div>
+  <div class="hdr-title">{{ event.name }}</div>
   {% if all_labels %}
   <div class="hdr-label">
     <label>🎵</label>
     <select id="labelSel" onchange="switchLabel(this.value)">
       <option value="">No music</option>
       {% for label in all_labels %}
-      <option value="{{ label.id }}" {% if project_label and label.id == project_label.id %}selected{% endif %}>
+      <option value="{{ label.id }}" {% if event_label and label.id == event_label.id %}selected{% endif %}>
         {{ label.name }}
       </option>
       {% endfor %}
@@ -89,7 +89,7 @@ var TOKEN   = '{{ token.token }}';
 var VERSION = '{{ default_version }}';
 var PROC_IMAGES = {{ processed_images | tojson | safe }};
 var USER_ID = {{ user_id }};
-var PROJ_ID = '{{ project.id }}';
+var PROJ_ID = '{{ event.id }}';
 
 // Build image list
 var images = [];

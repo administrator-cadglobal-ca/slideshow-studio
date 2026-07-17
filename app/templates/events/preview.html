@@ -1,5 +1,5 @@
 {% extends "shared/base.html" %}
-{% block title %}Preview — {{ project.name }}{% endblock %}
+{% block title %}Preview — {{ event.name }}{% endblock %}
 
 {% block head %}
 <style>
@@ -263,7 +263,7 @@
 <div class="page-header" style="margin-bottom:10px">
   <div class="page-header-left">
     <div style="font-size:11px;color:#8a9bb0;margin-bottom:3px">
-      <a href="{{ url_for('projects.show', project_id=project.id) }}" style="color:#8a9bb0">{{ project.name }}</a>
+      <a href="{{ url_for('events.show', event_id=event.id) }}" style="color:#8a9bb0">{{ event.name }}</a>
       <span style="margin:0 5px">›</span> Preview Player
     </div>
     <h1 style="font-size:17px">Slideshow Preview</h1>
@@ -273,7 +273,7 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
       Fullscreen
     </button>
-    <a href="{{ url_for('projects.show', project_id=project.id) }}" class="btn btn-sm">
+    <a href="{{ url_for('events.show', event_id=event.id) }}" class="btn btn-sm">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       Back
     </a>
@@ -383,7 +383,7 @@
             style="flex:1;border:1px solid #e8e5e0;border-radius:5px;padding:3px 6px;font-size:11px;outline:none;background:#fff">
             <option value="">All songs</option>
             {% for label in all_labels %}
-            <option value="{{ label.id }}" {% if label.id == project_label_id %}selected{% endif %}>{{ label.name }}</option>
+            <option value="{{ label.id }}" {% if label.id == event_label_id %}selected{% endif %}>{{ label.name }}</option>
             {% endfor %}
           </select>
           <button onclick="refreshLabels()" title="Refresh label list"
@@ -584,8 +584,8 @@
 const VERSIONS     = {{ versions_data | tojson | safe }};
 const LABELS_CLIPS = {{ labels_clips | tojson | safe }};
 const ALL_LABELS   = {{ all_labels | map(attribute='id') | list | tojson | safe if all_labels else '[]' }}; // ids only
-const PROJECT_LABEL_ID = {{ project_label_id or 'null' }};
-const CAPTION_STYLE = {{ project.caption_style | tojson | safe if project.caption_style else '{}' }};
+const EVENT_LABEL_ID = {{ event_label_id or 'null' }};
+const CAPTION_STYLE = {{ event.caption_style | tojson | safe if event.caption_style else '{}' }};
 const SONGS    = {{ songs_data | tojson | safe }};
 
 // ── State ───────────────────────────────────────────────────────────────────────
@@ -1120,7 +1120,7 @@ function updateFsSong(){
 document.addEventListener('DOMContentLoaded',()=>{
   const sel=document.getElementById('versionSelect');
   if(sel?.value) loadVersion(sel.value);
-  if(PROJECT_LABEL_ID){ switchAudioLabel(PROJECT_LABEL_ID); } else if(SONGS.length){ loadSong(0); updateFsSong(); }
+  if(EVENT_LABEL_ID){ switchAudioLabel(EVENT_LABEL_ID); } else if(SONGS.length){ loadSong(0); updateFsSong(); }
   // Default: filmstrip on
   filmstripOn=true;
   document.getElementById('filmstripBtn').classList.add('on');

@@ -13,26 +13,26 @@
         No active renders
       {% endif %}
       &nbsp;·&nbsp;
-      {{ projects|selectattr('status','eq','complete')|list|length }} project{{ 's' if projects|length != 1 }} complete
+      {{ events|selectattr('status','eq','complete')|list|length }} event{{ 's' if events|length != 1 }} complete
     </div>
   </div>
-  <a href="{{ url_for('projects.new') }}" class="btn btn-primary">
+  <a href="{{ url_for('events.new') }}" class="btn btn-primary">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    New project
+    New event
   </a>
 </div>
 
 {# ── Stats ── #}
 <div class="stat-grid">
   <div class="stat-card">
-    <div class="stat-label">Projects</div>
-    <div class="stat-value">{{ projects|length }}</div>
-    <div class="stat-sub">{{ projects|selectattr('status','eq','complete')|list|length }} complete</div>
+    <div class="stat-label">Events</div>
+    <div class="stat-value">{{ events|length }}</div>
+    <div class="stat-sub">{{ events|selectattr('status','eq','complete')|list|length }} complete</div>
   </div>
   <div class="stat-card">
     <div class="stat-label">Videos rendered</div>
     <div class="stat-value">{{ total_outputs }}</div>
-    <div class="stat-sub">across all projects</div>
+    <div class="stat-sub">across all events</div>
   </div>
   <div class="stat-card">
     <div class="stat-label">Audio library</div>
@@ -61,7 +61,7 @@
   <div class="section-hd">
     <div class="section-title" style="display:flex;align-items:center;gap:8px">
       <span style="width:8px;height:8px;border-radius:50%;background:#d97706;display:inline-block;animation:pulse 1.5s infinite"></span>
-      Rendering now — {{ active_job.project.name }}
+      Rendering now — {{ active_job.event.name }}
     </div>
     <a href="{{ url_for('renders.show', job_id=active_job.id) }}" class="btn btn-sm">View progress</a>
   </div>
@@ -77,63 +77,63 @@
 </div>
 {% endif %}
 
-{# ── Projects ── #}
+{# ── Events ── #}
 <div class="section-hd">
-  <div class="section-title">Your projects</div>
-  <a href="{{ url_for('projects.index') }}" class="btn btn-sm">View all</a>
+  <div class="section-title">Your events</div>
+  <a href="{{ url_for('events.index') }}" class="btn btn-sm">View all</a>
 </div>
 
-{% if projects %}
-<div class="projects-grid">
-  {% for proj in projects[:6] %}
-  <a href="{{ url_for('projects.show', project_id=proj.id) }}" class="proj-card" style="display:block">
-    <div class="proj-thumb" style="background:{{ loop_colors[loop.index0 % loop_colors|length] }}">
-      {% if proj.photo_count > 0 %}
-        <span class="proj-thumb-count">{{ proj.photo_count }} photos</span>
+{% if events %}
+<div class="events-grid">
+  {% for evt in events[:6] %}
+  <a href="{{ url_for('events.show', event_id=evt.id) }}" class="evt-card" style="display:block">
+    <div class="evt-thumb" style="background:{{ loop_colors[loop.index0 % loop_colors|length] }}">
+      {% if evt.photo_count > 0 %}
+        <span class="evt-thumb-count">{{ evt.photo_count }} photos</span>
       {% endif %}
     </div>
-    <div class="proj-body">
-      <div class="proj-name">{{ proj.name }}</div>
-      <div class="proj-meta">
-        {{ proj.photo_count }} photo{{ 's' if proj.photo_count != 1 }}
-        {% if proj.selected_songs|length %} · {{ proj.selected_songs|length }} song{{ 's' if proj.selected_songs|length != 1 }}{% endif %}
+    <div class="evt-body">
+      <div class="evt-name">{{ evt.name }}</div>
+      <div class="evt-meta">
+        {{ evt.photo_count }} photo{{ 's' if evt.photo_count != 1 }}
+        {% if evt.selected_songs|length %} · {{ evt.selected_songs|length }} song{{ 's' if evt.selected_songs|length != 1 }}{% endif %}
       </div>
       <div style="display:flex;align-items:center;gap:6px">
-        {% if proj.status == 'complete' %}
+        {% if evt.status == 'complete' %}
           <span class="pill pill-success">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
             Complete
           </span>
-        {% elif proj.status == 'rendering' %}
+        {% elif evt.status == 'rendering' %}
           <span class="pill pill-warning">Rendering</span>
-          {% if proj.latest_job %}
+          {% if evt.latest_job %}
           <div class="progress" style="flex:1">
-            <div class="progress-bar warn" style="width:{{ proj.latest_job.progress_pct or 0 }}%"></div>
+            <div class="progress-bar warn" style="width:{{ evt.latest_job.progress_pct or 0 }}%"></div>
           </div>
           {% endif %}
-        {% elif proj.status == 'draft' %}
+        {% elif evt.status == 'draft' %}
           <span class="pill pill-gray">Draft</span>
         {% else %}
-          <span class="pill pill-info">{{ proj.status|capitalize }}</span>
+          <span class="pill pill-info">{{ evt.status|capitalize }}</span>
         {% endif %}
       </div>
     </div>
   </a>
   {% endfor %}
 
-  {% if projects|length < 6 %}
-  <a href="{{ url_for('projects.new') }}" class="proj-new-card">
+  {% if events|length < 6 %}
+  <a href="{{ url_for('events.new') }}" class="evt-new-card">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    New project
+    New event
   </a>
   {% endif %}
 </div>
 {% else %}
 <div class="empty-state">
   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-  <p>No projects yet.</p>
+  <p>No events yet.</p>
   <div class="empty-cta">
-    <a href="{{ url_for('projects.new') }}" class="btn btn-primary">Create your first project</a>
+    <a href="{{ url_for('events.new') }}" class="btn btn-primary">Create your first event</a>
   </div>
 </div>
 {% endif %}

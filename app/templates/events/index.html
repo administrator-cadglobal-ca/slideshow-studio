@@ -1,0 +1,59 @@
+{% extends "shared/base.html" %}
+{% block title %}Events — Slideshow Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Events</h1>
+    <div class="page-sub">{{ events|length }} event{{ 's' if events|length != 1 }}</div>
+  </div>
+  <a href="{{ url_for('events.new') }}" class="btn btn-primary">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New event
+  </a>
+</div>
+
+{% if events %}
+<div class="events-grid">
+  {% for evt in events %}
+  <a href="{{ url_for('events.show', event_id=evt.id) }}" class="evt-card" style="display:block">
+    <div class="evt-thumb" style="background:{{ loop_colors[loop.index0 % loop_colors|length] }}">
+      <span class="evt-thumb-count">{{ evt.photo_count }} photos</span>
+    </div>
+    <div class="evt-body">
+      <div class="evt-name">{{ evt.name }}</div>
+      <div class="evt-meta">
+        {{ evt.photo_count }} photo{{ 's' if evt.photo_count != 1 }}
+        · {{ evt.selected_songs|length }} song{{ 's' if evt.selected_songs|length != 1 }}
+        · updated {{ evt.updated_at | naturaltime }}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        {% if evt.status == 'complete' %}
+          <span class="pill pill-success"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Complete</span>
+          <span style="font-size:11px;color:#8a9bb0">{{ evt.latest_job.outputs|length if evt.latest_job else 0 }} videos</span>
+        {% elif evt.status == 'rendering' %}
+          <span class="pill pill-warning">Rendering</span>
+        {% elif evt.status == 'draft' %}
+          <span class="pill pill-gray">Draft</span>
+        {% else %}
+          <span class="pill pill-info">{{ evt.status|capitalize }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+  <a href="{{ url_for('events.new') }}" class="evt-new-card">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New event
+  </a>
+</div>
+{% else %}
+<div class="empty-state">
+  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+  <p>No events yet.</p>
+  <div class="empty-cta">
+    <a href="{{ url_for('events.new') }}" class="btn btn-primary">Create your first event</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

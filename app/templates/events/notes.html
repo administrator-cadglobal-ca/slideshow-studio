@@ -1,5 +1,5 @@
 {% extends "shared/base.html" %}
-{% block title %}Captions — {{ project.name }}{% endblock %}
+{% block title %}Captions — {{ event.name }}{% endblock %}
 
 {% block head %}
 <style>
@@ -86,12 +86,12 @@
 <div class="page-header" style="margin-bottom:12px">
   <div class="page-header-left">
     <div style="font-size:11px;color:#8a9bb0;margin-bottom:3px">
-      <a href="{{ url_for('projects.show', project_id=project.id) }}" style="color:#8a9bb0">{{ project.name }}</a>
+      <a href="{{ url_for('events.show', event_id=event.id) }}" style="color:#8a9bb0">{{ event.name }}</a>
       <span style="margin:0 5px">›</span> Photo captions
     </div>
     <h1 style="font-size:18px">Photo captions</h1>
   </div>
-  <a href="{{ url_for('projects.show', project_id=project.id) }}" class="btn btn-sm">← Back</a>
+  <a href="{{ url_for('events.show', event_id=event.id) }}" class="btn btn-sm">← Back</a>
 </div>
 
 <div class="notes-stats">
@@ -113,7 +113,7 @@
       ('camera','📷 Camera'),('date_camera','📅 Date  +  📷 Camera'),
       ('location_camera','📍 Location  +  📷 Camera'),('all','📅 + 📍 + 📷 All'),
     ] %}
-    <button class="l2-opt {% if (project.caption_line2 or 'date_location') == val %}active{% endif %}"
+    <button class="l2-opt {% if (event.caption_line2 or 'date_location') == val %}active{% endif %}"
             data-val="{{ val }}" onclick="setLine2('{{ val }}',this)">{{ label }}</button>
     {% endfor %}
   </div>
@@ -179,7 +179,7 @@
 {% if photos %}
 <div class="notes-grid" id="notesGrid">
   {% for photo in photos %}
-  {% set l2 = photo.auto_line2(project.caption_line2 or 'date_location') %}
+  {% set l2 = photo.auto_line2(event.caption_line2 or 'date_location') %}
   <div class="note-card {% if photo.has_note %}has-note{% endif %} {% if photo.skipped %}skipped{% endif %}"
        id="nc-{{ photo.id }}"
        data-has-note="{{ '1' if photo.has_note else '0' }}"
@@ -188,7 +188,7 @@
        data-l2="{{ l2 }}">
 
     <div class="nc-thumb">
-      <img src="{{ thumb_url(project.user_id, project.id, photo.filename) }}"
+      <img src="{{ thumb_url(event.user_id, event.id, photo.filename) }}"
            alt="{{ photo.orig_name }}" onerror="this.style.display='none'">
       <span class="nc-num">{{ loop.index }}</span>
       <div class="nc-meta-icons">
@@ -243,15 +243,15 @@
 {% else %}
 <div class="empty-state">
   <p>No photos yet.</p>
-  <div class="empty-cta"><a href="{{ url_for('projects.show', project_id=project.id) }}" class="btn btn-primary">Go to project</a></div>
+  <div class="empty-cta"><a href="{{ url_for('events.show', event_id=event.id) }}" class="btn btn-primary">Go to event</a></div>
 </div>
 {% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
-const PROJECT_ID = '{{ project.id }}';
-const L2_MODE    = { v: '{{ project.caption_line2 or "date_location" }}' };
+const EVENT_ID = '{{ event.id }}';
+const L2_MODE    = { v: '{{ event.caption_line2 or "date_location" }}' };
 const PHOTO_META = {
   {% for photo in photos %}
   {{ photo.id }}: {
@@ -302,7 +302,7 @@ function saveStyle() {
     burn_captions: document.getElementById('burnCaptions').checked,
     line2:         L2_MODE.v,
   };
-  fetch(`/api/v1/projects/${PROJECT_ID}/caption-style`, {
+  fetch(`/api/v1/events/${EVENT_ID}/caption-style`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(vals)
   });
@@ -345,7 +345,7 @@ function saveNote(pid) {
   const val = document.getElementById(`note-${pid}`)?.value||'';
   const dot = document.getElementById(`dot-${pid}`);
   clearTimeout(saveTimers[pid]);
-  fetch(`/api/v1/projects/${PROJECT_ID}/photos/${pid}/note`, {
+  fetch(`/api/v1/events/${EVENT_ID}/photos/${pid}/note`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({note:val})
   }).then(r=>{

@@ -10,11 +10,11 @@
 {% if jobs %}
 <div class="card">
   <table class="data-table">
-    <thead><tr><th>Project</th><th>Mode</th><th>Status</th><th>Started</th><th>Duration</th><th>Outputs</th><th></th></tr></thead>
+    <thead><tr><th>Event</th><th>Mode</th><th>Status</th><th>Started</th><th>Duration</th><th>Outputs</th><th></th></tr></thead>
     <tbody>
     {% for job in jobs %}
     <tr>
-      <td><a href="{{ url_for('projects.show', project_id=job.project_id) }}" style="font-weight:500">{{ job.project.name }}</a></td>
+      <td><a href="{{ url_for('events.show', event_id=job.event_id) }}" style="font-weight:500">{{ job.event.name }}</a></td>
       <td><span class="pill pill-gray">{{ job.mode }}</span></td>
       <td>
         {% if job.status == 'complete' %}<span class="pill pill-success">✓ Complete</span>

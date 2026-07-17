@@ -1,18 +1,18 @@
 {% extends "shared/base.html" %}
-{% block title %}Settings — {{ project.name }}{% endblock %}
+{% block title %}Settings — {{ event.name }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div class="page-header-left">
     <div style="font-size:12px;color:#8a9bb0;margin-bottom:4px">
-      <a href="{{ url_for('projects.show', project_id=project.id) }}" style="color:#8a9bb0">{{ project.name }}</a>
+      <a href="{{ url_for('events.show', event_id=event.id) }}" style="color:#8a9bb0">{{ event.name }}</a>
       <span style="margin:0 6px">›</span> Settings
     </div>
-    <h1>Project settings</h1>
+    <h1>Event settings</h1>
   </div>
 </div>
 
-<form method="POST" action="{{ url_for('projects.save_settings', project_id=project.id) }}">
+<form method="POST" action="{{ url_for('events.save_settings', event_id=event.id) }}">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
 
 {# ── Left column ── #}
@@ -20,12 +20,12 @@
   <div class="settings-section">
     <div class="settings-section-title">Basic</div>
     <div class="form-group">
-      <label class="form-label">Project name</label>
-      <input type="text" name="name" class="form-control" value="{{ project.name }}" required>
+      <label class="form-label">Event name</label>
+      <input type="text" name="name" class="form-control" value="{{ event.name }}" required>
     </div>
     <div class="form-group">
       <label class="form-label">Output filename prefix</label>
-      <input type="text" name="slug" class="form-control" value="{{ project.slug }}">
+      <input type="text" name="slug" class="form-control" value="{{ event.slug }}">
       <div class="form-hint">Used for output filenames e.g. Krish_graduation-2026_HD_1080p.mp4</div>
     </div>
   </div>
@@ -34,22 +34,22 @@
     <div class="settings-section-title">Title slide</div>
     <div class="form-group">
       <label class="form-label">Title text</label>
-      <input type="text" name="title_text" class="form-control" value="{{ project.title_text }}">
+      <input type="text" name="title_text" class="form-control" value="{{ event.title_text }}">
     </div>
     <div class="form-group">
       <label class="form-label">Subtitle</label>
-      <input type="text" name="title_subtitle" class="form-control" value="{{ project.title_subtitle }}" placeholder="Optional tagline">
+      <input type="text" name="title_subtitle" class="form-control" value="{{ event.title_subtitle }}" placeholder="Optional tagline">
     </div>
     <div class="form-grid-2">
       <div class="form-group">
         <label class="form-label">Duration (seconds)</label>
-        <input type="number" name="title_duration" class="form-control" value="{{ project.title_duration }}" min="1" max="30" step="0.5">
+        <input type="number" name="title_duration" class="form-control" value="{{ event.title_duration }}" min="1" max="30" step="0.5">
       </div>
       <div class="form-group">
         <label class="form-label">Background colour</label>
         <div class="color-row">
-          <input type="color" name="title_bg" value="{{ project.title_bg }}">
-          <input type="text" class="form-control" value="{{ project.title_bg }}" style="font-family:monospace;font-size:13px">
+          <input type="color" name="title_bg" value="{{ event.title_bg }}">
+          <input type="text" class="form-control" value="{{ event.title_bg }}" style="font-family:monospace;font-size:13px">
         </div>
       </div>
     </div>
@@ -59,11 +59,11 @@
     <div class="settings-section-title">End slide</div>
     <div class="form-group">
       <label class="form-label">End text</label>
-      <input type="text" name="end_text" class="form-control" value="{{ project.end_text }}">
+      <input type="text" name="end_text" class="form-control" value="{{ event.end_text }}">
     </div>
     <div class="form-group">
       <label class="form-label">Duration (seconds)</label>
-      <input type="number" name="end_duration" class="form-control" value="{{ project.end_duration }}" min="1" max="30" step="0.5">
+      <input type="number" name="end_duration" class="form-control" value="{{ event.end_duration }}" min="1" max="30" step="0.5">
     </div>
   </div>
 
@@ -71,18 +71,18 @@
     <div class="settings-section-title">Processed images</div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-        <input type="checkbox" name="save_processed_images" {% if project.save_processed_images %}checked{% endif %}
+        <input type="checkbox" name="save_processed_images" {% if event.save_processed_images %}checked{% endif %}
                style="width:15px;height:15px;accent-color:#1e3a52">
         Save processed frames to pCloud
       </label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-        <input type="checkbox" name="save_images_confirm" {% if project.save_images_confirm %}checked{% endif %}
+        <input type="checkbox" name="save_images_confirm" {% if event.save_images_confirm %}checked{% endif %}
                style="width:15px;height:15px;accent-color:#1e3a52">
         Pause before rendering (review frames first)
       </label>
     </div>
     <div class="form-hint" style="margin-top:8px">
-      Saved to: P:\slideshow\users\{{ current_user.id }}\projects\{{ project.id }}\processed\
+      Saved to: P:\slideshow\users\{{ current_user.id }}\events\{{ event.id }}\processed\
     </div>
   </div>
 </div>
@@ -94,46 +94,46 @@
     <div class="form-grid-2">
       <div class="form-group">
         <label class="form-label">Duration per image (s)</label>
-        <input type="number" name="image_duration" class="form-control" value="{{ project.image_duration }}" min="0.5" max="30" step="0.5">
+        <input type="number" name="image_duration" class="form-control" value="{{ event.image_duration }}" min="0.5" max="30" step="0.5">
       </div>
       <div class="form-group">
         <label class="form-label">FPS</label>
         <select name="fps" class="form-control">
-          <option value="24" {% if project.fps==24 %}selected{% endif %}>24 fps</option>
-          <option value="30" {% if project.fps==30 %}selected{% endif %}>30 fps</option>
+          <option value="24" {% if event.fps==24 %}selected{% endif %}>24 fps</option>
+          <option value="30" {% if event.fps==30 %}selected{% endif %}>30 fps</option>
         </select>
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">Transition</label>
       <select name="transition" class="form-control">
-        <option value="fade" {% if project.transition=='fade' %}selected{% endif %}>Fade</option>
-        <option value="none" {% if project.transition=='none' %}selected{% endif %}>None (cut)</option>
+        <option value="fade" {% if event.transition=='fade' %}selected{% endif %}>Fade</option>
+        <option value="none" {% if event.transition=='none' %}selected{% endif %}>None (cut)</option>
       </select>
     </div>
     <div class="form-group">
       <label class="form-label">Fade duration (s)</label>
-      <input type="number" name="fade_duration" class="form-control" value="{{ project.fade_duration }}" min="0.1" max="3" step="0.1">
+      <input type="number" name="fade_duration" class="form-control" value="{{ event.fade_duration }}" min="0.1" max="3" step="0.1">
     </div>
     <div class="form-group">
       <label class="form-label">Image order</label>
       <select name="image_order" class="form-control">
-        <option value="sequential" {% if project.image_order=='sequential' %}selected{% endif %}>Sequential (as uploaded)</option>
-        <option value="date"       {% if project.image_order=='date'       %}selected{% endif %}>Date taken (EXIF)</option>
-        <option value="random"     {% if project.image_order=='random'     %}selected{% endif %}>Random</option>
+        <option value="sequential" {% if event.image_order=='sequential' %}selected{% endif %}>Sequential (as uploaded)</option>
+        <option value="date"       {% if event.image_order=='date'       %}selected{% endif %}>Date taken (EXIF)</option>
+        <option value="random"     {% if event.image_order=='random'     %}selected{% endif %}>Random</option>
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-        <input type="checkbox" name="auto_timing" {% if project.auto_timing %}checked{% endif %} style="width:15px;height:15px;accent-color:#1e3a52">
+        <input type="checkbox" name="auto_timing" {% if event.auto_timing %}checked{% endif %} style="width:15px;height:15px;accent-color:#1e3a52">
         Auto-timing (fit images to whole songs)
       </label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-        <input type="checkbox" name="complete_last_song" {% if project.complete_last_song %}checked{% endif %} style="width:15px;height:15px;accent-color:#1e3a52">
+        <input type="checkbox" name="complete_last_song" {% if event.complete_last_song %}checked{% endif %} style="width:15px;height:15px;accent-color:#1e3a52">
         Complete last song (hold last frame)
       </label>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-        <input type="checkbox" name="stitch_portraits" {% if project.stitch_portraits %}checked{% endif %} style="width:15px;height:15px;accent-color:#1e3a52">
+        <input type="checkbox" name="stitch_portraits" {% if event.stitch_portraits %}checked{% endif %} style="width:15px;height:15px;accent-color:#1e3a52">
         Stitch portrait pairs (landscape video)
       </label>
     </div>
@@ -142,7 +142,7 @@
   <div class="settings-section">
     <div class="settings-section-title">Render versions</div>
     <div class="version-grid">
-      {% set active_versions = project.render_versions_list %}
+      {% set active_versions = event.render_versions_list %}
       {% for vk, vinfo in render_versions.items() %}
       <label class="version-item" style="{{ 'border-color:#1e3a52;background:#f5f9fc' if vk in active_versions else '' }}">
         <input type="checkbox" name="render_versions" value="{{ vk }}"
@@ -162,11 +162,11 @@
 
 <div style="margin-top:20px;padding-top:16px;border-top:1px solid #f0ede8;display:flex;gap:8px">
   <button type="submit" class="btn btn-primary">Save settings</button>
-  <a href="{{ url_for('projects.show', project_id=project.id) }}" class="btn">Cancel</a>
+  <a href="{{ url_for('events.show', event_id=event.id) }}" class="btn">Cancel</a>
   <div style="margin-left:auto">
     <button type="button" class="btn btn-danger btn-sm"
-            onclick="if(confirm('Delete this project and all its files?')) location.href='{{ url_for('projects.delete', project_id=project.id) }}'">
-      Delete project
+            onclick="if(confirm('Delete this event and all its files?')) location.href='{{ url_for('events.delete', event_id=event.id) }}'">
+      Delete event
     </button>
   </div>
 </div>
