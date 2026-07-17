@@ -117,6 +117,10 @@
                 :                  'Something went wrong.';
       if (window.showToast) window.showToast('error', msg);
     });
+    /* Pause all audio on navigation away */
+    window.addEventListener('beforeunload', () => {
+      document.querySelectorAll('audio').forEach(a => a.pause());
+    });
   </script>
 
   {% block scripts %}{% endblock %}
