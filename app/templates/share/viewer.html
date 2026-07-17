@@ -190,6 +190,10 @@ function viewerPage() {
         this.version = this.availableVersions[0];
         this.loadVersion();
       }
+      // Default playlist: use provided or first available
+      if (!this.playlistId && this.playlists.length > 0) {
+        this.playlistId = String(this.playlists[0].id);
+      }
       if (this.playlistId) this.loadPlaylist();
       document.addEventListener('keydown', (e) => this.onKey(e));
     },
