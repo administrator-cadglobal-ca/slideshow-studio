@@ -113,18 +113,90 @@
   {# Tab: Originals #}
   <div x-show="activeTab === 'originals'" x-cloak>
     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-      <p class="text-small text-ink-soft">{{ selected_event.photo_count }} photo{{ 's' if selected_event.photo_count != 1 }}</p>
-      <button type="button" class="btn-primary" title="Upload photos" disabled>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="17 8 12 3 7 8"></polyline>
-          <line x1="12" y1="3" x2="12" y2="15"></line>
-        </svg>
-        Upload photos
-      </button>
+      <p class="text-small text-ink-soft"><span x-text="photos.length"></span> photo<span x-show="photos.length !== 1">s</span></p>
+      <div class="flex items-center gap-2">
+        <input type="file" x-ref="filePicker" @change="onFilePick($event)" accept="image/*" multiple class="hidden">
+        <button type="button" @click="$refs.filePicker.click()" class="btn-primary" title="Upload photos" :disabled="uploading">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          Upload photos
+        </button>
+        <button type="button" @click="processModal = true" class="btn-secondary" :disabled="photos.length === 0 || uploading" title="Process photos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          Process photos
+        </button>
+      </div>
     </div>
-    <div class="rounded-comfortable border-2 border-dashed border-line p-12 text-center text-ink-soft">
-      <p>Photo grid coming soon.</p>
+
+    {# Upload progress bar #}
+    <div x-show="uploading || uploadError" x-cloak
+         :class="uploadError ? 'border-danger bg-danger-soft' : 'border-indigo bg-indigo-soft'"
+         class="mb-4 rounded-comfortable border-2 border-dashed p-4 flex items-center gap-4">
+      <div class="flex-1 min-w-0">
+        <p class="text-small font-medium" x-text="uploadError || (uploadedCount + ' / ' + uploadTotal + ' photos uploaded')"></p>
+        <div class="mt-2 h-2 bg-line rounded-full overflow-hidden" x-show="!uploadError">
+          <div class="h-full bg-indigo transition-all" :style="'width: ' + Math.round(100 * uploadedCount / Math.max(1, uploadTotal)) + '%'"></div>
+        </div>
+      </div>
+      <button type="button" x-show="uploadError" @click="uploadError = ''" class="btn-secondary text-small">Dismiss</button>
+    </div>
+
+    {# Empty state OR photo grid #}
+    <div x-show="photos.length === 0 && !uploading" x-cloak
+         @dragover.prevent="dragActive = true"
+         @dragleave.prevent="dragActive = false"
+         @drop.prevent="onDrop($event)"
+         :class="dragActive ? 'border-indigo bg-indigo-soft' : 'border-line'"
+         class="rounded-comfortable border-2 border-dashed p-12 text-center cursor-pointer"
+         @click="$refs.filePicker.click()">
+      <div class="mx-auto w-14 h-14 rounded-full bg-line-soft flex items-center justify-center mb-4">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+      </div>
+      <h2 class="text-h2 mb-1">No photos yet</h2>
+      <p class="text-small text-ink-soft">Drag photos here or click to browse. JPG, PNG, HEIC.</p>
+    </div>
+
+    <div x-show="photos.length > 0" x-cloak
+         @dragover.prevent="dragActive = true"
+         @dragleave.prevent="dragActive = false"
+         @drop.prevent="onDrop($event)"
+         :class="dragActive ? 'ring-2 ring-indigo ring-offset-2 rounded-comfortable' : ''">
+      <div class="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+        <template x-for="p in photos" :key="p.id">
+          <div class="relative group rounded-standard overflow-hidden bg-line-soft aspect-square"
+               :class="p.skipped ? 'opacity-40' : ''">
+            <img :src="p.thumb_url" :alt="p.orig_name || p.filename"
+                 class="w-full h-full object-cover"
+                 loading="lazy"
+                 @error="$event.target.style.display = 'none'">
+            <div class="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+              <button type="button" @click="deletePhoto(p.id)"
+                      class="w-6 h-6 rounded-full bg-white/90 hover:bg-white flex items-center justify-center text-caption"
+                      title="Delete">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                  <path d="M10 11v6"></path>
+                  <path d="M14 11v6"></path>
+                </svg>
+              </button>
+            </div>
+            <span class="absolute bottom-1 left-1 text-caption bg-white/80 px-1 rounded"
+                  x-text="p.is_portrait ? 'Portrait' : 'Landscape'"></span>
+          </div>
+        </template>
+      </div>
     </div>
   </div>
 
@@ -169,17 +241,89 @@
     </div>
   </div>
 
+  {# Modal: Process photos #}
+  {% if selected_event %}
+  <div x-show="processModal" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+       @click.self="processModal = false">
+    <div class="bg-white rounded-comfortable p-6 max-w-md w-full">
+      <h2 class="text-h2 mb-2">Process photos</h2>
+      <p class="text-small text-ink-soft mb-4">Pick which resolutions to prepare frames for.</p>
+      <div class="space-y-2 mb-4">
+        <label class="flex items-center gap-2"><input type="checkbox" x-model="procResolutions" value="sd"> <span class="text-small">SD (1280x720)</span></label>
+        <label class="flex items-center gap-2"><input type="checkbox" x-model="procResolutions" value="hd"> <span class="text-small">HD (1920x1080)</span></label>
+        <label class="flex items-center gap-2"><input type="checkbox" x-model="procResolutions" value="2k"> <span class="text-small">2K (2560x1440)</span></label>
+        <label class="flex items-center gap-2"><input type="checkbox" x-model="procResolutions" value="4k"> <span class="text-small">4K (3840x2160)</span></label>
+      </div>
+      <label class="flex items-center gap-2 mb-4">
+        <input type="checkbox" x-model="procAllowUpscale">
+        <span class="text-small">Allow upscale for smaller source images</span>
+      </label>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="processModal = false" class="btn-secondary">Cancel</button>
+        <button type="button" @click="runProcess()" class="btn-primary" :disabled="procResolutions.length === 0">
+          Process <span x-text="procResolutions.length"></span> version<span x-show="procResolutions.length !== 1">s</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}
 
 {% block scripts %}
+{% if selected_event %}
+<script id="initialPhotos" type="application/json">
+[
+  {% for p in selected_event.photos %}
+    {
+      "id": {{ p.id }},
+      "filename": {{ p.filename|tojson }},
+      "orig_name": {{ (p.orig_name or "")|tojson }},
+      "sort_order": {{ p.sort_order or 0 }},
+      "skipped": {{ 'true' if p.skipped else 'false' }},
+      "is_portrait": {{ 'true' if p.is_portrait else 'false' }},
+      "thumb_url": {{ thumb_url(current_user.id, selected_event.id, p.filename)|tojson }}
+    }{% if not loop.last %},{% endif %}
+  {% endfor %}
+]
+</script>
+{% endif %}
 <script>
 function eventsPage() {
   return {
+    // Tab state
     activeTab: 'originals',
     newEventModal: false,
 
-    init() {},
+    // Photos
+    photos: [],
+    dragActive: false,
+    uploading: false,
+    uploadedCount: 0,
+    uploadTotal: 0,
+    uploadError: '',
+
+    // Process
+    processModal: false,
+    procResolutions: ['hd'],
+    procAllowUpscale: false,
+
+    // Selected event id (baked in)
+    eventId: '{{ selected_event.id if selected_event else "" }}',
+
+    init() {
+      var initEl = document.getElementById('initialPhotos');
+      if (initEl) {
+        try {
+          this.photos = JSON.parse(initEl.textContent);
+        } catch (e) {
+          console.error('Failed to parse initial photos', e);
+          this.photos = [];
+        }
+      }
+    },
 
     switchEvent(eventId) {
       if (eventId) {
@@ -188,10 +332,9 @@ function eventsPage() {
     },
 
     async assignPlaylist(playlistId) {
-      var selectedEventId = '{{ selected_event.id if selected_event else "" }}';
-      if (!selectedEventId) return;
+      if (!this.eventId) return;
       try {
-        var url = '/events/' + encodeURIComponent(selectedEventId) + '/set-playlist';
+        var url = '/events/' + encodeURIComponent(this.eventId) + '/set-playlist';
         var body = 'playlist_id=' + encodeURIComponent(playlistId || '');
         await fetch(url, {
           method: 'POST',
@@ -199,8 +342,105 @@ function eventsPage() {
           body: body,
           credentials: 'same-origin'
         });
+        if (window.showToast) window.showToast('Playlist saved', 'success');
       } catch (e) {
         console.error('Failed to assign playlist', e);
+      }
+    },
+
+    // Upload handlers
+    onFilePick(evt) {
+      var files = evt.target.files;
+      if (files && files.length) this.doUpload(files);
+      evt.target.value = '';
+    },
+
+    onDrop(evt) {
+      this.dragActive = false;
+      var files = evt.dataTransfer.files;
+      if (files && files.length) this.doUpload(files);
+    },
+
+    async doUpload(fileList) {
+      if (!this.eventId) return;
+      var files = Array.from(fileList);
+      this.uploading = true;
+      this.uploadError = '';
+      this.uploadTotal = files.length;
+      this.uploadedCount = 0;
+
+      var BATCH = 5;
+      for (var i = 0; i < files.length; i += BATCH) {
+        var batch = files.slice(i, i + BATCH);
+        var fd = new FormData();
+        batch.forEach(function(f) { fd.append('photos', f); });
+        try {
+          var r = await fetch('/api/v1/events/' + encodeURIComponent(this.eventId) + '/photos/upload', {
+            method: 'POST', body: fd, credentials: 'same-origin'
+          });
+          if (!r.ok) {
+            var errText = 'Upload failed (' + r.status + ')';
+            this.uploadError = errText;
+            this.uploading = false;
+            return;
+          }
+          var data = await r.json();
+          this.uploadedCount += (data.uploaded || 0);
+        } catch (e) {
+          console.error('Upload batch failed', e);
+          this.uploadError = 'Upload error: ' + e.message;
+          this.uploading = false;
+          return;
+        }
+      }
+
+      // Refresh photo list from server
+      await this.reloadPhotos();
+      this.uploading = false;
+      if (window.showToast) window.showToast(this.uploadedCount + ' photo(s) uploaded', 'success');
+    },
+
+    reloadPhotos() {
+      // Simplest reliable path: full page reload keeps server-rendered photo list correct
+      window.location.reload();
+    },
+
+    async deletePhoto(photoId) {
+      if (!confirm('Delete this photo?')) return;
+      try {
+        await fetch('/events/' + encodeURIComponent(this.eventId) + '/photos/' + photoId + '/delete', {
+          method: 'POST', credentials: 'same-origin'
+        });
+        this.photos = this.photos.filter(function(p) { return p.id !== photoId; });
+      } catch (e) {
+        console.error('Failed to delete photo', e);
+      }
+    },
+
+
+
+    async runProcess() {
+      if (this.procResolutions.length === 0) return;
+      this.processModal = false;
+      try {
+        var r = await fetch('/events/' + encodeURIComponent(this.eventId) + '/process', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            resolutions: this.procResolutions,
+            allow_upscale: this.procAllowUpscale
+          })
+        });
+        if (r.ok) {
+          if (window.showToast) window.showToast('Processing started', 'success');
+        } else {
+          var errData = await r.json();
+          if (window.showToast) window.showToast(errData.error || 'Process failed', 'error');
+        }
+      } catch (e) {
+        console.error('Process failed', e);
+        if (window.showToast) window.showToast('Process error: ' + e.message, 'error');
       }
     },
   };
