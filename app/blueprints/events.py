@@ -824,35 +824,41 @@ def render_mp4(event_id):
 @bp.route("/<event_id>/output-files")
 @login_required
 def list_output_files(event_id):
-    """List rendered MP4 files for this event."""
-    from app.services.storage import output_dir as _output_dir
+    """List rendered MP4 files for this event (from R2)."""
+    from app.services import r2 as R2
     db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    out_dir = _output_dir(current_user.id, event_id)
     files = []
-    if out_dir.exists():
-        for f in sorted(out_dir.glob("*.mp4"), reverse=True):
-            files.append({
-                "name": f.name,
-                "size_mb": round(f.stat().st_size / 1048576, 1),
-                "url": f"/events/{event_id}/download/{f.name}"
-            })
+    try:
+        client = R2.get_client()
+        prefix = f"users/{current_user.id}/events/{event_id}/output/"
+        resp = client.list_objects_v2(Bucket=R2.bucket(), Prefix=prefix)
+        for obj in resp.get("Contents", []):
+            key = obj["Key"]
+            fname = key.split("/")[-1]
+            if fname.endswith(".mp4"):
+                files.append({
+                    "name": fname,
+                    "size_mb": round(obj["Size"] / 1048576, 1),
+                    "url": f"/events/{event_id}/download/{fname}"
+                })
+        files.sort(key=lambda x: x["name"], reverse=True)
+    except Exception as e:
+        current_app.logger.error(f"list_output_files R2 error: {e}")
     return jsonify({"files": files})
 
 
 @bp.route("/<event_id>/download/<filename>")
 @login_required
 def download_output(event_id, filename):
-    """Download rendered MP4."""
-    from flask import send_file
-    from app.services.storage import output_dir as _output_dir
+    """Download rendered MP4 from R2 via presigned URL."""
+    from app.services import r2 as R2
+    from flask import redirect
     db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    path = _output_dir(current_user.id, event_id) / filename
-    if not path.exists():
-        abort(404)
-    return send_file(str(path), as_attachment=True,
-                     download_name=filename)
+    key = R2.output_key(current_user.id, event_id, filename)
+    url = R2.presigned_url(key, expires_in=3600)
+    return redirect(url)
 
 
 # ── Share token management ────────────────────────────────────────────────────
