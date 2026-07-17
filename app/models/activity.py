@@ -48,7 +48,13 @@ def log_activity(event, action, details=None, user=None):
     from flask_login import current_user
     if user is None:
         user = current_user
-    user_id = user.id if hasattr(user, "id") else int(user)
+    # Force resolution of the LocalProxy and grab the id
+    if hasattr(user, "_get_current_object"):
+        user = user._get_current_object()
+    try:
+        user_id = user.id
+    except AttributeError:
+        user_id = int(user)
     event_id = event.id if hasattr(event, "id") else str(event)
     activity = EventActivity(
         event_id=event_id,
