@@ -671,8 +671,8 @@ def render_mp4(event_id):
                     "name":  c.name
                 })
 
-    ts       = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_name = f"{version}_{ts}.mp4"
+    _safe_evt_name = "".join(c if c.isalnum() or c in "-_" else "-" for c in (evt.name or "event"))[:60]
+    out_name = f"{version}_{_safe_evt_name}.mp4"
     _user_id = current_user.id
     _event_id = event_id
     _frame_names = frame_names
@@ -793,7 +793,7 @@ def render_mp4(event_id):
                 # Upload output MP4 to R2
                 try:
                     out_key = R2.output_key(_user_id, _event_id, out_name)
-                    R2.upload_file(out_file, out_key, "video/mp4")
+                    R2.upload_file(out_key, str(out_file), "video/mp4")
                     log(f"DONE - {out_name} ({mb:.1f} MB) uploaded to R2")
                 except Exception as e:
                     log(f"R2 upload error: {e}")
