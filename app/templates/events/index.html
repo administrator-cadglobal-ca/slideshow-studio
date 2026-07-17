@@ -1,59 +1,209 @@
 {% extends "shared/base.html" %}
-{% block title %}Events — Slideshow Studio{% endblock %}
+
+{% block title %}Events - Slideshow Studio{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div class="page-header-left">
-    <h1>Events</h1>
-    <div class="page-sub">{{ events|length }} event{{ 's' if events|length != 1 }}</div>
-  </div>
-  <a href="{{ url_for('events.new') }}" class="btn btn-primary">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    New event
-  </a>
-</div>
+<div class="max-w-7xl mx-auto py-6"
+     x-data="eventsPage()"
+     x-init="init()">
 
-{% if events %}
-<div class="events-grid">
-  {% for evt in events %}
-  <a href="{{ url_for('events.show', event_id=evt.id) }}" class="evt-card" style="display:block">
-    <div class="evt-thumb" style="background:{{ loop_colors[loop.index0 % loop_colors|length] }}">
-      <span class="evt-thumb-count">{{ evt.photo_count }} photos</span>
+  {# Header #}
+  <div class="flex items-start justify-between gap-4 flex-wrap mb-4">
+    <div>
+      <h1 class="text-h1">Events</h1>
+      <p class="text-small text-ink-soft mt-1">
+        {{ events|length }} event{{ 's' if events|length != 1 }}
+      </p>
     </div>
-    <div class="evt-body">
-      <div class="evt-name">{{ evt.name }}</div>
-      <div class="evt-meta">
-        {{ evt.photo_count }} photo{{ 's' if evt.photo_count != 1 }}
-        · {{ evt.selected_songs|length }} song{{ 's' if evt.selected_songs|length != 1 }}
-        · updated {{ evt.updated_at | naturaltime }}
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        {% if evt.status == 'complete' %}
-          <span class="pill pill-success"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Complete</span>
-          <span style="font-size:11px;color:#8a9bb0">{{ evt.latest_job.outputs|length if evt.latest_job else 0 }} videos</span>
-        {% elif evt.status == 'rendering' %}
-          <span class="pill pill-warning">Rendering</span>
-        {% elif evt.status == 'draft' %}
-          <span class="pill pill-gray">Draft</span>
-        {% else %}
-          <span class="pill pill-info">{{ evt.status|capitalize }}</span>
-        {% endif %}
-      </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      {% if selected_event %}
+      <a href="{{ url_for('events.preview', event_id=selected_event.id) }}"
+         class="btn-secondary" title="Play preview">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        Preview
+      </a>
+      {% endif %}
+      <button type="button" @click="newEventModal = true" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        New event
+      </button>
     </div>
-  </a>
-  {% endfor %}
-  <a href="{{ url_for('events.new') }}" class="evt-new-card">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    New event
-  </a>
-</div>
-{% else %}
-<div class="empty-state">
-  <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-  <p>No events yet.</p>
-  <div class="empty-cta">
-    <a href="{{ url_for('events.new') }}" class="btn btn-primary">Create your first event</a>
   </div>
+
+  {# Empty state (no events) #}
+  {% if not events %}
+  <div class="rounded-comfortable border-2 border-dashed border-line p-12 text-center">
+    <div class="mx-auto w-14 h-14 rounded-full bg-line-soft flex items-center justify-center mb-4">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-faint">
+        <polygon points="23 7 16 12 23 17 23 7"></polygon>
+        <rect x="1" y="5" width="15" height="14" rx="2"></rect>
+      </svg>
+    </div>
+    <h2 class="text-h2 mb-1">No events yet</h2>
+    <p class="text-small text-ink-soft mb-4">Create your first event to get started.</p>
+    <button type="button" @click="newEventModal = true" class="btn-primary">Create your first event</button>
+  </div>
+  {% endif %}
+
+  {# Event + Playlist selectors #}
+  {% if events %}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+    <div class="flex items-center gap-2">
+      <label class="text-caption text-ink-soft w-16 flex-shrink-0">Event</label>
+      <select class="input flex-1 text-small"
+              @change="switchEvent($event.target.value)">
+        {% for e in events %}
+          <option value="{{ e.id }}" {% if selected_event and e.id == selected_event.id %}selected{% endif %}>{{ e.name }}</option>
+        {% endfor %}
+      </select>
+      {% if selected_event %}
+      <a href="{{ url_for('events.settings', event_id=selected_event.id) }}"
+         class="btn-secondary text-small flex-shrink-0" title="Event settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="flex items-center gap-2">
+      <label class="text-caption text-ink-soft w-16 flex-shrink-0">Playlist</label>
+      <select class="input flex-1 text-small"
+              @change="assignPlaylist($event.target.value)">
+        <option value="">- No playlist -</option>
+        {% for p in playlists %}
+          <option value="{{ p.id }}" {% if selected_event and selected_event.playlist_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Tabs #}
+  {% if selected_event %}
+  <div class="flex items-center gap-1 border-b border-line mb-6 overflow-x-auto">
+    <button type="button" @click="activeTab = 'originals'"
+            :class="activeTab === 'originals' ? 'border-indigo text-indigo' : 'border-transparent text-ink-soft hover:text-ink'"
+            class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px whitespace-nowrap">
+      Originals
+    </button>
+    <button type="button" @click="activeTab = 'descriptions'"
+            :class="activeTab === 'descriptions' ? 'border-indigo text-indigo' : 'border-transparent text-ink-soft hover:text-ink'"
+            class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px whitespace-nowrap">
+      Descriptions
+    </button>
+    <button type="button" @click="activeTab = 'processed'"
+            :class="activeTab === 'processed' ? 'border-indigo text-indigo' : 'border-transparent text-ink-soft hover:text-ink'"
+            class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px whitespace-nowrap">
+      Processed
+    </button>
+    <button type="button" @click="activeTab = 'renders'"
+            :class="activeTab === 'renders' ? 'border-indigo text-indigo' : 'border-transparent text-ink-soft hover:text-ink'"
+            class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px whitespace-nowrap">
+      Renders
+    </button>
+  </div>
+
+  {# Tab: Originals #}
+  <div x-show="activeTab === 'originals'" x-cloak>
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <p class="text-small text-ink-soft">{{ selected_event.photo_count }} photo{{ 's' if selected_event.photo_count != 1 }}</p>
+      <button type="button" class="btn-primary" title="Upload photos" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        Upload photos
+      </button>
+    </div>
+    <div class="rounded-comfortable border-2 border-dashed border-line p-12 text-center text-ink-soft">
+      <p>Photo grid coming soon.</p>
+    </div>
+  </div>
+
+  {# Tab: Descriptions #}
+  <div x-show="activeTab === 'descriptions'" x-cloak>
+    <div class="rounded-comfortable border border-line p-12 text-center text-ink-soft">
+      <p>Descriptions / metadata editor coming soon.</p>
+    </div>
+  </div>
+
+  {# Tab: Processed #}
+  <div x-show="activeTab === 'processed'" x-cloak>
+    <div class="rounded-comfortable border border-line p-12 text-center text-ink-soft">
+      <p>Processed photos preview coming soon.</p>
+    </div>
+  </div>
+
+  {# Tab: Renders #}
+  <div x-show="activeTab === 'renders'" x-cloak>
+    <div class="rounded-comfortable border border-line p-12 text-center text-ink-soft">
+      <p>Render workflow coming soon.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Modal: New event #}
+  <div x-show="newEventModal" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+       @click.self="newEventModal = false">
+    <div class="bg-white rounded-comfortable p-6 max-w-md w-full">
+      <h2 class="text-h2 mb-4">New event</h2>
+      <form method="POST" action="{{ url_for('events.new') }}">
+        <label class="block mb-3">
+          <span class="text-caption text-ink-soft">Event name</span>
+          <input type="text" name="name" required class="input mt-1 w-full" placeholder="e.g. Diwali 2026" autofocus>
+        </label>
+        <div class="flex justify-end gap-2 mt-4">
+          <button type="button" @click="newEventModal = false" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Create event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </div>
-{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function eventsPage() {
+  return {
+    activeTab: 'originals',
+    newEventModal: false,
+
+    init() {},
+
+    switchEvent(eventId) {
+      if (eventId) {
+        window.location.href = '{{ url_for("events.index") }}?event=' + encodeURIComponent(eventId);
+      }
+    },
+
+    async assignPlaylist(playlistId) {
+      var selectedEventId = '{{ selected_event.id if selected_event else "" }}';
+      if (!selectedEventId) return;
+      try {
+        var url = '/events/' + encodeURIComponent(selectedEventId) + '/set-playlist';
+        var body = 'playlist_id=' + encodeURIComponent(playlistId || '');
+        await fetch(url, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: body,
+          credentials: 'same-origin'
+        });
+      } catch (e) {
+        console.error('Failed to assign playlist', e);
+      }
+    },
+  };
+}
+</script>
 {% endblock %}

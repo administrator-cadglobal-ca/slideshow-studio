@@ -34,10 +34,24 @@ RENDER_VERSIONS = {
 @bp.route("/")
 @login_required
 def index():
+    from app.models.audio import Playlist
     events = db.session.query(Event)\
                  .filter_by(user_id=current_user.id)\
                  .order_by(Event.updated_at.desc()).all()
-    return render_template("events/index.html", events=events, loop_colors=LOOP_COLORS)
+    playlists = db.session.query(Playlist)\
+                    .filter_by(user_id=current_user.id)\
+                    .order_by(Playlist.sort_order, Playlist.name).all()
+    # Resolve selected event from ?event= or default to first
+    requested_id = request.args.get("event", "").strip()
+    selected_event = None
+    if requested_id:
+        selected_event = next((e for e in events if e.id == requested_id), None)
+    if not selected_event and events:
+        selected_event = events[0]
+    return render_template("events/index.html", events=events,
+                           playlists=playlists,
+                           selected_event=selected_event,
+                           loop_colors=LOOP_COLORS)
 
 @bp.route("/new", methods=["GET","POST"])
 @login_required
@@ -68,22 +82,8 @@ def new():
 @bp.route("/<event_id>")
 @login_required
 def show(event_id):
-    evt = db.session.query(Event)\
-             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    # Processed versions
-    from app.services.storage import list_processed_versions_r2
-    processed_images   = list_processed_versions_r2(current_user.id, event_id)
-    processed_versions = sorted(processed_images.keys())
-    from flask import current_app
-    from app.models.audio import Playlist
-    all_labels = db.session.query(Playlist)                   .filter_by(user_id=current_user.id)                   .order_by(Playlist.name).all()
-    event_playlist = evt.playlist  # Playlist with event_id=evt.id, or None
-
-    return render_template("events/show.html", event=evt,
-        processed_versions=processed_versions, processed_images=processed_images,
-        max_upload_mb=current_app.config.get("MAX_UPLOAD_MB",50),
-        thumb_url=thumb_url, processed_url=processed_url, output_url=output_url,
-        all_labels=all_labels, event_playlist=event_playlist)
+    # Backward-compatible redirect: /<event_id> -> /?event=<event_id>
+    return redirect(url_for("events.index", event=event_id))
 
 @bp.route("/<event_id>/settings", methods=["GET","POST"])
 @login_required
@@ -120,6 +120,16 @@ def save_settings(event_id):
     db.session.commit()
     flash("Settings saved.", "success")
     return redirect(url_for("events.show", event_id=evt.id))
+
+@bp.route("/<event_id>/set-playlist", methods=["POST"])
+@login_required
+def set_playlist(event_id):
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    pid_raw = request.form.get("playlist_id", "").strip()
+    evt.playlist_id = int(pid_raw) if pid_raw else None
+    db.session.commit()
+    return jsonify({"ok": True, "playlist_id": evt.playlist_id})
 
 @bp.route("/<event_id>/delete", methods=["GET","POST"])
 @login_required
