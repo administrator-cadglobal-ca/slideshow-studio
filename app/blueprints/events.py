@@ -666,9 +666,9 @@ def render_mp4(event_id):
                 clips.append({
                     "r2_key": R2.audio_key(current_user.id, c.song.filename),
                     "filename": c.song.filename,
-                    "start": c.start_s or 0,
-                    "end":   c.end_s,
-                    "name":  c.display_name
+                    "start": c.trim_start or 0,
+                    "end":   c.trim_end,
+                    "name":  c.name
                 })
 
     ts       = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
