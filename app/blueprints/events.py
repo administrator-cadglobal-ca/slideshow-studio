@@ -621,6 +621,17 @@ def process_frames(event_id):
 
 
 
+@bp.route("/<event_id>/versions-r2")
+@login_required
+def list_r2_versions(event_id):
+    """List processed versions available in R2 for rendering."""
+    from app.services.storage import list_processed_versions_r2
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    versions = list_processed_versions_r2(current_user.id, event_id)
+    return jsonify({"versions": list(versions.keys())})
+
+
 @bp.route("/<event_id>/render-mp4", methods=["POST"])
 @login_required
 def render_mp4(event_id):

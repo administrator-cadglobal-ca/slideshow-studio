@@ -1029,9 +1029,9 @@ function eventsPage() {
     // ─── Renders ─────────────────────────────────────────────────────────
     async loadRenderVersions() {
       try {
-        const r = await fetch('/events/' + this.eventId + '/process/frames', {credentials: 'same-origin'});
+        const r = await fetch('/events/' + this.eventId + '/versions-r2', {credentials: 'same-origin'});
         const data = await r.json();
-        this.renderVersions = Object.keys(data.versions || {});
+        this.renderVersions = data.versions || [];
         if (this.renderVersions.length > 0 && !this.renderVersion) {
           this.renderVersion = this.renderVersions.includes('hd-landscape')
             ? 'hd-landscape'
