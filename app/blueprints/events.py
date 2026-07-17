@@ -857,7 +857,7 @@ def download_output(event_id, filename):
     db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     key = R2.output_key(current_user.id, event_id, filename)
-    url = R2.presigned_url(key, expires_in=3600)
+    url = R2.presigned_url(key, expires=3600)
     return redirect(url)
 
 
