@@ -194,7 +194,12 @@ function viewerPage() {
       if (!this.playlistId && this.playlists.length > 0) {
         this.playlistId = String(this.playlists[0].id);
       }
-      if (this.playlistId) this.loadPlaylist();
+      // Force select to sync after options render
+      this.$nextTick(() => {
+        var sel = document.querySelector('select[x-model="playlistId"]');
+        if (sel && this.playlistId) sel.value = String(this.playlistId);
+        if (this.playlistId) this.loadPlaylist();
+      });
       document.addEventListener('keydown', (e) => this.onKey(e));
     },
 
