@@ -254,6 +254,38 @@
         </button>
       </div>
 
+      {# Auto-fill from metadata #}
+      <div class="mb-4 p-3 rounded-standard bg-indigo-soft/30 border border-line">
+        <p class="text-caption font-medium text-ink mb-2">Auto-fill captions from photo metadata:</p>
+        <div class="flex flex-wrap items-center gap-3 mb-3">
+          <label class="flex items-center gap-1.5 text-small">
+            <input type="checkbox" x-model="autoFillFields.place" class="w-4 h-4">
+            <span>Place</span>
+          </label>
+          <label class="flex items-center gap-1.5 text-small">
+            <input type="checkbox" x-model="autoFillFields.country" class="w-4 h-4">
+            <span>Country</span>
+          </label>
+          <label class="flex items-center gap-1.5 text-small">
+            <input type="checkbox" x-model="autoFillFields.date" class="w-4 h-4">
+            <span>Date</span>
+          </label>
+          <label class="flex items-center gap-1.5 text-small">
+            <input type="checkbox" x-model="autoFillFields.camera" class="w-4 h-4">
+            <span>Camera</span>
+          </label>
+        </div>
+        <div class="flex items-center gap-3">
+          <button type="button" class="btn-secondary text-small" @click="autoFillCaptions()">
+            Fill empty captions
+          </button>
+          <label class="flex items-center gap-1.5 text-small text-ink-soft">
+            <input type="checkbox" x-model="autoFillOverwrite" class="w-4 h-4">
+            <span>Overwrite existing captions</span>
+          </label>
+        </div>
+      </div>
+
       <div class="space-y-2">
         <template x-for="photo in captionsPhotos" :key="photo.id">
           <div class="flex items-start gap-3 rounded-standard border border-line p-2">
@@ -466,6 +498,8 @@ function eventsPage() {
     savingAllCaptions: false,
     eventCaptionSaved: false,
     captionError: '',
+    autoFillFields: { place: true, country: true, date: true, camera: false },
+    autoFillOverwrite: false,
     newEventModal: false,
 
     // Photos
@@ -800,6 +834,33 @@ function eventsPage() {
     },
 
     // ─── Captions ──────────────────────────────────────────────────────
+    buildAutoCaption(photo) {
+      var parts = [];
+      var placeParts = [];
+      if (this.autoFillFields.place && photo.gps_place) placeParts.push(photo.gps_place);
+      if (this.autoFillFields.country && photo.gps_country) placeParts.push(photo.gps_country);
+      if (placeParts.length > 0) parts.push(placeParts.join(', '));
+      if (this.autoFillFields.date && photo.exif_date_str) parts.push(photo.exif_date_str);
+      if (this.autoFillFields.camera && photo.camera_model) parts.push(photo.camera_model);
+      return parts.join(' — ');
+    },
+
+    autoFillCaptions() {
+      var filled = 0;
+      this.captionsPhotos.forEach(p => {
+        if (!this.autoFillOverwrite && p.caption) return;
+        var auto = this.buildAutoCaption(p);
+        if (auto && auto !== p.caption) {
+          p.caption = auto;
+          p._dirty = true;
+          filled++;
+        }
+      });
+      if (window.showToast) {
+        window.showToast('Filled ' + filled + ' caption(s). Click Save all to persist.', 'success');
+      }
+    },
+
     initCaptions() {
       const eventId = "{{ selected_event.id if selected_event else '' }}";
       this.eventId = eventId;
