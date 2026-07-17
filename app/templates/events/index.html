@@ -484,7 +484,11 @@
     "skipped": p.skipped,
     "is_portrait": p.is_portrait,
     "thumb_url": thumb_url(current_user.id, selected_event.id, p.filename),
-    "caption": p.caption or ""
+    "caption": p.caption or "",
+    "gps_place": p.gps_place or "",
+    "gps_country": p.gps_country or "",
+    "exif_date_str": p.exif_date_str or "",
+    "camera_model": p.camera_model or ""
   }) %}
 {% endfor %}
 <script id="initialPhotos" type="application/json">{{ _initial_photos | tojson | safe }}</script>
