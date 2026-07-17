@@ -114,13 +114,7 @@
     </div>
 
     {# Fullscreen overlay controls #}
-    <div class="fs-overlay" x-show="isFullscreen && overlayVisible" x-cloak
-         x-transition:enter="transition ease-out duration-200"
-         x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-500"
-         x-transition:leave-start="opacity-100"
-         x-transition:leave-end="opacity-0">
+    <div class="fs-overlay" x-show="isFullscreen && overlayVisible" x-cloak>
       <div class="fs-controls-top">
         <div class="flex items-center gap-2 flex-wrap">
           <select x-model="version" @change="loadVersion()" class="fs-select">
