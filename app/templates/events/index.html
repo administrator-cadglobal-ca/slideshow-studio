@@ -256,34 +256,35 @@
 
       {# Auto-fill from metadata #}
       <div class="mb-4 p-3 rounded-standard bg-indigo-soft/30 border border-line">
-        <p class="text-caption font-medium text-ink mb-2">Auto-fill captions from photo metadata:</p>
-        <div class="flex flex-wrap items-center gap-3 mb-3">
-          <label class="flex items-center gap-1.5 text-small">
-            <input type="checkbox" x-model="autoFillFields.place" class="w-4 h-4">
-            <span>Place</span>
-          </label>
-          <label class="flex items-center gap-1.5 text-small">
-            <input type="checkbox" x-model="autoFillFields.country" class="w-4 h-4">
-            <span>Country</span>
-          </label>
-          <label class="flex items-center gap-1.5 text-small">
-            <input type="checkbox" x-model="autoFillFields.date" class="w-4 h-4">
-            <span>Date</span>
-          </label>
-          <label class="flex items-center gap-1.5 text-small">
-            <input type="checkbox" x-model="autoFillFields.camera" class="w-4 h-4">
-            <span>Camera</span>
-          </label>
-        </div>
-        <div class="flex items-center gap-3">
-          <button type="button" class="btn-secondary text-small" @click="autoFillCaptions()">
-            Fill empty captions
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-caption font-medium text-ink">Include:</span>
+            <label class="flex items-center gap-1.5 text-small">
+              <input type="checkbox" x-model="autoFillFields.place" @change="refreshAutoCaptions()" class="w-4 h-4">
+              <span>Place</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-small">
+              <input type="checkbox" x-model="autoFillFields.country" @change="refreshAutoCaptions()" class="w-4 h-4">
+              <span>Country</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-small">
+              <input type="checkbox" x-model="autoFillFields.date" @change="refreshAutoCaptions()" class="w-4 h-4">
+              <span>Date</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-small">
+              <input type="checkbox" x-model="autoFillFields.camera" @change="refreshAutoCaptions()" class="w-4 h-4">
+              <span>Camera</span>
+            </label>
+          </div>
+          <button type="button" class="btn-secondary text-small" @click="refreshAutoCaptions()" title="Reset all captions from selected metadata">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline align-text-bottom mr-1">
+              <path d="M23 4v6h-6M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            Refresh all
           </button>
-          <label class="flex items-center gap-1.5 text-small text-ink-soft">
-            <input type="checkbox" x-model="autoFillOverwrite" class="w-4 h-4">
-            <span>Overwrite existing captions</span>
-          </label>
         </div>
+        <p class="text-caption text-ink-soft mt-2">Toggling a checkbox or clicking Refresh regenerates all captions from selected metadata. Your manual edits below will be replaced.</p>
       </div>
 
       <div class="space-y-2">
@@ -499,7 +500,6 @@ function eventsPage() {
     eventCaptionSaved: false,
     captionError: '',
     autoFillFields: { place: true, country: true, date: true, camera: false },
-    autoFillOverwrite: false,
     newEventModal: false,
 
     // Photos
@@ -845,20 +845,11 @@ function eventsPage() {
       return parts.join(' — ');
     },
 
-    autoFillCaptions() {
-      var filled = 0;
+    refreshAutoCaptions() {
       this.captionsPhotos.forEach(p => {
-        if (!this.autoFillOverwrite && p.caption) return;
-        var auto = this.buildAutoCaption(p);
-        if (auto && auto !== p.caption) {
-          p.caption = auto;
-          p._dirty = true;
-          filled++;
-        }
+        p.caption = this.buildAutoCaption(p);
+        p._dirty = true;
       });
-      if (window.showToast) {
-        window.showToast('Filled ' + filled + ' caption(s). Click Save all to persist.', 'success');
-      }
     },
 
     initCaptions() {
