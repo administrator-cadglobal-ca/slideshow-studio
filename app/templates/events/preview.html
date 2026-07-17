@@ -187,8 +187,9 @@ body.fs-lock { overflow: hidden !important; }
           <div class="fs-song" x-show="currentSong" x-text="currentSong ? currentSong.name : ''"></div>
         </div>
       </div>
+    </div>
 
-      {# Caption overlay - MUST be descendant of stage (which gets .fs-fake) #}
+    {# Caption overlay - MUST be descendant of stage (which gets .fs-fake) #}
       <div class="caption-overlay" x-show="hasCaption" x-cloak>
         <template x-if="captionTitle">
           <div class="caption-overlay__title" x-text="captionTitle"></div>
@@ -200,7 +201,6 @@ body.fs-lock { overflow: hidden !important; }
           <div class="caption-overlay__photo" x-text="currentPhotoCaption"></div>
         </template>
       </div>
-    </div>
   </div>
 
   {# Song info bar #}
