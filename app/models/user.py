@@ -59,7 +59,7 @@ class User(UserMixin, db.Model):
     last_login  = db.Column(db.DateTime)
 
     # Relationships
-    projects    = db.relationship("Project",   back_populates="user",
+    events      = db.relationship("Event",     back_populates="user",
                                   cascade="all, delete-orphan")
     audio_files = db.relationship("AudioFile", back_populates="user",
                                   cascade="all, delete-orphan")
@@ -72,9 +72,9 @@ class User(UserMixin, db.Model):
 
     @property
     def storage_used(self) -> int:
-        project_bytes = sum(p.storage_bytes for p in self.projects)
+        event_bytes   = sum(p.storage_bytes for p in self.events)
         audio_bytes   = sum(a.file_size    for a in self.audio_files)
-        return project_bytes + audio_bytes
+        return event_bytes + audio_bytes
 
     @property
     def storage_pct(self) -> float:
