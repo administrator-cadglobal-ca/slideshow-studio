@@ -804,6 +804,95 @@ def download_output(event_id, filename):
 
 # ── Share token management ────────────────────────────────────────────────────
 
+# ─── Captions ─────────────────────────────────────────────────────────────
+@bp.route("/<event_id>/caption/event", methods=["POST"])
+@login_required
+def save_event_caption(event_id):
+    """Persist the event-level caption (reuses title_text / title_subtitle)."""
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+
+    data = request.json or {}
+    title    = (data.get("title_text") or "").strip()
+    subtitle = (data.get("title_subtitle") or "").strip()
+
+    evt.title_text     = title or None
+    evt.title_subtitle = subtitle or None
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Database error"}), 500
+
+    from app.models import log_activity
+    log_activity(evt, "caption.event_saved", {"title": title, "subtitle": subtitle})
+    return jsonify({
+        "ok": True,
+        "title_text": evt.title_text,
+        "title_subtitle": evt.title_subtitle,
+    })
+
+
+@bp.route("/<event_id>/caption/photo/<int:photo_id>", methods=["POST"])
+@login_required
+def save_photo_caption(event_id, photo_id):
+    """Persist a single photo's caption."""
+    from app.models.photo import Photo
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+
+    photo = db.session.query(Photo).filter_by(id=photo_id, event_id=event_id).first()
+    if photo is None:
+        return jsonify({"ok": False, "error": "Photo not found"}), 404
+
+    data = request.json or {}
+    caption = (data.get("caption") or "").strip()
+    photo.caption = caption or None
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Database error"}), 500
+
+    from app.models import log_activity
+    log_activity(evt, "caption.photo_saved", {"photo_id": photo_id, "caption": caption})
+    return jsonify({"ok": True, "id": photo.id, "caption": photo.caption})
+
+
+@bp.route("/<event_id>/caption/photos/bulk", methods=["POST"])
+@login_required
+def save_photo_captions_bulk(event_id):
+    """Persist multiple photo captions in one round-trip."""
+    from app.models.photo import Photo
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+
+    data  = request.json or {}
+    items = data.get("captions") or []
+    if not isinstance(items, list):
+        return jsonify({"ok": False, "error": "Invalid payload"}), 400
+
+    photos = {p.id: p for p in db.session.query(Photo).filter_by(event_id=event_id).all()}
+    changed = 0
+    for item in items:
+        pid = (item or {}).get("id")
+        if pid in photos:
+            photos[pid].caption = ((item.get("caption") or "").strip()) or None
+            changed += 1
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Database error"}), 500
+
+    from app.models import log_activity
+    log_activity(evt, "caption.photos_bulk_saved", {"count": changed})
+    return jsonify({"ok": True, "saved": changed})
+
+
 @bp.route("/<event_id>/share", methods=["POST"])
 @login_required
 def create_share_token(event_id):
