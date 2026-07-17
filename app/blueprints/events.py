@@ -132,6 +132,19 @@ def set_playlist(event_id):
     db.session.commit()
     return jsonify({"ok": True, "playlist_id": evt.playlist_id})
 
+@bp.route("/<event_id>/activities")
+@login_required
+def get_activities(event_id):
+    from app.models import EventActivity
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    limit = int(request.args.get("limit", 100))
+    activities = db.session.query(EventActivity)\
+                    .filter_by(event_id=evt.id)\
+                    .order_by(EventActivity.created_at.desc())\
+                    .limit(limit).all()
+    return jsonify({"activities": [a.to_dict() for a in activities]})
+
 @bp.route("/<event_id>/delete", methods=["GET","POST"])
 @login_required
 def delete(event_id):
