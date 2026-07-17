@@ -136,15 +136,15 @@ class AudioLabel(db.Model):
 
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"))
+    event_id = db.Column(db.Integer, db.ForeignKey("events.id"))
     name       = db.Column(db.String(100), nullable=False)
     color      = db.Column(db.String(10))
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user    = db.relationship("User")
-    project = db.relationship("Project", back_populates="audio_label",
-                              foreign_keys=[project_id])
+    event = db.relationship("Event", back_populates="audio_label",
+                              foreign_keys=[event_id])
     clips   = db.relationship("AudioClip",
                               secondary="audio_clip_labels",
                               order_by="audio_clip_labels.c.sort_order",

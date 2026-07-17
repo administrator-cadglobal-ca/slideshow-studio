@@ -9,7 +9,7 @@ class RenderJob(db.Model):
 
     id          = db.Column(db.String(36), primary_key=True,
                             default=lambda: str(uuid.uuid4()))
-    project_id  = db.Column(db.String(36), db.ForeignKey("projects.id"), nullable=False)
+    event_id    = db.Column(db.String(36), db.ForeignKey("events.id"), nullable=False)
     mode        = db.Column(db.String(20), default="production")
     # dev | fast | production
 
@@ -19,7 +19,7 @@ class RenderJob(db.Model):
     celery_task_id  = db.Column(db.String(255))
     queue_position  = db.Column(db.Integer, default=0)
 
-    # Dev mode settings (overrides project defaults when mode=dev)
+    # Dev mode settings (overrides event defaults when mode=dev)
     dev_images          = db.Column(db.Integer, default=20)
     dev_songs           = db.Column(db.Integer, default=4)
     dev_images_per_song = db.Column(db.Integer, default=5)
@@ -37,7 +37,7 @@ class RenderJob(db.Model):
     error_msg       = db.Column(db.Text)
 
     # Relationships
-    project     = db.relationship("Project",       back_populates="render_jobs")
+    event       = db.relationship("Event",       back_populates="render_jobs")
     versions    = db.relationship("RenderVersion", back_populates="job",
                                   cascade="all, delete-orphan",
                                   order_by="RenderVersion.started_at")

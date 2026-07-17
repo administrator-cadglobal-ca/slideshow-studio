@@ -6,7 +6,7 @@ class Photo(db.Model):
     __tablename__ = "photos"
 
     id          = db.Column(db.Integer,     primary_key=True)
-    project_id  = db.Column(db.String(36),  db.ForeignKey("projects.id"), nullable=False)
+    event_id    = db.Column(db.String(36),  db.ForeignKey("events.id"), nullable=False)
     filename    = db.Column(db.String(255),  nullable=False)
     orig_name   = db.Column(db.String(255))
     file_size   = db.Column(db.BigInteger,   default=0)
@@ -51,7 +51,7 @@ class Photo(db.Model):
     software         = db.Column(db.String(80))
 
     processed_paths  = db.Column(db.Text)
-    project          = db.relationship("Project", back_populates="photos")
+    event            = db.relationship("Event", back_populates="photos")
 
     @property
     def is_portrait(self):
