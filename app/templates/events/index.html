@@ -275,19 +275,17 @@
 {% block scripts %}
 {% if selected_event %}
 <script id="initialPhotos" type="application/json">
-[
-  {% for p in selected_event.photos %}
-    {
-      "id": {{ p.id }},
-      "filename": {{ p.filename|tojson }},
-      "orig_name": {{ (p.orig_name or "")|tojson }},
-      "sort_order": {{ p.sort_order or 0 }},
-      "skipped": {{ 'true' if p.skipped else 'false' }},
-      "is_portrait": {{ 'true' if p.is_portrait else 'false' }},
-      "thumb_url": {{ thumb_url(current_user.id, selected_event.id, p.filename)|tojson }}
-    }{% if not loop.last %},{% endif %}
-  {% endfor %}
-]
+{{ [
+  {
+    "id": p.id,
+    "filename": p.filename,
+    "orig_name": p.orig_name or "",
+    "sort_order": p.sort_order or 0,
+    "skipped": p.skipped,
+    "is_portrait": p.is_portrait,
+    "thumb_url": thumb_url(current_user.id, selected_event.id, p.filename)
+  } for p in selected_event.photos
+] | tojson | safe }}
 </script>
 {% endif %}
 <script>
