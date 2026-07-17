@@ -3,8 +3,8 @@ from app.extensions import db
 import uuid
 
 
-class Project(db.Model):
-    __tablename__ = "projects"
+class Event(db.Model):
+    __tablename__ = "events"
 
     id              = db.Column(db.String(36),  primary_key=True,
                                 default=lambda: str(uuid.uuid4()))
@@ -58,19 +58,19 @@ class Project(db.Model):
                                 onupdate=lambda: datetime.now(timezone.utc))
 
     # ── Relationships ─────────────────────────────────────────────────────────
-    user            = db.relationship("User", back_populates="projects")
-    photos          = db.relationship("Photo", back_populates="project",
+    user            = db.relationship("User", back_populates="events")
+    photos          = db.relationship("Photo", back_populates="event",
                                       cascade="all, delete-orphan",
                                       order_by="Photo.sort_order")
-    render_jobs     = db.relationship("RenderJob", back_populates="project",
+    render_jobs     = db.relationship("RenderJob", back_populates="event",
                                       cascade="all, delete-orphan",
                                       order_by="RenderJob.created_at.desc()")
-    audio_label     = db.relationship("AudioLabel", back_populates="project",
-                                      foreign_keys="AudioLabel.project_id",
+    audio_label     = db.relationship("AudioLabel", back_populates="event",
+                                      foreign_keys="AudioLabel.event_id",
                                       uselist=False)
     selected_songs  = db.relationship("AudioFile",
-                                      secondary="project_songs",
-                                      order_by="project_songs.c.sort_order")
+                                      secondary="event_songs",
+                                      order_by="event_songs.c.sort_order")
 
     @property
     def photo_count(self) -> int:
@@ -97,13 +97,13 @@ class Project(db.Model):
             return {}
 
     def __repr__(self):
-        return f"<Project {self.name}>"
+        return f"<Event {self.name}>"
 
 
-# ── Join table: project ↔ audio files ────────────────────────────────────────
-project_songs = db.Table(
-    "project_songs",
-    db.Column("project_id",    db.String(36), db.ForeignKey("projects.id"),    primary_key=True),
+# ── Join table: event ↔ audio files ────────────────────────────────────────
+event_songs = db.Table(
+    "event_songs",
+    db.Column("event_id",    db.String(36), db.ForeignKey("events.id"),    primary_key=True),
     db.Column("audio_file_id", db.Integer,    db.ForeignKey("audio_files.id"), primary_key=True),
     db.Column("sort_order",    db.Integer,    default=0),
     db.Column("use_clipped",   db.Boolean,    default=True),
@@ -111,12 +111,12 @@ project_songs = db.Table(
 
 
 class ShareToken(db.Model):
-    """Public share links and collaborator invites for projects."""
+    """Public share links and collaborator invites for events."""
     __tablename__ = "share_tokens"
 
     id             = db.Column(db.Integer, primary_key=True)
     token          = db.Column(db.String(64), unique=True, nullable=False, index=True)
-    project_id     = db.Column(db.String(36), db.ForeignKey("projects.id"), nullable=False)
+    event_id       = db.Column(db.String(36), db.ForeignKey("events.id"), nullable=False)
     created_by     = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     share_type     = db.Column(db.String(16), default="public")
     target_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
@@ -132,7 +132,7 @@ class ShareToken(db.Model):
     plain_password = db.Column(db.String(100), nullable=True)   # stored locally for owner reference
     versions_list  = db.Column(db.Text, nullable=True)          # JSON list of uploaded versions
 
-    project = db.relationship("Project", foreign_keys=[project_id],
+    event = db.relationship("Event", foreign_keys=[event_id],
                               backref=db.backref("share_tokens", lazy="dynamic"))
 
     @property
