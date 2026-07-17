@@ -17,6 +17,7 @@ class Photo(db.Model):
     skipped     = db.Column(db.Boolean,      default=False)
     uploaded_at = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc))
     note        = db.Column(db.String(200))
+    caption     = db.Column(db.Text)
 
     # ── EXIF Date ──────────────────────────────────────────────────────────────
     exif_date        = db.Column(db.DateTime)
