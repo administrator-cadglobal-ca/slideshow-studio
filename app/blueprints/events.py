@@ -673,6 +673,9 @@ def render_mp4(event_id):
 
     ts       = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     out_name = f"{version}_{ts}.mp4"
+    _user_id = current_user.id
+    _event_id = event_id
+    _frame_names = frame_names
     import tempfile as _tmp_r
     _rlog_dir = Path(_tmp_r.gettempdir()) / "slideshow_logs"
     _rlog_dir.mkdir(exist_ok=True)
@@ -691,7 +694,36 @@ def render_mp4(event_id):
 
 
     def run():
+        from app.services import r2 as R2
         tmp = Path(tempfile.mkdtemp())
+        out_file = tmp / out_name
+
+        # Download frames from R2 first
+        frame_dir = tmp / "frames"
+        frame_dir.mkdir(exist_ok=True)
+        local_frames = []
+        for fname in _frame_names:
+            key = R2.processed_key(_user_id, _event_id, version, fname)
+            local_path = frame_dir / fname
+            try:
+                R2.download_file(key, local_path)
+                local_frames.append(local_path)
+            except Exception:
+                pass
+
+        # Download audio clips from R2
+        if clips:
+            for cl in clips:
+                audio_path = tmp / cl["filename"]
+                try:
+                    R2.download_file(cl["r2_key"], audio_path)
+                    cl["path"] = str(audio_path)
+                except Exception:
+                    cl["path"] = None
+            clips[:] = [c for c in clips if c.get("path")]
+
+        frames = [str(fp) for fp in local_frames]
+
         try:
             log("=" * 55)
             log(f"RENDER: {version} → {out_file.name}")
@@ -757,9 +789,16 @@ def render_mp4(event_id):
 
             if proc.returncode == 0 and out_file.exists():
                 mb = out_file.stat().st_size / 1048576
-                log(f"DONE ✓ → {out_file.name} ({mb:.1f} MB)")
+                log(f"Rendered locally: {mb:.1f} MB. Uploading to R2...")
+                # Upload output MP4 to R2
+                try:
+                    out_key = R2.output_key(_user_id, _event_id, out_name)
+                    R2.upload_file(out_file, out_key, "video/mp4")
+                    log(f"DONE - {out_name} ({mb:.1f} MB) uploaded to R2")
+                except Exception as e:
+                    log(f"R2 upload error: {e}")
             else:
-                log(f"FAILED — ffmpeg exit {proc.returncode}")
+                log(f"FAILED - ffmpeg exit {proc.returncode}")
 
         except Exception as e:
             log(f"RENDER ERROR: {e}")
