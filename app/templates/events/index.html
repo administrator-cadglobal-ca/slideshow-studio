@@ -185,16 +185,16 @@
          :class="dragActive ? 'ring-2 ring-indigo ring-offset-2 rounded-comfortable' : ''">
       <div class="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
         <template x-for="p in photos" :key="p.id">
-          <div class="relative group rounded-standard overflow-hidden bg-line-soft aspect-square"
+          <div class="relative group rounded-standard overflow-hidden bg-line-soft aspect-square cursor-pointer"
+               @click="openLightbox(p.thumb_url.replace('/media/thumbs/', '/media/photos/').replace('thumb_', ''))"
                :class="p.skipped ? 'opacity-40' : ''">
             <img :src="p.thumb_url" :alt="p.orig_name || p.filename"
-                 @click="openLightbox(p.thumb_url.replace('/media/thumbs/', '/media/photos/').replace('thumb_', ''))"
-                 class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
+                 class="w-full h-full object-cover hover:opacity-90 transition pointer-events-none"
                  loading="lazy"
                  @error="$event.target.style.display = 'none'">
             <div class="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 
-              <button type="button" @click="deletePhoto(p.id)"
+              <button type="button" @click.stop="deletePhoto(p.id)"
                       class="w-6 h-6 rounded-full bg-white/90 hover:bg-white flex items-center justify-center text-caption"
                       title="Delete">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
