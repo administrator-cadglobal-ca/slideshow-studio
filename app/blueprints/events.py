@@ -851,13 +851,22 @@ def list_output_files(event_id):
 @bp.route("/<event_id>/download/<filename>")
 @login_required
 def download_output(event_id, filename):
-    """Download rendered MP4 from R2 via presigned URL."""
+    """Download rendered MP4 from R2 via presigned URL with force-download header."""
     from app.services import r2 as R2
     from flask import redirect
     db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     key = R2.output_key(current_user.id, event_id, filename)
-    url = R2.presigned_url(key, expires=3600)
+    # Add ResponseContentDisposition to force download instead of inline play
+    url = R2.get_client().generate_presigned_url(
+        "get_object",
+        Params={
+            "Bucket": R2.bucket(),
+            "Key": key,
+            "ResponseContentDisposition": f'attachment; filename="{filename}"',
+        },
+        ExpiresIn=3600,
+    )
     return redirect(url)
 
 
