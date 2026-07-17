@@ -390,6 +390,10 @@ function eventsPage() {
     loadingActivities: false,
     procResolutions: ['hd'],
     procAllowUpscale: false,
+    processing: false,
+    processDone: false,
+    processLog: '',
+    processPollTimer: null,
 
     // Selected event id (baked in)
     eventId: '{{ selected_event.id if selected_event else "" }}',
@@ -635,7 +639,10 @@ function eventsPage() {
 
     async runProcess() {
       if (this.procResolutions.length === 0) return;
-      this.processModal = false;
+      // Switch modal into processing state (don't close)
+      this.processing = true;
+      this.processDone = false;
+      this.processLog = '';
       try {
         var r = await fetch('/events/' + encodeURIComponent(this.eventId) + '/process', {
           method: 'POST',
@@ -646,16 +653,54 @@ function eventsPage() {
             allow_upscale: this.procAllowUpscale
           })
         });
-        if (r.ok) {
-          if (window.showToast) window.showToast('Processing started', 'success');
-        } else {
-          var errData = await r.json();
+        if (!r.ok) {
+          var errData = {};
+          try { errData = await r.json(); } catch (e) {}
+          this.processLog = 'ERROR: ' + (errData.error || ('HTTP ' + r.status));
+          this.processDone = true;
           if (window.showToast) window.showToast(errData.error || 'Process failed', 'error');
+          return;
         }
+        if (window.showToast) window.showToast('Processing started', 'success');
+        // Start polling the log
+        this.startProcessPolling();
       } catch (e) {
         console.error('Process failed', e);
+        this.processLog = 'ERROR: ' + e.message;
+        this.processDone = true;
         if (window.showToast) window.showToast('Process error: ' + e.message, 'error');
       }
+    },
+
+    startProcessPolling() {
+      if (this.processPollTimer) clearInterval(this.processPollTimer);
+      var self = this;
+      var tick = async function () {
+        try {
+          var r = await fetch('/events/' + encodeURIComponent(self.eventId) + '/process/log', {
+            credentials: 'same-origin'
+          });
+          if (r.ok) {
+            var data = await r.json();
+            self.processLog = data.log || 'Waiting for output\u2026';
+            // Auto-scroll to bottom
+            self.$nextTick(function () {
+              var box = self.$refs.logBox;
+              if (box) box.scrollTop = box.scrollHeight;
+            });
+            if (data.done) {
+              clearInterval(self.processPollTimer);
+              self.processPollTimer = null;
+              self.processDone = true;
+              if (window.showToast) window.showToast('Processing complete', 'success');
+            }
+          }
+        } catch (e) {
+          console.error('Poll error', e);
+        }
+      };
+      tick();
+      this.processPollTimer = setInterval(tick, 2000);
     },
   };
 }
