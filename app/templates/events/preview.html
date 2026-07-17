@@ -410,6 +410,13 @@ function previewPage() {
       if (this.playlistId) this.loadPlaylist();
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => this.onKey(e));
+      // Auto-start slideshow (audio requires user click due to browser autoplay policy)
+      setTimeout(() => {
+        if (this.images.length > 0) {
+          this.playing = true;
+          this.startSlideTimer();
+        }
+      }, 500);
       // Escape key exits fake-fullscreen (handled in onKey)
     },
 
