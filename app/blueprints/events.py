@@ -529,9 +529,10 @@ def process_photos(event_id):
         import datetime as _dt, io
         from app.services import r2 as R2
 
-        separator = f"\n{'='*60}\n[{_dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] NEW BATCH STARTED\n{'='*60}\n"
+        # Overwrite log for fresh view of current batch only
+        separator = f"{'='*60}\n[{_dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] PROCESSING STARTED\n{'='*60}\n"
         try:
-            with open(log_path_str, 'a', encoding='utf-8') as f:
+            with open(log_path_str, 'w', encoding='utf-8') as f:
                 f.write(separator)
         except Exception:
             pass
