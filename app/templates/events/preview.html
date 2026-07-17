@@ -4,8 +4,9 @@
 {% block head %}
 <style>
 [x-cloak] { display: none !important; }
-.fs-active { position: fixed !important; inset: 0 !important; z-index: 9999 !important; width: 100vw !important; height: 100vh !important; background: #000 !important; border-radius: 0 !important; max-height: none !important; aspect-ratio: auto !important; }
-.fs-active img { object-fit: contain !important; width: 100vw !important; height: 100vh !important; }
+/* When in browser fullscreen, use native :fullscreen selector, no wrapper class needed */
+:fullscreen { background: #000; }
+:fullscreen img { object-fit: contain !important; width: 100vw !important; height: 100vh !important; max-height: 100vh !important; }
 .fs-overlay { position: absolute; inset: 0; pointer-events: none; }
 .fs-overlay > * { pointer-events: auto; }
 .fs-controls-top { position: absolute; top: 0; left: 0; right: 0; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); flex-wrap: wrap; }
@@ -100,7 +101,7 @@
 
   {# Main stage #}
   <div class="relative bg-black rounded-comfortable overflow-hidden mb-4"
-       :class="isFullscreen ? 'fs-active' : ''"
+       :class="isFullscreen ? 'fs-native' : ''"
        style="aspect-ratio: 16/9; max-height: 70vh"
        x-ref="stage"
        @mousemove="showOverlay()"
