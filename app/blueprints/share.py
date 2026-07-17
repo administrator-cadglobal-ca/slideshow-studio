@@ -1,144 +1,137 @@
-"""Public share routes — no login required."""
-from flask import Blueprint, render_template, abort, request, jsonify
+"""Public share viewer routes."""
+from flask import Blueprint, render_template, request, redirect, url_for, session, abort, jsonify
 from app.extensions import db
-from app.models.event import Event, ShareToken
-from app.models.audio import Playlist
-from app.services.storage import processed_dir, thumb_url, processed_url, audio_dir
-import json
+from app.models.event import ShareToken, Event
 from datetime import datetime
 
 bp = Blueprint("share", __name__)
 
 
-@bp.route("/s/<token>")
-def public_player(token):
-    """Public slideshow player — no login required."""
-    st = db.session.query(ShareToken).filter_by(token=token, share_type="public").first_or_404()
-    if st.is_expired:
-        abort(410)  # Gone
+def _load_share(token):
+    """Load a valid, non-expired share token or return None."""
+    st = db.session.query(ShareToken).filter_by(token=token).first()
+    if not st:
+        return None
+    if st.expires_at and datetime.utcnow() > st.expires_at:
+        return None
+    return st
+
+
+def _session_key(token):
+    return f"share_auth_{token}"
+
+
+@bp.route("/s/<token>", methods=["GET", "POST"])
+def view_share(token):
+    """Public viewer: password gate, then slideshow."""
+    st = _load_share(token)
+    if not st:
+        return render_template("share/invalid.html"), 404
+
+    session_key = _session_key(token)
+
+    # Handle password submission
+    if request.method == "POST":
+        submitted = (request.form.get("password") or "").strip()
+        expected  = (st.plain_password or "WELCOME").strip()
+        if submitted == expected:
+            session[session_key] = True
+            session.permanent = True
+            # Track usage
+            st.last_used_at = datetime.utcnow()
+            st.use_count = (st.use_count or 0) + 1
+            db.session.commit()
+            return redirect(url_for("share.view_share", token=token))
+        else:
+            return render_template("share/password.html", token=token, error="Incorrect password. Try again.", description=st.description)
+
+    # If not yet authenticated, show password page
+    if not session.get(session_key):
+        return render_template("share/password.html", token=token, error=None, description=st.description)
+
+    # Authenticated - show slideshow
+    from app.services.storage import list_processed_versions_r2, thumb_url
+    from app.models.audio import Playlist
+    import json
 
     evt = db.session.get(Event, st.event_id)
     if not evt:
-        abort(404)
+        return render_template("share/invalid.html"), 404
 
-    # Update usage stats
-    st.last_used_at = datetime.utcnow()
-    st.use_count += 1
-    db.session.commit()
-
-    # Get processed versions
-    proc_base = processed_dir(st.created_by, evt.id)
-    processed_versions = []
-    processed_images = {}
-    if proc_base.exists():
-        for ver_dir in sorted(proc_base.iterdir()):
-            if ver_dir.is_dir() and ver_dir.name != "thumbs":
-                imgs = sorted([f.name for f in ver_dir.glob("*.jpg")
-                               if f.parent == ver_dir])
-                if imgs:
-                    processed_versions.append(ver_dir.name)
-                    processed_images[ver_dir.name] = imgs
-
-    # Default version
-    default_version = st.version or (processed_versions[0] if processed_versions else "source")
-
-    # Get allowed labels
-    allowed_playlist_ids = json.loads(st.playlist_ids) if st.playlist_ids else None
-    labels_query = db.session.query(Playlist)\
-                     .filter_by(user_id=st.created_by)\
-                     .order_by(Playlist.name)
-    if allowed_playlist_ids:
-        labels_query = labels_query.filter(Playlist.id.in_(allowed_playlist_ids))
-    all_labels = labels_query.all()
-
-    # Default label = event's assigned label
-    event_playlist = evt.playlist
-
-    # Build source images (fallback if no processed)
+    # Build versions_data (source + processed)
+    versions_data = {}
     photos_ordered = sorted(evt.photos, key=lambda p: p.sort_order)
+    if photos_ordered:
+        versions_data["source"] = [
+            {
+                "url":      thumb_url(evt.user_id, evt.id, p.filename),
+                "full_url": f"/api/v1/media/photos/{evt.user_id}/{evt.id}/{p.filename}",
+                "name":     p.orig_name or p.filename,
+            }
+            for p in photos_ordered
+        ]
 
-    return render_template("share/player.html",
-        token=st, event=evt,
-        processed_versions=processed_versions,
-        processed_images=processed_images,
+    r2_versions = list_processed_versions_r2(evt.user_id, evt.id)
+    for ver, frames in sorted(r2_versions.items()):
+        versions_data[ver] = [
+            {
+                "url":      f"/api/v1/media/processed/{evt.user_id}/{evt.id}/{ver}/{f}",
+                "full_url": f"/api/v1/media/processed/{evt.user_id}/{evt.id}/{ver}/{f}",
+                "name":     f,
+            }
+            for f in frames
+        ]
+
+    # Filter versions if versions_list constraint set
+    if st.versions_list:
+        try:
+            allowed = set(json.loads(st.versions_list))
+            versions_data = {k: v for k, v in versions_data.items() if k in allowed}
+        except Exception:
+            pass
+
+    # Build labels_clips - filter to allowed playlists
+    all_playlists_q = db.session.query(Playlist).filter_by(user_id=evt.user_id)
+    if st.playlist_ids:
+        try:
+            allowed_ids = set(int(x) for x in json.loads(st.playlist_ids))
+            all_playlists = [p for p in all_playlists_q.all() if p.id in allowed_ids]
+        except Exception:
+            all_playlists = all_playlists_q.all()
+    else:
+        all_playlists = all_playlists_q.all()
+
+    labels_clips = {}
+    for label in all_playlists:
+        clips = []
+        for c in label.clips:
+            clips.append({
+                "id":    c.id,
+                "name":  c.name,
+                "url":   f"/api/v1/media/audio/{evt.user_id}/original/{c.song.filename}",
+                "dur":   c.trim_end or "--:--",
+                "start": c.trim_start or "0",
+                "end":   c.trim_end,
+            })
+        labels_clips[str(label.id)] = clips
+
+    # Preferred default version from share
+    default_version = st.version or (list(versions_data.keys())[0] if versions_data else "")
+    default_playlist_id = evt.playlist_id if evt.playlist_id in [p.id for p in all_playlists] else (all_playlists[0].id if all_playlists else None)
+
+    return render_template("share/viewer.html",
+        event=evt,
+        token=token,
+        share=st,
+        versions_data=versions_data,
+        all_playlists=all_playlists,
+        labels_clips=labels_clips,
         default_version=default_version,
-        all_labels=all_labels,
-        event_playlist=event_playlist,
-        photos=photos_ordered,
-        user_id=st.created_by,
-        thumb_url=thumb_url,
-        processed_url=processed_url,
+        default_playlist_id=default_playlist_id,
     )
 
 
-@bp.route("/s/<token>/clips/<int:playlist_id>")
-def public_label_clips(token, playlist_id):
-    """Return clips for a label — public, token-gated."""
-    st = db.session.query(ShareToken).filter_by(token=token, share_type="public").first()
-    if not st or st.is_expired:
-        abort(403)
-    # Verify label belongs to event owner
-    label = db.session.get(Playlist, playlist_id)
-    if not label or label.user_id != st.created_by:
-        abort(403)
-    # Verify label is allowed
-    if st.playlist_ids:
-        allowed = json.loads(st.playlist_ids)
-        if playlist_id not in allowed:
-            abort(403)
-    clips = []
-    for c in label.clips:
-        src = audio_dir(st.created_by, "original") / c.song.filename
-        clips.append({
-            "id": c.id, "name": c.display_name,
-            "dur": c.duration_display,
-            "url": f"/s/{token}/audio/{c.song.filename}",
-            "start": c.start_s or 0, "end": c.end_s,
-        })
-    return jsonify({"clips": clips, "label": label.name})
-
-
-@bp.route("/s/<token>/audio/<filename>")
-def public_audio(token, filename):
-    """Serve audio file — public, token-gated."""
-    from flask import send_file
-    st = db.session.query(ShareToken).filter_by(token=token, share_type="public").first()
-    if not st or st.is_expired:
-        abort(403)
-    path = audio_dir(st.created_by, "original") / filename
-    if not path.exists():
-        abort(404)
-    return send_file(str(path))
-
-
-@bp.route("/s/<token>/media/<version>/<filename>")
-def public_media(token, version, filename):
-    """Serve processed frame or thumbnail — public, token-gated."""
-    from flask import send_file
-    st = db.session.query(ShareToken).filter_by(token=token, share_type="public").first()
-    if not st or st.is_expired:
-        abort(403)
-    # Try thumb first, fall back to full
-    proc = processed_dir(st.created_by, st.event_id, version)
-    path = proc / "thumbs" / filename
-    if not path.exists():
-        path = proc / filename
-    if not path.exists():
-        abort(404)
-    return send_file(str(path))
-
-
-@bp.route("/s/<token>/source/<filename>")
-def public_source(token, filename):
-    """Serve source photo thumbnail — public, token-gated."""
-    from flask import send_file
-    from app.services.storage import source_dir
-    st = db.session.query(ShareToken).filter_by(token=token, share_type="public").first()
-    if not st or st.is_expired:
-        abort(403)
-    path = source_dir(st.created_by, st.event_id).parent / "thumbs" / filename
-    if not path.exists():
-        path = source_dir(st.created_by, st.event_id) / filename
-    if not path.exists():
-        abort(404)
-    return send_file(str(path))
+@bp.route("/s/<token>/logout", methods=["POST"])
+def logout_share(token):
+    session.pop(_session_key(token), None)
+    return redirect(url_for("share.view_share", token=token))

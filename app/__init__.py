@@ -36,6 +36,7 @@ def create_app(env: str = "default") -> Flask:
     from app.blueprints.renders   import bp as render_bp
     from app.blueprints.admin     import bp as admin_bp
     from app.blueprints.api       import bp as api_bp
+    from app.blueprints.share     import bp as share_bp
 
     app.register_blueprint(auth_bp,   url_prefix="/auth")
     app.register_blueprint(dash_bp,   url_prefix="/")
@@ -44,6 +45,7 @@ def create_app(env: str = "default") -> Flask:
     app.register_blueprint(render_bp, url_prefix="/renders")
     app.register_blueprint(admin_bp,  url_prefix="/admin")
     app.register_blueprint(api_bp,    url_prefix="/api/v1")
+    app.register_blueprint(share_bp)  # /s/<token> - no prefix
 
     # ── Database ────────────────────────────────────────────────────────────────
     with app.app_context():

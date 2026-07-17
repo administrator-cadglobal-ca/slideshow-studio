@@ -1,0 +1,16 @@
+{% extends "shared/base.html" %}
+{% block title %}Invalid link{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-16 p-6">
+  <div class="bg-white rounded-comfortable border border-line p-8 text-center">
+    <div class="mx-auto w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mb-4">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-700">
+        <circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+    </div>
+    <h1 class="text-h1 mb-2">Link not found</h1>
+    <p class="text-small text-ink-soft">This share link is invalid, has been revoked, or has expired.</p>
+  </div>
+</div>
+{% endblock %}

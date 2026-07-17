@@ -1,0 +1,289 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ event.name }}{% endblock %}
+
+{% block head_extras %}
+<style>
+[x-cloak] { display: none !important; }
+.fs-fake { position: fixed !important; inset: 0 !important; z-index: 9999 !important; width: 100vw !important; height: 100vh !important; background: #000 !important; border-radius: 0 !important; max-height: 100vh !important; aspect-ratio: auto !important; margin: 0 !important; }
+.fs-fake img { width: 100vw !important; height: 100vh !important; max-height: 100vh !important; object-fit: contain !important; }
+body.fs-lock { overflow: hidden !important; }
+.fs-overlay { position: absolute; inset: 0; pointer-events: none; }
+.fs-overlay > * { pointer-events: auto; }
+.fs-controls-top { position: absolute; top: 0; left: 0; right: 0; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); flex-wrap: wrap; }
+.fs-controls-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; display: flex; justify-content: center; align-items: center; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); }
+.fs-song { background: rgba(0,0,0,0.7); color: white; padding: 8px 20px; border-radius: 999px; font-size: 14px; }
+.fs-select { background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 8px; font-size: 13px; }
+.fs-btn { background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.fs-btn:hover { background: rgba(0,0,0,0.8); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-4" x-data="viewerPage()" x-init="init()">
+
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+    <h1 class="text-h1">{{ event.name }}</h1>
+    <form method="POST" action="{{ url_for('share.logout_share', token=token) }}">
+      <button type="submit" class="btn-secondary text-small">Sign out</button>
+    </form>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+    <div class="flex items-center gap-2">
+      <label class="text-caption text-ink-soft flex-shrink-0">Version</label>
+      <select x-model="version" @change="loadVersion()" class="input text-small flex-1">
+        <template x-for="v in availableVersions" :key="v">
+          <option :value="v" x-text="versionLabel(v)"></option>
+        </template>
+      </select>
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="text-caption text-ink-soft flex-shrink-0">Playlist</label>
+      <select x-model="playlistId" @change="loadPlaylist()" class="input text-small flex-1">
+        <option value="">- No music -</option>
+        <template x-for="p in playlists" :key="p.id">
+          <option :value="p.id" x-text="p.name"></option>
+        </template>
+      </select>
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="text-caption text-ink-soft flex-shrink-0">Seconds/slide</label>
+      <input type="number" x-model.number="slideDur" min="1" max="30" class="input text-small w-20">
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 mb-4 flex-wrap">
+    <button type="button" @click="prev()" class="btn-secondary" :disabled="images.length === 0" title="Previous">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+    </button>
+    <button type="button" @click="togglePlay()" class="btn-primary" :disabled="images.length === 0" :title="playing ? 'Pause' : 'Play'">
+      <svg x-show="!playing" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+      <svg x-show="playing" x-cloak width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5" height="16"></rect><rect x="14" y="4" width="5" height="16"></rect></svg>
+    </button>
+    <button type="button" @click="next()" class="btn-secondary" :disabled="images.length === 0" title="Next">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+    </button>
+    <div class="flex-1"></div>
+    <button type="button" @click="toggleFullscreen()" class="btn-secondary" title="Fullscreen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+    </button>
+  </div>
+
+  <div class="relative bg-black rounded-comfortable overflow-hidden mb-4"
+       :class="isFullscreen ? 'fs-fake' : ''"
+       style="aspect-ratio: 16/9; max-height: 70vh"
+       x-ref="stage"
+       @mousemove="showOverlay()"
+       @click="showOverlay()">
+    <img :src="currentImage ? (currentImage.full_url || currentImage.url) : ''"
+         class="w-full h-full object-contain"
+         x-show="currentImage" x-cloak>
+    <div x-show="!currentImage" x-cloak class="absolute inset-0 flex items-center justify-center text-white">No photos</div>
+
+    <div class="fs-overlay" x-show="isFullscreen && overlayVisible" x-cloak>
+      <div class="fs-controls-top">
+        <div class="flex items-center gap-2 flex-wrap">
+          <select x-model="version" @change="loadVersion()" class="fs-select">
+            <template x-for="v in availableVersions" :key="v"><option :value="v" x-text="versionLabel(v)"></option></template>
+          </select>
+          <select x-model="playlistId" @change="loadPlaylist()" class="fs-select">
+            <option value="">- No music -</option>
+            <template x-for="p in playlists" :key="p.id"><option :value="p.id" x-text="p.name"></option></template>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" @click="prev()" class="fs-btn" title="Previous">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+          </button>
+          <button type="button" @click="togglePlay()" class="fs-btn" :title="playing ? 'Pause' : 'Play'">
+            <svg x-show="!playing" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+            <svg x-show="playing" x-cloak width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5" height="16"></rect><rect x="14" y="4" width="5" height="16"></rect></svg>
+          </button>
+          <button type="button" @click="next()" class="fs-btn" title="Next">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+          </button>
+          <button type="button" @click="toggleFullscreen()" class="fs-btn" title="Exit fullscreen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+      <div class="fs-controls-bottom">
+        <div class="flex items-center gap-3" x-show="songs.length > 0">
+          <button type="button" @click="prevSong()" class="fs-btn" title="Previous song">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+          </button>
+          <button type="button" @click="toggleAudio()" class="fs-btn" :title="audioPlaying ? 'Pause' : 'Play'">
+            <svg x-show="!audioPlaying" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+            <svg x-show="audioPlaying" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5" height="16"></rect><rect x="14" y="4" width="5" height="16"></rect></svg>
+          </button>
+          <button type="button" @click="nextSong()" class="fs-btn" title="Next song">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+          </button>
+          <div class="fs-song" x-show="currentSong" x-text="currentSong ? currentSong.name : ''"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-3 border border-line rounded-standard flex items-center gap-3" x-show="songs.length > 0" x-cloak>
+    <div class="w-8 h-8 rounded-full bg-indigo-soft flex items-center justify-center flex-shrink-0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-small font-medium truncate" x-text="currentSong ? currentSong.name : 'No music playing'"></p>
+      <p class="text-caption text-ink-soft" x-text="'Song ' + (songIndex + 1) + ' of ' + songs.length"></p>
+    </div>
+    <div class="flex items-center gap-1">
+      <button type="button" @click="prevSong()" class="btn-secondary" title="Previous song">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+      </button>
+      <button type="button" @click="toggleAudio()" class="btn-secondary" :title="audioPlaying ? 'Pause' : 'Play'">
+        <svg x-show="!audioPlaying" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+        <svg x-show="audioPlaying" x-cloak width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5" height="16"></rect><rect x="14" y="4" width="5" height="16"></rect></svg>
+      </button>
+      <button type="button" @click="nextSong()" class="btn-secondary" title="Next song">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+      </button>
+    </div>
+  </div>
+
+  <audio x-ref="audioEl" @ended="onAudioEnded()" preload="auto"></audio>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const VIEWER_VERSIONS = {{ versions_data | tojson | safe }};
+const VIEWER_LABELS_CLIPS = {{ labels_clips | tojson | safe }};
+
+{% set _pl_list = [] %}
+{% for p in all_playlists %}
+  {% set _ = _pl_list.append({"id": p.id, "name": p.name}) %}
+{% endfor %}
+const VIEWER_PLAYLISTS = {{ _pl_list | tojson | safe }};
+const VIEWER_DEFAULT_VERSION = {{ default_version|tojson|safe }};
+const VIEWER_DEFAULT_PLAYLIST_ID = {{ default_playlist_id or 'null' }};
+
+function viewerPage() {
+  return {
+    versions: VIEWER_VERSIONS,
+    availableVersions: Object.keys(VIEWER_VERSIONS),
+    labelsClips: VIEWER_LABELS_CLIPS,
+    playlists: VIEWER_PLAYLISTS,
+    version: VIEWER_DEFAULT_VERSION || '',
+    playlistId: VIEWER_DEFAULT_PLAYLIST_ID ? String(VIEWER_DEFAULT_PLAYLIST_ID) : '',
+    images: [],
+    currentIndex: 0,
+    playing: false,
+    slideDur: 3,
+    slideTimer: null,
+    songs: [],
+    songIndex: 0,
+    audioPlaying: false,
+    isFullscreen: false,
+    overlayVisible: true,
+    overlayTimer: null,
+
+    init() {
+      if (this.version) this.loadVersion();
+      else if (this.availableVersions.length > 0) {
+        this.version = this.availableVersions[0];
+        this.loadVersion();
+      }
+      if (this.playlistId) this.loadPlaylist();
+      document.addEventListener('keydown', (e) => this.onKey(e));
+    },
+
+    versionLabel(v) {
+      const map = { 'source': 'Original', 'sd-landscape': 'SD Landscape', 'sd-portrait': 'SD Portrait', 'hd-landscape': 'HD Landscape', 'hd-portrait': 'HD Portrait', '2k-landscape': '2K Landscape', '2k-portrait': '2K Portrait', '4k-landscape': '4K Landscape', '4k-portrait': '4K Portrait' };
+      return map[v] || v;
+    },
+
+    get currentImage() { return this.images[this.currentIndex] || null; },
+    get currentSong() { return this.songs[this.songIndex] || null; },
+
+    loadVersion() {
+      this.images = this.versions[this.version] || [];
+      this.currentIndex = 0;
+      if (this.playing) this.startSlideTimer();
+    },
+
+    loadPlaylist() {
+      const clips = this.playlistId ? (this.labelsClips[this.playlistId] || []) : [];
+      this.songs = clips;
+      this.songIndex = 0;
+      const audio = this.$refs.audioEl;
+      if (audio) { audio.pause(); this.audioPlaying = false; }
+      if (this.songs.length > 0) this.loadCurrentSong();
+    },
+
+    loadCurrentSong() {
+      const audio = this.$refs.audioEl;
+      const song = this.currentSong;
+      if (audio && song) { audio.src = song.url; audio.load(); }
+    },
+
+    togglePlay() {
+      this.playing = !this.playing;
+      if (this.playing) this.startSlideTimer();
+      else this.stopSlideTimer();
+    },
+
+    startSlideTimer() {
+      this.stopSlideTimer();
+      this.slideTimer = setInterval(() => this.next(), (this.slideDur || 3) * 1000);
+    },
+    stopSlideTimer() { if (this.slideTimer) { clearInterval(this.slideTimer); this.slideTimer = null; } },
+
+    prev() { if (this.images.length) this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length; },
+    next() { if (this.images.length) this.currentIndex = (this.currentIndex + 1) % this.images.length; },
+
+    playAudio() {
+      const audio = this.$refs.audioEl;
+      if (audio) audio.play().then(() => { this.audioPlaying = true; }).catch(() => {});
+    },
+    pauseAudio() {
+      const audio = this.$refs.audioEl;
+      if (audio) { audio.pause(); this.audioPlaying = false; }
+    },
+    toggleAudio() { this.audioPlaying ? this.pauseAudio() : this.playAudio(); },
+
+    prevSong() {
+      if (!this.songs.length) return;
+      this.songIndex = (this.songIndex - 1 + this.songs.length) % this.songs.length;
+      this.loadCurrentSong();
+      if (this.audioPlaying) this.playAudio();
+    },
+    nextSong() {
+      if (!this.songs.length) return;
+      this.songIndex = (this.songIndex + 1) % this.songs.length;
+      this.loadCurrentSong();
+      if (this.audioPlaying) this.playAudio();
+    },
+    onAudioEnded() { this.nextSong(); },
+
+    toggleFullscreen() {
+      this.isFullscreen = !this.isFullscreen;
+      document.body.classList.toggle('fs-lock', this.isFullscreen);
+      if (this.isFullscreen) this.showOverlay();
+    },
+    showOverlay() {
+      this.overlayVisible = true;
+      if (this.overlayTimer) clearTimeout(this.overlayTimer);
+      this.overlayTimer = setTimeout(() => { this.overlayVisible = false; }, 3000);
+    },
+
+    onKey(e) {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      if (e.key === 'ArrowRight') this.next();
+      else if (e.key === 'ArrowLeft') this.prev();
+      else if (e.key === ' ') { e.preventDefault(); this.togglePlay(); }
+      else if (e.key === 'ArrowUp') this.nextSong();
+      else if (e.key === 'ArrowDown') this.prevSong();
+      else if (e.key === 'f' || e.key === 'F') this.toggleFullscreen();
+      else if (e.key === 'Escape' && this.isFullscreen) this.toggleFullscreen();
+    },
+  };
+}
+</script>
+{% endblock %}
