@@ -34,7 +34,7 @@ body.fs-lock { overflow: hidden !important; }
       </select>
     </div>
     <div class="flex items-center gap-2">
-      <button type="button" @click="shareVersion = shareVersion || version; if (sharePlaylistIds.length === 0) { if (playlistId) sharePlaylistIds = [parseInt(playlistId, 10)]; else if (playlists.length > 0) sharePlaylistIds = [playlists[0].id]; } shareModal = true" class="btn-primary">
+      <button type="button" @click="shareVersion = shareVersion || version; if (sharePlaylistIds.length === 0) { if (playlistId) sharePlaylistIds = [parseInt(playlistId, 10)]; else if (playlists.length > 0) sharePlaylistIds = [playlists[0].id]; } if (shareVersionsList.length === 0) shareVersionsList = availableVersions.slice(); shareModal = true" class="btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle>
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
@@ -237,11 +237,23 @@ body.fs-lock { overflow: hidden !important; }
         <label class="block mb-3">
           <span class="text-caption text-ink-soft">Default version viewer sees</span>
           <select x-model="shareVersion" class="input mt-1 w-full text-small">
-            <template x-for="v in availableVersions" :key="v">
+            <template x-for="v in shareVersionsList" :key="v">
               <option :value="v" x-text="versionLabel(v)"></option>
             </template>
           </select>
         </label>
+
+        <div class="mb-3">
+          <span class="text-caption text-ink-soft">Versions to include (viewer can pick from these)</span>
+          <div class="mt-1 border border-line rounded-standard p-3 max-h-40 overflow-auto">
+            <template x-for="v in availableVersions" :key="v">
+              <label class="flex items-center gap-2 text-small">
+                <input type="checkbox" :value="v" x-model="shareVersionsList">
+                <span x-text="versionLabel(v)"></span>
+              </label>
+            </template>
+          </div>
+        </div>
 
         <div class="mb-3">
           <span class="text-caption text-ink-soft">Playlists to include (viewer can pick from these)</span>
@@ -351,6 +363,7 @@ function previewPage() {
     shareVersion: '',
     shareExpiresDays: '',
     sharePlaylistIds: [],
+    shareVersionsList: [],
     shareCreating: false,
     shareResult: null,
 
@@ -496,6 +509,7 @@ function previewPage() {
         var body = {
           password: this.sharePassword || 'WELCOME',
           version: this.shareVersion || this.version,
+          versions_list: this.shareVersionsList.slice(),
           description: this.shareDescription || null,
           playlist_ids: this.sharePlaylistIds.map(function(id) { return parseInt(id, 10); }),
         };
