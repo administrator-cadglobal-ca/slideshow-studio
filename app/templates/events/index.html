@@ -93,10 +93,10 @@
             class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px whitespace-nowrap">
       Originals
     </button>
-    <button type="button" @click="activeTab = 'descriptions'"
-            :class="activeTab === 'descriptions' ? 'border-indigo text-indigo' : 'border-transparent text-ink-soft hover:text-ink'"
+    <button type="button" @click="activeTab = 'captions'"
+            :class="activeTab === 'captions' ? 'border-indigo text-indigo' : 'border-transparent text-ink-soft hover:text-ink'"
             class="inline-flex items-center gap-2 px-3 py-2 text-small font-medium border-b-2 -mb-px whitespace-nowrap">
-      Descriptions
+      Captions
     </button>
     <button type="button" @click="activeTab = 'processed'"
             :class="activeTab === 'processed' ? 'border-indigo text-indigo' : 'border-transparent text-ink-soft hover:text-ink'"
@@ -212,11 +212,68 @@
     </div>
   </div>
 
-  {# Tab: Descriptions #}
-  <div x-show="activeTab === 'descriptions'" x-cloak>
-    <div class="rounded-comfortable border border-line p-12 text-center text-ink-soft">
-      <p>Descriptions / metadata editor coming soon.</p>
-    </div>
+  {# Tab: Captions #}
+  <div x-show="activeTab === 'captions'" x-cloak class="space-y-6">
+
+    {# Event-level caption #}
+    <section class="rounded-comfortable border border-line p-5 bg-white">
+      <div class="mb-4">
+        <h3 class="text-small font-semibold text-ink">Event caption</h3>
+        <p class="text-caption text-ink-soft">Shown as headline on every slide during playback.</p>
+      </div>
+      <div class="grid gap-3">
+        <label class="block">
+          <span class="text-caption text-ink-soft">Title</span>
+          <input type="text" class="input mt-1 w-full text-small" x-model="captionTitle" placeholder="e.g. Diwali 2026">
+        </label>
+        <label class="block">
+          <span class="text-caption text-ink-soft">Subtitle</span>
+          <input type="text" class="input mt-1 w-full text-small" x-model="captionSubtitle" placeholder="e.g. Calgary Dhamaka">
+        </label>
+      </div>
+      <div class="mt-4 flex items-center gap-3">
+        <button type="button" class="btn-primary text-small" @click="saveEventCaption()" :disabled="savingEventCaption">
+          <span x-show="!savingEventCaption">Save event caption</span>
+          <span x-show="savingEventCaption" x-cloak>Saving&hellip;</span>
+        </button>
+        <span class="text-caption text-emerald-700" x-show="eventCaptionSaved" x-transition x-cloak>Saved</span>
+        <span class="text-caption text-rose-700" x-show="captionError" x-text="captionError" x-cloak></span>
+      </div>
+    </section>
+
+    {# Per-photo captions #}
+    <section class="rounded-comfortable border border-line p-5 bg-white">
+      <div class="mb-4 flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h3 class="text-small font-semibold text-ink">Photo captions</h3>
+          <p class="text-caption text-ink-soft">Each caption appears while its photo is on screen.</p>
+        </div>
+        <button type="button" class="btn-secondary text-small" @click="saveAllPhotoCaptions()" :disabled="savingAllCaptions">
+          <span x-show="!savingAllCaptions">Save all</span>
+          <span x-show="savingAllCaptions" x-cloak>Saving&hellip;</span>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <template x-for="photo in captionsPhotos" :key="photo.id">
+          <div class="flex items-start gap-3 rounded-standard border border-line p-2">
+            <img :src="photo.thumb_url" :alt="photo.name" class="h-16 w-16 flex-none rounded object-cover bg-line-soft">
+            <div class="flex-1 min-w-0">
+              <p class="text-caption text-ink-soft truncate" x-text="photo.name"></p>
+              <input type="text" class="input mt-1 w-full text-small" x-model="photo.caption" @input="photo._dirty = true" placeholder="Add a caption&hellip;">
+            </div>
+            <button type="button" class="btn-secondary text-small flex-none" @click="savePhotoCaption(photo)" :disabled="photo._saving">
+              <span x-show="!photo._saving">Save</span>
+              <span x-show="photo._saving" x-cloak>&hellip;</span>
+            </button>
+          </div>
+        </template>
+        <p class="text-caption text-ink-soft text-center py-6" x-show="captionsPhotos.length === 0">
+          No photos in this event yet.
+        </p>
+      </div>
+    </section>
+
   </div>
 
   {# Tab: Processed #}
@@ -389,7 +446,8 @@
     "sort_order": p.sort_order or 0,
     "skipped": p.skipped,
     "is_portrait": p.is_portrait,
-    "thumb_url": thumb_url(current_user.id, selected_event.id, p.filename)
+    "thumb_url": thumb_url(current_user.id, selected_event.id, p.filename),
+    "caption": p.caption or ""
   }) %}
 {% endfor %}
 <script id="initialPhotos" type="application/json">{{ _initial_photos | tojson | safe }}</script>
@@ -399,6 +457,15 @@ function eventsPage() {
   return {
     // Tab state
     activeTab: 'originals',
+
+    // Captions tab state
+    captionTitle: {{ (event.title_text or '')|tojson|safe }},
+    captionSubtitle: {{ (event.title_subtitle or '')|tojson|safe }},
+    captionsPhotos: [],
+    savingEventCaption: false,
+    savingAllCaptions: false,
+    eventCaptionSaved: false,
+    captionError: '',
     newEventModal: false,
 
     // Photos
@@ -436,6 +503,7 @@ function eventsPage() {
           this.photos = [];
         }
       }
+      this.initCaptions();
     },
 
     switchEvent(eventId) {
@@ -729,6 +797,94 @@ function eventsPage() {
       };
       tick();
       this.processPollTimer = setInterval(tick, 2000);
+    },
+
+    // ─── Captions ──────────────────────────────────────────────────────
+    initCaptions() {
+      const eventId = "{{ event.id }}";
+      this.eventId = eventId;
+      // Seed from photos data already available in this page
+      const photoSrc = this.photos || [];
+      this.captionsPhotos = photoSrc.map(p => ({
+        id: p.id,
+        name: p.orig_name || p.filename || 'Photo',
+        thumb_url: p.thumb_url || p.url,
+        caption: p.caption || '',
+        _dirty: false,
+        _saving: false,
+      }));
+    },
+
+    async saveEventCaption() {
+      this.savingEventCaption = true;
+      this.captionError = '';
+      this.eventCaptionSaved = false;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/caption/event', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            title_text: this.captionTitle,
+            title_subtitle: this.captionSubtitle,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.eventCaptionSaved = true;
+        setTimeout(() => { this.eventCaptionSaved = false; }, 2500);
+      } catch (e) {
+        this.captionError = 'Save failed: ' + e.message;
+      } finally {
+        this.savingEventCaption = false;
+      }
+    },
+
+    async savePhotoCaption(photo) {
+      photo._saving = true;
+      this.captionError = '';
+      try {
+        const r = await fetch('/events/' + this.eventId + '/caption/photo/' + photo.id, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({caption: photo.caption}),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        photo._dirty = false;
+      } catch (e) {
+        this.captionError = 'Save failed: ' + e.message;
+      } finally {
+        photo._saving = false;
+      }
+    },
+
+    async saveAllPhotoCaptions() {
+      this.savingAllCaptions = true;
+      this.captionError = '';
+      const dirty = this.captionsPhotos.filter(p => p._dirty);
+      if (dirty.length === 0) {
+        this.savingAllCaptions = false;
+        return;
+      }
+      const payload = dirty.map(p => ({id: p.id, caption: p.caption}));
+      try {
+        const r = await fetch('/events/' + this.eventId + '/caption/photos/bulk', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({captions: payload}),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        dirty.forEach(p => { p._dirty = false; });
+        if (window.showToast) window.showToast('Saved ' + data.saved + ' captions', 'success');
+      } catch (e) {
+        this.captionError = 'Save all failed: ' + e.message;
+      } finally {
+        this.savingAllCaptions = false;
+      }
     },
   };
 }
