@@ -72,14 +72,30 @@
 
   {# Playback control row #}
   <div class="flex items-center gap-2 mb-4 flex-wrap">
-    <button type="button" @click="prev()" class="btn-secondary text-small" :disabled="images.length === 0">Previous</button>
-    <button type="button" @click="togglePlay()" class="btn-primary text-small" :disabled="images.length === 0">
-      <span x-show="!playing">Play</span>
-      <span x-show="playing">Pause</span>
+    <button type="button" @click="prev()" class="btn-secondary" :disabled="images.length === 0" title="Previous">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>
+      </svg>
     </button>
-    <button type="button" @click="next()" class="btn-secondary text-small" :disabled="images.length === 0">Next</button>
+    <button type="button" @click="togglePlay()" class="btn-primary" :disabled="images.length === 0" :title="playing ? 'Pause' : 'Play'">
+      <svg x-show="!playing" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <polygon points="6 3 20 12 6 21 6 3"></polygon>
+      </svg>
+      <svg x-show="playing" x-cloak width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="5" y="4" width="5" height="16"></rect><rect x="14" y="4" width="5" height="16"></rect>
+      </svg>
+    </button>
+    <button type="button" @click="next()" class="btn-secondary" :disabled="images.length === 0" title="Next">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>
+      </svg>
+    </button>
     <div class="flex-1"></div>
-    <button type="button" @click="toggleFullscreen()" class="btn-secondary text-small">Fullscreen</button>
+    <button type="button" @click="toggleFullscreen()" class="btn-secondary" title="Fullscreen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+      </svg>
+    </button>
   </div>
 
   {# Main stage #}
