@@ -1,6 +1,7 @@
 from flask       import Blueprint, jsonify, Response, stream_with_context, \
                         request, abort
-from flask_login import login_required, current_user
+from flask_login import login_required
+from app.services.share_auth import share_or_login_required, current_user
 from app.extensions import db
 from app.models  import RenderJob, Event, Photo
 import time, json
@@ -313,12 +314,11 @@ from app.services.storage import (thumb_dir as _td, output_dir as _od,
 
 @bp.route("/media/thumbs/<int:uid>/<pid>/<filename>",
           endpoint="serve_thumb")
-@login_required
+@share_or_login_required
 def serve_thumb(uid, pid, filename):
     from flask import redirect
     from app.services import r2 as R2
-    if uid != current_user.id and not current_user.is_admin:
-        _abort(403)
+    # Auth handled by decorator
     key = R2.thumb_key(uid, pid, filename)
     print(f"[THUMB] key={key}")
     try:
@@ -337,34 +337,31 @@ def serve_thumb(uid, pid, filename):
 
 @bp.route("/media/photos/<int:uid>/<pid>/<filename>",
           endpoint="serve_photo")
-@login_required
+@share_or_login_required
 def serve_photo(uid, pid, filename):
     from flask import redirect
     from app.services import r2 as R2
-    if uid != current_user.id and not current_user.is_admin:
-        _abort(403)
+    # Auth handled by decorator
     key = R2.photo_key(uid, pid, filename)
     return redirect(R2.presigned_url(key, 3600))
 
 
 @bp.route("/media/output/<int:uid>/<pid>/<filename>",
           endpoint="serve_output")
-@login_required
+@share_or_login_required
 def serve_output(uid, pid, filename):
-    if uid != current_user.id and not current_user.is_admin:
-        _abort(403)
+    # Auth handled by decorator
     f = _od(uid, pid) / filename
     if not f.exists(): _abort(404)
     return _sf(str(f), as_attachment=True)
 
 @bp.route("/media/processed/<int:uid>/<pid>/<ver>/<filename>",
           endpoint="serve_processed")
-@login_required
+@share_or_login_required
 def serve_processed(uid, pid, ver, filename):
     from flask import redirect
     from app.services import r2 as R2
-    if uid != current_user.id and not current_user.is_admin:
-        _abort(403)
+    # Auth handled by decorator
     # Try thumbnail first, fall back to full frame
     if filename.startswith("thumb_"):
         key = R2.processed_thumb_key(uid, pid, ver, filename)
@@ -374,12 +371,37 @@ def serve_processed(uid, pid, ver, filename):
 
 @bp.route("/media/audio/<int:uid>/<sub>/<filename>",
           endpoint="serve_audio")
-@login_required
 def serve_audio(uid, sub, filename):
-    from flask import redirect
+    from flask import redirect, session, abort
+    from flask_login import current_user
     from app.services import r2 as R2
-    if uid != current_user.id and not current_user.is_admin:
-        _abort(403)
+    # Allow owner OR share-authenticated viewer with a share matching this user's events
+    authorized = False
+    try:
+        if current_user.is_authenticated:
+            if uid == current_user.id or current_user.is_admin:
+                authorized = True
+    except Exception:
+        pass
+    if not authorized:
+        # Check if any share_auth in session grants access to an event owned by uid
+        from app.models.event import ShareToken, Event
+        from datetime import datetime
+        for key in list(session.keys()):
+            if not key.startswith("share_auth_"):
+                continue
+            token = key[len("share_auth_"):]
+            st = db.session.query(ShareToken).filter_by(token=token).first()
+            if not st:
+                continue
+            if st.expires_at and datetime.utcnow() > st.expires_at:
+                continue
+            evt = db.session.get(Event, st.event_id)
+            if evt and evt.user_id == uid:
+                authorized = True
+                break
+    if not authorized:
+        abort(403)
     key = R2.audio_key(uid, filename)
     print(f"[AUDIO] serving key={key}")
     try:
