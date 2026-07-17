@@ -304,12 +304,8 @@ function previewPage() {
       this.playing = !this.playing;
       if (this.playing) {
         this.startSlideTimer();
-        if (this.songs.length > 0 && !this.audioPlaying) {
-          this.playAudio();
-        }
       } else {
         this.stopSlideTimer();
-        this.pauseAudio();
       }
     },
 
