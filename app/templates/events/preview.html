@@ -4,9 +4,10 @@
 {% block head %}
 <style>
 [x-cloak] { display: none !important; }
-/* When in browser fullscreen, use native :fullscreen selector, no wrapper class needed */
-:fullscreen { background: #000; }
-:fullscreen img { object-fit: contain !important; width: 100vw !important; height: 100vh !important; max-height: 100vh !important; }
+/* Fake-fullscreen: fills the browser window, no native API */
+.fs-fake { position: fixed !important; inset: 0 !important; z-index: 9999 !important; width: 100vw !important; height: 100vh !important; background: #000 !important; border-radius: 0 !important; max-height: 100vh !important; aspect-ratio: auto !important; margin: 0 !important; }
+.fs-fake img { width: 100vw !important; height: 100vh !important; max-height: 100vh !important; object-fit: contain !important; }
+body.fs-lock { overflow: hidden !important; }
 .fs-overlay { position: absolute; inset: 0; pointer-events: none; }
 .fs-overlay > * { pointer-events: auto; }
 .fs-controls-top { position: absolute; top: 0; left: 0; right: 0; padding: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); flex-wrap: wrap; }
@@ -101,7 +102,7 @@
 
   {# Main stage #}
   <div class="relative bg-black rounded-comfortable overflow-hidden mb-4"
-       :class="isFullscreen ? 'fs-native' : ''"
+       :class="isFullscreen ? 'fs-fake' : ''"
        style="aspect-ratio: 16/9; max-height: 70vh"
        x-ref="stage"
        @mousemove="showOverlay()"
@@ -248,11 +249,7 @@ function previewPage() {
       if (this.playlistId) this.loadPlaylist();
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => this.onKey(e));
-      // Fullscreen change detection
-      document.addEventListener('fullscreenchange', () => {
-        this.isFullscreen = !!document.fullscreenElement;
-        if (this.isFullscreen) this.showOverlay();
-      });
+      // Escape key exits fake-fullscreen (handled in onKey)
     },
 
     versionLabel(v) {
@@ -371,11 +368,9 @@ function previewPage() {
     },
 
     toggleFullscreen() {
-      if (!document.fullscreenElement) {
-        this.$refs.stage.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen();
-      }
+      this.isFullscreen = !this.isFullscreen;
+      document.body.classList.toggle('fs-lock', this.isFullscreen);
+      if (this.isFullscreen) this.showOverlay();
     },
 
     showOverlay() {
@@ -392,7 +387,7 @@ function previewPage() {
       else if (e.key === 'ArrowUp') this.nextSong();
       else if (e.key === 'ArrowDown') this.prevSong();
       else if (e.key === 'f' || e.key === 'F') this.toggleFullscreen();
-      else if (e.key === 'Escape' && this.isFullscreen) document.exitFullscreen();
+      else if (e.key === 'Escape' && this.isFullscreen) this.toggleFullscreen();
     },
   };
 }
