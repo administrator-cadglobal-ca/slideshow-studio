@@ -814,26 +814,38 @@ def create_share_token(event_id):
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
 
     data       = request.json or {}
-    expires_in = data.get("expires_days")   # None = no expiry
-    playlist_ids  = data.get("playlist_ids")      # None = all labels
-    version    = data.get("version")        # default processed version
+    expires_in    = data.get("expires_days")   # None = no expiry
+    playlist_ids  = data.get("playlist_ids")   # None = all playlists
+    version       = data.get("version")        # default processed version
+    versions_list = data.get("versions_list")  # list of versions viewer can pick from
+    password      = (data.get("password") or "").strip() or "WELCOME"
+    description   = data.get("description")
 
     from datetime import datetime, timedelta
     token = secrets.token_urlsafe(24)
     share = ShareToken(
-        token      = token,
-        event_id = evt.id,
-        created_by = current_user.id,
-        share_type = "public",
-        role       = "viewer",
-        version    = version,
-        playlist_ids  = json.dumps(playlist_ids) if playlist_ids else None,
-        expires_at = datetime.utcnow() + timedelta(days=int(expires_in))
-                     if expires_in else None,
+        token          = token,
+        event_id       = evt.id,
+        created_by     = current_user.id,
+        share_type     = "public",
+        role           = "viewer",
+        version        = version,
+        versions_list  = json.dumps(versions_list) if versions_list else None,
+        playlist_ids   = json.dumps(playlist_ids) if playlist_ids else None,
+        plain_password = password,
+        description    = description,
+        expires_at     = datetime.utcnow() + timedelta(days=int(expires_in))
+                          if expires_in else None,
     )
     db.session.add(share)
     db.session.commit()
-    return jsonify({"ok": True, "token": token, "url": f"/s/{token}"})
+    from app.models import log_activity
+    log_activity(evt, "share_created", {"token": token, "description": description or "", "has_password": bool(password)})
+    from flask import request as _req
+    scheme = _req.headers.get("X-Forwarded-Proto") or _req.scheme
+    host   = _req.host
+    absolute_url = f"{scheme}://{host}/s/{token}"
+    return jsonify({"ok": True, "token": token, "url": f"/s/{token}", "absolute_url": absolute_url, "password": password})
 
 
 @bp.route("/<event_id>/share", methods=["GET"])

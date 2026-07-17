@@ -34,7 +34,7 @@ body.fs-lock { overflow: hidden !important; }
       </select>
     </div>
     <div class="flex items-center gap-2">
-      <button type="button" @click="shareModal = true" class="btn-primary">
+      <button type="button" @click="shareVersion = shareVersion || version; shareModal = true" class="btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle>
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
@@ -215,15 +215,74 @@ body.fs-lock { overflow: hidden !important; }
     </div>
   </div>
 
-  {# Share modal - placeholder for Phase 3 #}
+  {# Share modal - Phase 3 #}
   <div x-show="shareModal" x-cloak
        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
        @click.self="shareModal = false">
-    <div class="bg-white rounded-comfortable p-6 max-w-md w-full">
+    <div class="bg-white rounded-comfortable p-6 max-w-lg w-full">
       <h2 class="text-h2 mb-4">Share slideshow</h2>
-      <p class="text-small text-ink-soft mb-4">Share feature - coming in Phase 3.</p>
-      <div class="flex justify-end">
-        <button type="button" @click="shareModal = false" class="btn-secondary">Close</button>
+
+      {# State: form (before creating share) #}
+      <div x-show="!shareResult" x-cloak>
+        <label class="block mb-3">
+          <span class="text-caption text-ink-soft">Description (optional)</span>
+          <input type="text" x-model="shareDescription" class="input mt-1 w-full" placeholder="e.g. Family group">
+        </label>
+
+        <label class="block mb-3">
+          <span class="text-caption text-ink-soft">Password (default: WELCOME)</span>
+          <input type="text" x-model="sharePassword" class="input mt-1 w-full" placeholder="WELCOME">
+        </label>
+
+        <label class="block mb-3">
+          <span class="text-caption text-ink-soft">Default version viewer sees</span>
+          <select x-model="shareVersion" class="input mt-1 w-full text-small">
+            <template x-for="v in availableVersions" :key="v">
+              <option :value="v" x-text="versionLabel(v)"></option>
+            </template>
+          </select>
+        </label>
+
+        <label class="block mb-4">
+          <span class="text-caption text-ink-soft">Expires in (days, blank = no expiry)</span>
+          <input type="number" x-model="shareExpiresDays" class="input mt-1 w-full" placeholder="30" min="1">
+        </label>
+
+        <p class="text-caption text-ink-soft mb-4">Anyone with the link + password can view. You can revoke the link at any time from the event's share list.</p>
+
+        <div class="flex justify-end gap-2">
+          <button type="button" @click="shareModal = false" class="btn-secondary">Cancel</button>
+          <button type="button" @click="createShare()" class="btn-primary" :disabled="shareCreating">
+            <span x-show="!shareCreating">Create share link</span>
+            <span x-show="shareCreating" x-cloak>Creating&hellip;</span>
+          </button>
+        </div>
+      </div>
+
+      {# State: result (after share created) #}
+      <div x-show="shareResult" x-cloak>
+        <p class="text-small text-ink-soft mb-2">Your share link is ready. Send both the link and the password to viewers.</p>
+
+        <div class="mb-3">
+          <span class="text-caption text-ink-soft">Link</span>
+          <div class="flex items-center gap-2 mt-1">
+            <input type="text" :value="shareResult ? shareResult.absolute_url : ''" readonly class="input flex-1 text-small font-mono" x-ref="shareUrlInput">
+            <button type="button" @click="copyShareUrl()" class="btn-secondary text-small">Copy</button>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <span class="text-caption text-ink-soft">Password</span>
+          <div class="flex items-center gap-2 mt-1">
+            <input type="text" :value="shareResult ? shareResult.password : ''" readonly class="input flex-1 text-small font-mono">
+            <button type="button" @click="copySharePassword()" class="btn-secondary text-small">Copy</button>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <button type="button" @click="shareResult = null" class="btn-secondary">Create another</button>
+          <button type="button" @click="shareModal = false; shareResult = null" class="btn-primary">Done</button>
+        </div>
       </div>
     </div>
   </div>
@@ -274,6 +333,12 @@ function previewPage() {
 
     // Modal
     shareModal: false,
+    shareDescription: '',
+    sharePassword: 'WELCOME',
+    shareVersion: '',
+    shareExpiresDays: '',
+    shareCreating: false,
+    shareResult: null,
 
     init() {
       // Choose default version
@@ -409,6 +474,53 @@ function previewPage() {
       this.overlayVisible = true;
       if (this.overlayTimer) clearTimeout(this.overlayTimer);
       this.overlayTimer = setTimeout(() => { this.overlayVisible = false; }, 3000);
+    },
+
+    async createShare() {
+      this.shareCreating = true;
+      try {
+        var body = {
+          password: this.sharePassword || 'WELCOME',
+          version: this.shareVersion || this.version,
+          description: this.shareDescription || null,
+        };
+        if (this.shareExpiresDays) body.expires_days = parseInt(this.shareExpiresDays, 10);
+        var r = await fetch('/events/{{ event.id }}/share', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify(body)
+        });
+        if (!r.ok) {
+          if (window.showToast) window.showToast('Share failed', 'error');
+          return;
+        }
+        this.shareResult = await r.json();
+      } catch (e) {
+        console.error('Share failed', e);
+        if (window.showToast) window.showToast('Share error: ' + e.message, 'error');
+      } finally {
+        this.shareCreating = false;
+      }
+    },
+
+    async copyShareUrl() {
+      if (!this.shareResult) return;
+      try {
+        await navigator.clipboard.writeText(this.shareResult.absolute_url);
+        if (window.showToast) window.showToast('Link copied', 'success');
+      } catch (e) {
+        this.$refs.shareUrlInput.select();
+        document.execCommand('copy');
+      }
+    },
+
+    async copySharePassword() {
+      if (!this.shareResult) return;
+      try {
+        await navigator.clipboard.writeText(this.shareResult.password);
+        if (window.showToast) window.showToast('Password copied', 'success');
+      } catch (e) {}
     },
 
     onKey(e) {
