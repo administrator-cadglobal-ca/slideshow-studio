@@ -139,7 +139,7 @@
          :class="uploadError ? 'border-danger bg-danger-soft' : 'border-indigo bg-indigo-soft'"
          class="mb-4 rounded-comfortable border-2 border-dashed p-4 flex items-center gap-4">
       <div class="flex-1 min-w-0">
-        <p class="text-small font-medium" x-text="uploadError || (uploadedCount + ' / ' + uploadTotal + ' photos uploaded')"></p>
+        <p class="text-small font-medium" x-text="uploadError || ('Uploading batch ' + currentBatch + ' of ' + totalBatches + ' (' + uploadedCount + ' / ' + uploadTotal + ' photos)')"></p>
         <div class="mt-2 h-2 bg-line rounded-full overflow-hidden" x-show="!uploadError">
           <div class="h-full bg-indigo transition-all" :style="'width: ' + Math.round(100 * uploadedCount / Math.max(1, uploadTotal)) + '%'"></div>
         </div>
@@ -302,6 +302,8 @@ function eventsPage() {
     uploadedCount: 0,
     uploadTotal: 0,
     uploadError: '',
+    currentBatch: 0,
+    totalBatches: 0,
 
     // Process
     processModal: false,
@@ -368,7 +370,10 @@ function eventsPage() {
       this.uploadedCount = 0;
 
       var BATCH = 5;
+      this.totalBatches = Math.ceil(files.length / BATCH);
+      this.currentBatch = 0;
       for (var i = 0; i < files.length; i += BATCH) {
+        this.currentBatch++;
         var batch = files.slice(i, i + BATCH);
         var fd = new FormData();
         batch.forEach(function(f) { fd.append('photos', f); });
