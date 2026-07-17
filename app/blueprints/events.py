@@ -246,7 +246,7 @@ def preview(event_id):
         processed_versions.append(ver)
         versions_data[ver] = [
             {
-                "url":      f"/api/v1/media/processed/{current_user.id}/{event_id}/{ver}/thumbs/{f}",
+                "url":      f"/api/v1/media/processed/{current_user.id}/{event_id}/{ver}/{f}",
                 "full_url": f"/api/v1/media/processed/{current_user.id}/{event_id}/{ver}/{f}",
                 "name":     f,
                 "note":     "",

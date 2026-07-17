@@ -89,7 +89,7 @@
        x-ref="stage"
        @mousemove="showOverlay()"
        @click="showOverlay()">
-    <img :src="currentImage ? currentImage.url : ''"
+    <img :src="currentImage ? (currentImage.full_url || currentImage.url) : ''"
          class="w-full h-full object-contain"
          x-show="currentImage" x-cloak>
     <div x-show="!currentImage" x-cloak class="absolute inset-0 flex items-center justify-center text-white">
