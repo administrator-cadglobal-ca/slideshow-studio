@@ -94,45 +94,6 @@ class Playlist(db.Model):
 
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    library_id = db.Column(db.Integer, db.ForeignKey("libraries.id"))
-    name       = db.Column(db.String(100), nullable=False)
-    color      = db.Column(db.String(10))
-    sort_order = db.Column(db.Integer, default=0)
-    is_default = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    user  = db.relationship("User")
-    clips = db.relationship("AudioClip",
-                            secondary="playlist_clips",
-                            order_by="PlaylistClip.sort_order",
-                            backref="playlists")
-
-    def to_dict(self):
-        return {
-            "id":         self.id,
-            "library_id": self.library_id,
-            "name":       self.name,
-            "color":      self.color,
-            "sort_order": self.sort_order,
-            "is_default": bool(self.is_default),
-            "clip_count": len(self.clips),
-        }
-
-
-class PlaylistClip(db.Model):
-    __tablename__ = "playlist_clips"
-
-    playlist_id = db.Column(db.Integer, db.ForeignKey("playlists.id"), primary_key=True)
-    clip_id     = db.Column(db.Integer, db.ForeignKey("audio_clips.id"), primary_key=True)
-    sort_order  = db.Column(db.Integer, nullable=False, default=0)
-    added_at    = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-class Playlist(db.Model):
-    __tablename__ = "playlists"
-
-    id         = db.Column(db.Integer, primary_key=True)
-    user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey("events.id"))
     name       = db.Column(db.String(100), nullable=False)
     color      = db.Column(db.String(10))
