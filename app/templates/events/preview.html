@@ -34,7 +34,7 @@ body.fs-lock { overflow: hidden !important; }
       </select>
     </div>
     <div class="flex items-center gap-2">
-      <button type="button" @click="shareVersion = shareVersion || version; shareModal = true" class="btn-primary">
+      <button type="button" @click="shareVersion = shareVersion || version; if (sharePlaylistIds.length === 0 && playlistId) sharePlaylistIds = [parseInt(playlistId, 10)]; shareModal = true" class="btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle>
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
@@ -243,6 +243,19 @@ body.fs-lock { overflow: hidden !important; }
           </select>
         </label>
 
+        <div class="mb-3">
+          <span class="text-caption text-ink-soft">Playlists to include (viewer can pick from these)</span>
+          <div class="mt-1 border border-line rounded-standard p-3 max-h-40 overflow-auto">
+            <template x-for="p in playlists" :key="p.id">
+              <label class="flex items-center gap-2 text-small">
+                <input type="checkbox" :value="p.id" x-model="sharePlaylistIds">
+                <span x-text="p.name"></span>
+              </label>
+            </template>
+            <p x-show="playlists.length === 0" class="text-caption text-ink-soft">No playlists yet - viewer will have no music.</p>
+          </div>
+        </div>
+
         <label class="block mb-4">
           <span class="text-caption text-ink-soft">Expires in (days, blank = no expiry)</span>
           <input type="number" x-model="shareExpiresDays" class="input mt-1 w-full" placeholder="30" min="1">
@@ -337,6 +350,7 @@ function previewPage() {
     sharePassword: 'WELCOME',
     shareVersion: '',
     shareExpiresDays: '',
+    sharePlaylistIds: [],
     shareCreating: false,
     shareResult: null,
 
@@ -483,6 +497,7 @@ function previewPage() {
           password: this.sharePassword || 'WELCOME',
           version: this.shareVersion || this.version,
           description: this.shareDescription || null,
+          playlist_ids: this.sharePlaylistIds.map(function(id) { return parseInt(id, 10); }),
         };
         if (this.shareExpiresDays) body.expires_days = parseInt(this.shareExpiresDays, 10);
         var r = await fetch('/events/{{ event.id }}/share', {
