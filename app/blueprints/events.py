@@ -51,6 +51,7 @@ def index():
     return render_template("events/index.html", events=events,
                            playlists=playlists,
                            selected_event=selected_event,
+                           thumb_url=thumb_url,
                            loop_colors=LOOP_COLORS)
 
 @bp.route("/new", methods=["GET","POST"])
