@@ -459,8 +459,8 @@ function eventsPage() {
     activeTab: 'originals',
 
     // Captions tab state
-    captionTitle: {{ (event.title_text or '')|tojson|safe }},
-    captionSubtitle: {{ (event.title_subtitle or '')|tojson|safe }},
+    captionTitle: {{ (selected_event.title_text or '')|tojson|safe if selected_event else '""' }},
+    captionSubtitle: {{ (selected_event.title_subtitle or '')|tojson|safe if selected_event else '""' }},
     captionsPhotos: [],
     savingEventCaption: false,
     savingAllCaptions: false,
@@ -801,7 +801,7 @@ function eventsPage() {
 
     // ─── Captions ──────────────────────────────────────────────────────
     initCaptions() {
-      const eventId = "{{ event.id }}";
+      const eventId = "{{ selected_event.id if selected_event else '' }}";
       this.eventId = eventId;
       // Seed from photos data already available in this page
       const photoSrc = this.photos || [];
