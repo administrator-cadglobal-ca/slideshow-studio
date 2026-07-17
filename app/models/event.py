@@ -67,7 +67,7 @@ class Event(db.Model):
     render_jobs     = db.relationship("RenderJob", back_populates="event",
                                       cascade="all, delete-orphan",
                                       order_by="RenderJob.created_at.desc()")
-    playlist        = db.relationship("Playlist", foreign_keys=["events.playlist_id"])
+    playlist        = db.relationship("Playlist", foreign_keys=[playlist_id])
     selected_songs  = db.relationship("AudioFile",
                                       secondary="event_songs",
                                       order_by="event_songs.c.sort_order")
