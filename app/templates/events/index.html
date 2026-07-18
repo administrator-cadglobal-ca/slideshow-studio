@@ -565,6 +565,106 @@
           </div>
         </div>
 
+        <div class="space-y-2 border-t border-line pt-3">
+          <p class="text-caption text-ink-soft font-medium">Captions styling</p>
+
+          <div class="grid gap-2" style="grid-template-columns: 90px 60px 1fr 40px;">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" x-model="ssIncludeTitle">
+              <span class="text-small">Title</span>
+            </label>
+            <input type="number" x-model.number="ssTitleSize" min="4" max="30" class="input text-caption py-0.5 px-1" :disabled="!ssIncludeTitle">
+            <select x-model="ssTitleFont" class="input text-caption py-0.5 px-1" :disabled="!ssIncludeTitle">
+              <optgroup label="Sans-serif">
+                <option value="DejaVu Sans">DejaVu Sans</option>
+                <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Montserrat,Bold">Montserrat Bold</option>
+                <option value="Poppins">Poppins</option>
+                <option value="Poppins,Bold">Poppins Bold</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Open Sans">Open Sans</option>
+                <option value="Bebas Neue">Bebas Neue</option>
+                <option value="Oswald">Oswald</option>
+              </optgroup>
+              <optgroup label="Serif">
+                <option value="Playfair Display">Playfair Display</option>
+                <option value="Playfair Display,Bold">Playfair Display Bold</option>
+                <option value="Merriweather">Merriweather</option>
+              </optgroup>
+              <optgroup label="Script">
+                <option value="Great Vibes">Great Vibes</option>
+                <option value="Dancing Script">Dancing Script</option>
+                <option value="Dancing Script,Bold">Dancing Script Bold</option>
+              </optgroup>
+            </select>
+            <input type="color" x-model="ssTitleColor" class="w-8 h-8 rounded cursor-pointer" :disabled="!ssIncludeTitle">
+
+            <label class="flex items-center gap-2">
+              <input type="checkbox" x-model="ssIncludeSubtitle">
+              <span class="text-small">Sub-title</span>
+            </label>
+            <input type="number" x-model.number="ssSubtitleSize" min="4" max="30" class="input text-caption py-0.5 px-1" :disabled="!ssIncludeSubtitle">
+            <select x-model="ssSubtitleFont" class="input text-caption py-0.5 px-1" :disabled="!ssIncludeSubtitle">
+              <optgroup label="Sans-serif">
+                <option value="DejaVu Sans">DejaVu Sans</option>
+                <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Poppins">Poppins</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Open Sans">Open Sans</option>
+              </optgroup>
+              <optgroup label="Serif">
+                <option value="Playfair Display">Playfair Display</option>
+                <option value="Merriweather">Merriweather</option>
+              </optgroup>
+              <optgroup label="Script">
+                <option value="Great Vibes">Great Vibes</option>
+                <option value="Dancing Script">Dancing Script</option>
+              </optgroup>
+            </select>
+            <input type="color" x-model="ssSubtitleColor" class="w-8 h-8 rounded cursor-pointer" :disabled="!ssIncludeSubtitle">
+
+            <label class="flex items-center gap-2">
+              <input type="checkbox" x-model="ssIncludePhoto">
+              <span class="text-small">Page</span>
+            </label>
+            <input type="number" x-model.number="ssPhotoSize" min="4" max="30" class="input text-caption py-0.5 px-1" :disabled="!ssIncludePhoto">
+            <select x-model="ssPhotoFont" class="input text-caption py-0.5 px-1" :disabled="!ssIncludePhoto">
+              <optgroup label="Sans-serif">
+                <option value="DejaVu Sans">DejaVu Sans</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Poppins">Poppins</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Open Sans">Open Sans</option>
+              </optgroup>
+              <optgroup label="Serif">
+                <option value="Playfair Display">Playfair Display</option>
+                <option value="Merriweather">Merriweather</option>
+              </optgroup>
+              <optgroup label="Script">
+                <option value="Great Vibes">Great Vibes</option>
+                <option value="Dancing Script">Dancing Script</option>
+              </optgroup>
+            </select>
+            <input type="color" x-model="ssPhotoColor" class="w-8 h-8 rounded cursor-pointer" :disabled="!ssIncludePhoto">
+          </div>
+
+          <div class="mt-2 rounded-standard p-3 text-center" style="background:#334155;">
+            <div class="space-y-0.5">
+              <div x-show="ssIncludeTitle" x-cloak
+                   :style="'color:' + ssTitleColor + '; font-family:\'' + ssTitleFont.split(',')[0] + '\',sans-serif; font-size:' + (ssTitleSize * 2.5) + 'px; font-weight:' + (ssTitleFont.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black;'"
+                   x-text="'Title Sample'"></div>
+              <div x-show="ssIncludeSubtitle" x-cloak
+                   :style="'color:' + ssSubtitleColor + '; font-family:\'' + ssSubtitleFont.split(',')[0] + '\',sans-serif; font-size:' + (ssSubtitleSize * 2.5) + 'px; font-weight:' + (ssSubtitleFont.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black;'"
+                   x-text="'Sub-title Sample'"></div>
+              <div x-show="ssIncludePhoto" x-cloak
+                   :style="'color:' + ssPhotoColor + '; font-family:\'' + ssPhotoFont.split(',')[0] + '\',sans-serif; font-size:' + (ssPhotoSize * 2.5) + 'px; font-weight:' + (ssPhotoFont.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black;'"
+                   x-text="'Per-photo caption sample'"></div>
+            </div>
+          </div>
+        </div>
+
         <p class="text-caption text-rose-700" x-show="createSlideshowError" x-text="createSlideshowError"></p>
 
         <div class="flex justify-end gap-2 pt-2">
@@ -1252,6 +1352,18 @@ function eventsPage() {
     creatingSlideshow: false,
     createSlideshowResult: null,
     createSlideshowError: '',
+    ssIncludeTitle: true,
+    ssTitleSize: 8,
+    ssTitleFont: 'DejaVu Sans,Bold',
+    ssTitleColor: '#ffffff',
+    ssIncludeSubtitle: true,
+    ssSubtitleSize: 6,
+    ssSubtitleFont: 'DejaVu Sans',
+    ssSubtitleColor: '#ffffff',
+    ssIncludePhoto: true,
+    ssPhotoSize: 6,
+    ssPhotoFont: 'DejaVu Sans',
+    ssPhotoColor: '#ffffff',
     autoFillFields: { place: true, country: true, date: true, time: false, camera: false, filename: false, settings: false },
     newEventModal: false,
 
@@ -1876,6 +1988,11 @@ function eventsPage() {
           versions_list: this.newSlideshowVersionsList.slice(),
           playlist_ids: this.newSlideshowPlaylistIds.map(id => parseInt(id, 10)),
           expires_days: this.newSlideshowExpiresDays ? parseInt(this.newSlideshowExpiresDays, 10) : null,
+          caption_styles: {
+            title:    { enabled: this.ssIncludeTitle,    size: this.ssTitleSize,    font: this.ssTitleFont,    color: this.ssTitleColor    },
+            subtitle: { enabled: this.ssIncludeSubtitle, size: this.ssSubtitleSize, font: this.ssSubtitleFont, color: this.ssSubtitleColor },
+            photo:    { enabled: this.ssIncludePhoto,    size: this.ssPhotoSize,    font: this.ssPhotoFont,    color: this.ssPhotoColor    },
+          },
         };
         const r = await fetch('/events/' + this.eventId + '/share', {
           method: 'POST',
