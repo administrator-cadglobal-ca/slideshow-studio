@@ -678,6 +678,7 @@ def delete_all_processed_frames(event_id):
     log_dir = Path(tempfile.gettempdir()) / "slideshow_logs"
     log_dir.mkdir(exist_ok=True)
     log_path = log_dir / f"delete_processed_{event_id}.log"
+    _app = current_app._get_current_object()
 
     def _log(msg):
         ts = _dt.datetime.now().strftime("%H:%M:%S")
@@ -688,29 +689,30 @@ def delete_all_processed_frames(event_id):
             pass
 
     def _run():
-        try:
-            with open(str(log_path), 'w', encoding='utf-8') as f:
-                f.write(f"[{_dt.datetime.now().strftime('%H:%M:%S')}] Starting delete-all...\n")
-            versions_map = list_processed_versions_r2(_user_id, _event_id)
-            total = sum(len(v) for v in versions_map.values())
-            _log(f"Found {len(versions_map)} version(s), {total} total frames")
-            deleted = 0
-            failed = 0
-            for ver, frames in versions_map.items():
-                _log(f"Deleting version: {ver} ({len(frames)} frames)")
-                for i, f in enumerate(frames, 1):
-                    try:
-                        key = R2.processed_key(_user_id, _event_id, ver, f)
-                        R2.delete(key)
-                        deleted += 1
-                    except Exception as e:
-                        failed += 1
-                        _log(f"  FAIL {f}: {e}")
-                    if i % 5 == 0 or i == len(frames):
-                        _log(f"  {ver}: {i}/{len(frames)} done")
-            _log(f"DONE - {deleted} deleted, {failed} failed")
-        except Exception as e:
-            _log(f"ERROR: {e}")
+        with _app.app_context():
+            try:
+                with open(str(log_path), 'w', encoding='utf-8') as f:
+                    f.write(f"[{_dt.datetime.now().strftime('%H:%M:%S')}] Starting delete-all...\n")
+                versions_map = list_processed_versions_r2(_user_id, _event_id)
+                total = sum(len(v) for v in versions_map.values())
+                _log(f"Found {len(versions_map)} version(s), {total} total frames")
+                deleted = 0
+                failed = 0
+                for ver, frames in versions_map.items():
+                    _log(f"Deleting version: {ver} ({len(frames)} frames)")
+                    for i, f in enumerate(frames, 1):
+                        try:
+                            key = R2.processed_key(_user_id, _event_id, ver, f)
+                            R2.delete(key)
+                            deleted += 1
+                        except Exception as e:
+                            failed += 1
+                            _log(f"  FAIL {f}: {e}")
+                        if i % 5 == 0 or i == len(frames):
+                            _log(f"  {ver}: {i}/{len(frames)} done")
+                _log(f"DONE - {deleted} deleted, {failed} failed")
+            except Exception as e:
+                _log(f"ERROR: {e}")
 
     threading.Thread(target=_run, daemon=True).start()
     return jsonify({"ok": True, "started": True, "log_url": f"/events/{event_id}/processed-frames/delete-all/log"})
