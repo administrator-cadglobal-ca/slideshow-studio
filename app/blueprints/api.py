@@ -131,6 +131,10 @@ def delete_all_photos(event_id):
         except Exception:
             pass
         db.session.delete(photo)
+    # Cascade: clear photo_ids in all slideshows for this event
+    from app.models.event import ShareToken
+    for st in db.session.query(ShareToken).filter_by(event_id=event_id, share_type="public").all():
+        st.photo_ids = None
     db.session.commit()
     from app.models import log_activity
     log_activity(evt, "photos_deleted_all", {"count": deleted})
@@ -153,6 +157,18 @@ def delete_photo(event_id, photo_id):
     except Exception:
         pass
     filename_for_log = photo.orig_name or photo.filename
+    # Cascade: remove this photo from any active slideshow's photo_ids
+    from app.models.event import ShareToken
+    import json as _json
+    for st in db.session.query(ShareToken).filter_by(event_id=event_id, share_type="public").all():
+        if st.photo_ids:
+            try:
+                ids = _json.loads(st.photo_ids)
+                if photo_id in ids:
+                    ids.remove(photo_id)
+                    st.photo_ids = _json.dumps(ids) if ids else None
+            except Exception:
+                pass
     db.session.delete(photo)
     db.session.commit()
     from app.models import log_activity
