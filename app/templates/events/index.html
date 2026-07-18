@@ -825,11 +825,31 @@
           </label>
           <input type="number" x-model.number="renderTitleFontSize" min="4" max="30" class="input text-caption py-0.5 px-1" title="Font size" :disabled="!renderIncludeEventTitle">
           <select x-model="renderTitleFontFamily" class="input text-caption py-0.5 px-1" title="Font family" :disabled="!renderIncludeEventTitle">
-            <option value="DejaVu Sans">DejaVu Sans</option>
-            <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
-            <option value="Cantarell">Cantarell</option>
-            <option value="Cantarell,Bold">Cantarell Bold</option>
-            <option value="Bitstream Charter">Bitstream Charter</option>
+            <optgroup label="Sans-serif">
+              <option value="DejaVu Sans">DejaVu Sans</option>
+              <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
+              <option value="Cantarell">Cantarell</option>
+              <option value="Cantarell,Bold">Cantarell Bold</option>
+              <option value="Montserrat">Montserrat</option>
+              <option value="Montserrat,Bold">Montserrat Bold</option>
+              <option value="Poppins">Poppins</option>
+              <option value="Poppins,Bold">Poppins Bold</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Open Sans">Open Sans</option>
+              <option value="Bebas Neue">Bebas Neue</option>
+              <option value="Oswald">Oswald</option>
+            </optgroup>
+            <optgroup label="Serif">
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="Playfair Display,Bold">Playfair Display Bold</option>
+              <option value="Merriweather">Merriweather</option>
+              <option value="Bitstream Charter">Bitstream Charter</option>
+            </optgroup>
+            <optgroup label="Script/Handwriting">
+              <option value="Great Vibes">Great Vibes</option>
+              <option value="Dancing Script">Dancing Script</option>
+              <option value="Dancing Script,Bold">Dancing Script Bold</option>
+            </optgroup>
           </select>
           <input type="color" x-model="renderTitleColor" class="w-8 h-8 rounded cursor-pointer" title="Font color" :disabled="!renderIncludeEventTitle">
 
@@ -839,11 +859,31 @@
           </label>
           <input type="number" x-model.number="renderSubtitleFontSize" min="4" max="30" class="input text-caption py-0.5 px-1" title="Font size" :disabled="!renderIncludeEventSubtitle">
           <select x-model="renderSubtitleFontFamily" class="input text-caption py-0.5 px-1" title="Font family" :disabled="!renderIncludeEventSubtitle">
-            <option value="DejaVu Sans">DejaVu Sans</option>
-            <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
-            <option value="Cantarell">Cantarell</option>
-            <option value="Cantarell,Bold">Cantarell Bold</option>
-            <option value="Bitstream Charter">Bitstream Charter</option>
+            <optgroup label="Sans-serif">
+              <option value="DejaVu Sans">DejaVu Sans</option>
+              <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
+              <option value="Cantarell">Cantarell</option>
+              <option value="Cantarell,Bold">Cantarell Bold</option>
+              <option value="Montserrat">Montserrat</option>
+              <option value="Montserrat,Bold">Montserrat Bold</option>
+              <option value="Poppins">Poppins</option>
+              <option value="Poppins,Bold">Poppins Bold</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Open Sans">Open Sans</option>
+              <option value="Bebas Neue">Bebas Neue</option>
+              <option value="Oswald">Oswald</option>
+            </optgroup>
+            <optgroup label="Serif">
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="Playfair Display,Bold">Playfair Display Bold</option>
+              <option value="Merriweather">Merriweather</option>
+              <option value="Bitstream Charter">Bitstream Charter</option>
+            </optgroup>
+            <optgroup label="Script/Handwriting">
+              <option value="Great Vibes">Great Vibes</option>
+              <option value="Dancing Script">Dancing Script</option>
+              <option value="Dancing Script,Bold">Dancing Script Bold</option>
+            </optgroup>
           </select>
           <input type="color" x-model="renderSubtitleColor" class="w-8 h-8 rounded cursor-pointer" title="Font color" :disabled="!renderIncludeEventSubtitle">
 
@@ -853,11 +893,31 @@
           </label>
           <input type="number" x-model.number="renderPhotoFontSize" min="4" max="30" class="input text-caption py-0.5 px-1" title="Font size" :disabled="!renderIncludePhotoCaptions">
           <select x-model="renderPhotoFontFamily" class="input text-caption py-0.5 px-1" title="Font family" :disabled="!renderIncludePhotoCaptions">
-            <option value="DejaVu Sans">DejaVu Sans</option>
-            <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
-            <option value="Cantarell">Cantarell</option>
-            <option value="Cantarell,Bold">Cantarell Bold</option>
-            <option value="Bitstream Charter">Bitstream Charter</option>
+            <optgroup label="Sans-serif">
+              <option value="DejaVu Sans">DejaVu Sans</option>
+              <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
+              <option value="Cantarell">Cantarell</option>
+              <option value="Cantarell,Bold">Cantarell Bold</option>
+              <option value="Montserrat">Montserrat</option>
+              <option value="Montserrat,Bold">Montserrat Bold</option>
+              <option value="Poppins">Poppins</option>
+              <option value="Poppins,Bold">Poppins Bold</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Open Sans">Open Sans</option>
+              <option value="Bebas Neue">Bebas Neue</option>
+              <option value="Oswald">Oswald</option>
+            </optgroup>
+            <optgroup label="Serif">
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="Playfair Display,Bold">Playfair Display Bold</option>
+              <option value="Merriweather">Merriweather</option>
+              <option value="Bitstream Charter">Bitstream Charter</option>
+            </optgroup>
+            <optgroup label="Script/Handwriting">
+              <option value="Great Vibes">Great Vibes</option>
+              <option value="Dancing Script">Dancing Script</option>
+              <option value="Dancing Script,Bold">Dancing Script Bold</option>
+            </optgroup>
           </select>
           <input type="color" x-model="renderPhotoColor" class="w-8 h-8 rounded cursor-pointer" title="Font color" :disabled="!renderIncludePhotoCaptions">
         </div>
