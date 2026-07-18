@@ -676,10 +676,62 @@ def clip_editor(song_id):
         abort(404)
     return render_template("audio/clip_editor.html", song=song)
 
-def _handle_zip_upload(zip_file, library_id):
-    """Extract audio files from ZIP and upload each. Returns summary."""
+def _extract_members(archive_file, filename):
+    """Extract members from various archive formats. Returns list of (name, bytes) tuples."""
     import zipfile
-    import tempfile
+    import tarfile
+    import os as _os
+    from io import BytesIO
+
+    filename_l = filename.lower()
+    data = archive_file.read()
+    members = []
+
+    if filename_l.endswith(".zip"):
+        with zipfile.ZipFile(BytesIO(data)) as zf:
+            for m in zf.namelist():
+                if m.endswith("/") or "__MACOSX" in m or _os.path.basename(m).startswith("."):
+                    continue
+                with zf.open(m) as inner:
+                    members.append((m, inner.read()))
+    elif filename_l.endswith(".7z"):
+        import py7zr
+        with py7zr.SevenZipFile(BytesIO(data)) as zf:
+            extracted = zf.readall()
+            for name, bio in extracted.items():
+                if name.endswith("/") or _os.path.basename(name).startswith("."):
+                    continue
+                members.append((name, bio.read()))
+    elif filename_l.endswith(".rar"):
+        import rarfile
+        import tempfile
+        # rarfile needs a real file
+        with tempfile.NamedTemporaryFile(suffix=".rar", delete=False) as tf:
+            tf.write(data)
+            temp_path = tf.name
+        try:
+            with rarfile.RarFile(temp_path) as rf:
+                for m in rf.namelist():
+                    if m.endswith("/") or _os.path.basename(m).startswith("."):
+                        continue
+                    members.append((m, rf.read(m)))
+        finally:
+            _os.unlink(temp_path)
+    elif any(filename_l.endswith(x) for x in (".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz")):
+        mode = "r:*"
+        with tarfile.open(fileobj=BytesIO(data), mode=mode) as tf:
+            for m in tf.getmembers():
+                if not m.isfile() or _os.path.basename(m.name).startswith("."):
+                    continue
+                f = tf.extractfile(m)
+                if f:
+                    members.append((m.name, f.read()))
+
+    return members
+
+
+def _handle_archive_upload(archive_file, library_id, filename):
+    """Extract audio files from any supported archive and upload each. Returns summary."""
     import os as _os
     from io import BytesIO
     from werkzeug.datastructures import FileStorage
@@ -688,11 +740,9 @@ def _handle_zip_upload(zip_file, library_id):
     AUDIO_EXTS = {".mp3", ".m4a", ".mp4", ".wav", ".ogg", ".flac", ".aac", ".webm"}
 
     try:
-        # Read zip into memory
-        data = zip_file.read()
-        zf = zipfile.ZipFile(BytesIO(data))
-    except zipfile.BadZipFile:
-        return _jsonify({"error": "Invalid or corrupted ZIP file"}), 400
+        all_members = _extract_members(archive_file, filename)
+    except Exception as e:
+        return _jsonify({"error": f"Invalid or corrupted archive: {e}"}), 400
 
     uploaded_count = 0
     skipped = []
@@ -717,17 +767,12 @@ def _handle_zip_upload(zip_file, library_id):
         db.session.add(default_playlist)
         db.session.commit()
 
-    for member in zf.namelist():
-        # Skip directories and hidden/macOS metadata files
-        if member.endswith("/") or "__MACOSX" in member or _os.path.basename(member).startswith("."):
-            continue
+    for member, file_bytes in all_members:
         ext = _os.path.splitext(member)[1].lower()
         if ext not in AUDIO_EXTS:
             skipped.append(_os.path.basename(member))
             continue
         try:
-            with zf.open(member) as inner:
-                file_bytes = inner.read()
             file_stream = BytesIO(file_bytes)
             safe_name = _os.path.basename(member)
             fs = FileStorage(stream=file_stream, filename=safe_name, content_type="audio/mpeg")
