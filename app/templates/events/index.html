@@ -1154,7 +1154,7 @@ function eventsPage() {
 
     // Selected event id (baked in)
     eventId: '{{ selected_event.id if selected_event else "" }}',
-    eventName: {{ (selected_event.name | tojson) if selected_event else '""' }},
+    eventName: '{{ (selected_event.name if selected_event else '') | replace("'", '') | e }}',
 
     init() {
       var initEl = document.getElementById('initialPhotos');
