@@ -150,6 +150,19 @@ def view_share(token):
         except Exception:
             pass
 
+    # Load event-level caption_styles as fallback
+    if not caption_styles_data and evt.caption_styles:
+        try:
+            caption_styles_data = json.loads(evt.caption_styles)
+        except Exception:
+            pass
+
+    # Decoration theme (from event)
+    from app.services.decoration_themes import get_theme
+    decoration_theme_id = evt.decoration_theme
+    decoration_theme_data = get_theme(decoration_theme_id) if decoration_theme_id else None
+    decoration_subcategory = decoration_theme_data.get("_subcategory_id") if decoration_theme_data else None
+
     return render_template("share/viewer.html",
         event=evt,
         token=token,
@@ -164,6 +177,9 @@ def view_share(token):
         event_title=evt.title_text or "",
         event_subtitle=evt.title_subtitle or "",
         caption_styles=caption_styles_data,
+        decoration_theme=decoration_theme_id,
+        decoration_theme_data=decoration_theme_data,
+        decoration_subcategory=decoration_subcategory,
         is_share_view=True,
     )
 

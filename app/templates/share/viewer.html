@@ -3,6 +3,25 @@
 
 {% block head_extras %}
 <style>
+    /* Decoration overlay */
+    .deco-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
+    .deco-clip { position: absolute; opacity: 0.9; }
+    .deco-clip svg { width: 100%; height: 100%; }
+    .deco-top-left     { top: 4%;  left: 4%;  }
+    .deco-top-right    { top: 4%;  right: 4%; }
+    .deco-bottom-left  { bottom: 20%; left: 4%; }
+    .deco-bottom-right { bottom: 20%; right: 4%; }
+    .deco-center-top   { top: 8%; left: 50%; transform: translateX(-50%); }
+    @keyframes float-pulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.05); } }
+    .deco-anim-float-pulse { animation: float-pulse 2.5s ease-in-out infinite; }
+    @keyframes sway-gentle { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+    .deco-anim-sway-gentle { animation: sway-gentle 3.5s ease-in-out infinite; transform-origin: 50% 100%; }
+    @keyframes twinkle { 0%,100% { opacity: 0.6; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
+    .deco-anim-twinkle { animation: twinkle 1.5s ease-in-out infinite; }
+    @keyframes confetti-fall { 0% { transform: translateY(-20px) rotate(0deg); } 100% { transform: translateY(10px) rotate(360deg); } }
+    .deco-anim-confetti-fall { animation: confetti-fall 4s linear infinite; }
+    @keyframes float-flutter { 0%,100% { transform: translate(0,0) rotate(-5deg); } 50% { transform: translate(5px,-5px) rotate(5deg); } }
+    .deco-anim-float-flutter { animation: float-flutter 2s ease-in-out infinite; }
     .caption-overlay { position: absolute; left: 0; right: 0; bottom: 0; padding: 2.5rem 1.25rem 1.25rem; background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%); color: white; text-align: center; z-index: 5; pointer-events: none; }
     .fs-fake .caption-overlay { padding: 4rem 2rem 2rem; }
 [x-cloak] { display: none !important; }
@@ -81,6 +100,15 @@ body.fs-lock { overflow: hidden !important; }
          class="w-full h-full object-contain"
          x-show="currentImage" x-cloak>
     <div x-show="!currentImage" x-cloak class="absolute inset-0 flex items-center justify-center text-white">No photos</div>
+
+    {# Decoration overlay #}
+    <div class="deco-layer" x-show="showDecorations && decorationTheme" x-cloak>
+      <template x-for="(clip, i) in decoClips" :key="i">
+        <div :class="'deco-clip deco-' + clip.position + ' deco-anim-' + clip.animate"
+             :style="'width:' + clip.size + '%; height:' + clip.size + '%;'"
+             x-html="clip.svg"></div>
+      </template>
+    </div>
 
     {# Caption overlay with saved styles #}
     <div class="caption-overlay" x-show="hasCaption()" x-cloak>
@@ -174,6 +202,9 @@ const VIEWER_PHOTO_IDS = {{ photo_ids_in_order | tojson | safe }};
 const VIEWER_EVENT_TITLE = {{ event_title | tojson | safe }};
 const VIEWER_EVENT_SUBTITLE = {{ event_subtitle | tojson | safe }};
 const VIEWER_CAPTION_STYLES = {{ caption_styles | tojson | safe }};
+const VIEWER_DECORATION_THEME = {{ decoration_theme | tojson | safe }};
+const VIEWER_DECORATION_THEME_DATA = {{ decoration_theme_data | tojson | safe }};
+const VIEWER_DECORATION_SUBCATEGORY = {{ decoration_subcategory | tojson | safe }};
 const VIEWER_LABELS_CLIPS = {{ labels_clips | tojson | safe }};
 
 {% set _pl_list = [] %}
@@ -194,6 +225,35 @@ function viewerPage() {
     playlistId: VIEWER_DEFAULT_PLAYLIST_ID ? String(VIEWER_DEFAULT_PLAYLIST_ID) : '',
     images: [],
     currentIndex: 0,
+
+    // Decoration state
+    showDecorations: true,
+    decorationTheme: VIEWER_DECORATION_THEME,
+    decorationThemeData: VIEWER_DECORATION_THEME_DATA,
+    decorationSubcategory: VIEWER_DECORATION_SUBCATEGORY,
+    decoClips: [],
+
+    async rebuildDecoClips() {
+      this.decoClips = [];
+      if (!this.decorationThemeData || !this.decorationThemeData.clips) return;
+      const clips = this.decorationThemeData.clips;
+      const seed = this.currentIndex + 1;
+      const rand = (n) => ((seed * 9301 + 49297) % 233280 + n * 137) % 100;
+      for (var ci = 0; ci < clips.length; ci++) {
+        const clipDef = clips[ci];
+        const positions = clipDef.positions.slice();
+        for (var i = 0; i < clipDef.count && positions.length > 0; i++) {
+          const pIdx = rand(ci * 10 + i) % positions.length;
+          const position = positions[pIdx];
+          positions.splice(pIdx, 1);
+          try {
+            const svgRes = await fetch('/static/clips/' + (this.decorationSubcategory || this.decorationTheme) + '/' + clipDef.file);
+            const svgText = await svgRes.text();
+            this.decoClips.push({ svg: svgText, position: position, size: clipDef.size, animate: clipDef.animate || 'twinkle' });
+          } catch (e) { console.error('load clip', clipDef.file, e); }
+        }
+      }
+    },
 
     // Caption state
     eventTitle: VIEWER_EVENT_TITLE || '',
@@ -245,6 +305,7 @@ function viewerPage() {
         this.version = this.availableVersions[0] || '';
       }
       if (this.version) this.loadVersion();
+      this.rebuildDecoClips();
       // Default playlist: use provided or first available
       if (!this.playlistId && this.playlists.length > 0) {
         this.playlistId = String(this.playlists[0].id);
@@ -299,8 +360,14 @@ function viewerPage() {
     },
     stopSlideTimer() { if (this.slideTimer) { clearInterval(this.slideTimer); this.slideTimer = null; } },
 
-    prev() { if (this.images.length) this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length; },
-    next() { if (this.images.length) this.currentIndex = (this.currentIndex + 1) % this.images.length; },
+    prev() {
+      if (this.images.length) this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
+      this.rebuildDecoClips();
+    },
+    next() {
+      if (this.images.length) this.currentIndex = (this.currentIndex + 1) % this.images.length;
+      this.rebuildDecoClips();
+    },
 
     playAudio() {
       const audio = this.$refs.audioEl;
