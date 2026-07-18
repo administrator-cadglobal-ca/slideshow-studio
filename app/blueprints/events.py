@@ -775,8 +775,23 @@ def render_mp4(event_id):
     version  = data.get("version", "hd-landscape")
     playlist_id = data.get("playlist_id")
     duration = float(data.get("duration", 4.0))
+    include_event_caption  = bool(data.get("include_event_caption", False))
+    include_photo_captions = bool(data.get("include_photo_captions", False))
     from app.models import log_activity
-    log_activity(evt, "render_started", {"version": version, "playlist_id": playlist_id, "duration": duration})
+    log_activity(evt, "render_started", {"version": version, "playlist_id": playlist_id, "duration": duration, "captions": include_event_caption or include_photo_captions})
+
+    # Gather caption data
+    event_caption_text = ""
+    if include_event_caption:
+        parts = []
+        if evt.title_text: parts.append(evt.title_text)
+        if evt.title_subtitle: parts.append(evt.title_subtitle)
+        event_caption_text = "\\N".join(parts)
+
+    photo_captions = []
+    if include_photo_captions:
+        photos_ordered = sorted(evt.photos, key=lambda p: p.sort_order)
+        photo_captions = [(p.caption or "").strip() for p in photos_ordered]
 
     from app.services import r2 as R2
     from app.services.storage import list_processed_versions_r2
@@ -804,6 +819,9 @@ def render_mp4(event_id):
     _user_id = current_user.id
     _event_id = event_id
     _frame_names = frame_names
+    _event_caption = event_caption_text
+    _photo_captions = photo_captions
+    _use_subs = include_event_caption or include_photo_captions
     import tempfile as _tmp_r
     _rlog_dir = Path(_tmp_r.gettempdir()) / "slideshow_logs"
     _rlog_dir.mkdir(exist_ok=True)
@@ -894,13 +912,70 @@ def render_mp4(event_id):
                                    capture_output=True)
                     log(f"Audio ready: {len(parts)} clips")
 
+            # --- Build SRT for captions ---
+            srt_path = None
+            if _use_subs:
+                def _srt_time(t):
+                    h = int(t // 3600)
+                    m = int((t % 3600) // 60)
+                    s = int(t % 60)
+                    ms = int((t - int(t)) * 1000)
+                    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+                def _srt_escape(text):
+                    return (text or "").replace("\\N", "\n").replace("{", "\\{").replace("}", "\\}").strip()
+
+                srt_path = tmp / "captions.srt"
+                srt_lines = []
+                idx = 1
+                total_duration = len(frames) * duration
+
+                # Event caption spans the whole video (top)
+                if _event_caption:
+                    srt_lines.append(f"{idx}")
+                    srt_lines.append(f"{_srt_time(0)} --> {_srt_time(total_duration)}")
+                    srt_lines.append(f"{{\\an8}}{_srt_escape(_event_caption)}")
+                    srt_lines.append("")
+                    idx += 1
+
+                # Per-photo captions (bottom, per slice)
+                if _photo_captions:
+                    for i, cap in enumerate(_photo_captions):
+                        if not cap:
+                            continue
+                        # Only add if we have a matching frame slot
+                        if i >= len(frames):
+                            break
+                        start = i * duration
+                        end = (i + 1) * duration
+                        srt_lines.append(f"{idx}")
+                        srt_lines.append(f"{_srt_time(start)} --> {_srt_time(end)}")
+                        srt_lines.append(f"{{\\an2}}{_srt_escape(cap)}")
+                        srt_lines.append("")
+                        idx += 1
+
+                if len(srt_lines) > 0:
+                    with open(str(srt_path), 'w', encoding='utf-8') as f:
+                        f.write("\n".join(srt_lines))
+                    log(f"Built captions.srt with {idx-1} entries")
+                else:
+                    srt_path = None
+
             # --- ffmpeg render ---
             log("Running ffmpeg...")
             cmd = [ffmpeg, "-y",
                    "-f", "concat", "-safe", "0", "-i", str(concat_v)]
             if mixed and mixed.exists():
                 cmd += ["-i", str(mixed)]
-            cmd += ["-vf", "fps=25,format=yuv420p",
+
+            # Video filter: subtitles overlay if SRT exists
+            vf = "fps=25,format=yuv420p"
+            if srt_path and srt_path.exists():
+                # Escape path for ffmpeg subtitles filter (single-quote wrap + colon escape)
+                srt_esc = str(srt_path).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
+                subs_style = "FontName=Arial,FontSize=22,PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=2,Shadow=0,BorderStyle=1"
+                vf = f"subtitles='{srt_esc}':force_style='{subs_style}'," + vf
+
+            cmd += ["-vf", vf,
                     "-c:v", "libx264", "-preset", "fast", "-crf", "18"]
             if mixed and mixed.exists():
                 cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]

@@ -770,6 +770,18 @@
         </label>
       </div>
 
+      <div class="mt-4 space-y-2 border-t border-line pt-3">
+        <p class="text-caption text-ink-soft font-medium">Captions in video</p>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" x-model="renderIncludeEventCaption">
+          <span class="text-small">Burn in event caption (title + subtitle)</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" x-model="renderIncludePhotoCaptions">
+          <span class="text-small">Burn in per-photo captions</span>
+        </label>
+      </div>
+
       <div class="mt-4 flex items-center gap-3">
         <button type="button" class="btn-primary text-small" @click="startRender()" :disabled="rendering || renderVersions.length === 0">
           <span x-show="!rendering">Start render</span>
@@ -1032,6 +1044,8 @@ function eventsPage() {
     renderVersion: '',
     renderPlaylistId: '',
     renderDuration: 4.0,
+    renderIncludeEventCaption: true,
+    renderIncludePhotoCaptions: true,
     rendering: false,
     renderStarted: false,
     renderError: '',
@@ -1882,6 +1896,8 @@ function eventsPage() {
             version: this.renderVersion,
             playlist_id: this.renderPlaylistId ? parseInt(this.renderPlaylistId, 10) : null,
             duration: this.renderDuration,
+            include_event_caption: this.renderIncludeEventCaption,
+            include_photo_captions: this.renderIncludePhotoCaptions,
           }),
         });
         const data = await r.json();
