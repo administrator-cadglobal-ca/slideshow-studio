@@ -1006,7 +1006,7 @@ def render_mp4(event_id):
             if srt_path and srt_path.exists():
                 # Escape path for ffmpeg subtitles filter (single-quote wrap + colon escape)
                 srt_esc = str(srt_path).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-                subs_style = "FontName=Arial,FontSize=14,PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=1,Shadow=0,BorderStyle=1"
+                subs_style = "FontName=Arial,FontSize=8,PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=1,Shadow=0,BorderStyle=1"
                 vf = f"subtitles='{srt_esc}':force_style='{subs_style}'," + vf
 
             cmd += ["-vf", vf,
