@@ -142,7 +142,7 @@ body.fs-lock { overflow: hidden !important; }
     </button>
   </div>
 
-  {# Decoration theme #}
+  {# Decoration theme (3-level cascading) #}
   <div class="mb-4 rounded-standard border border-line p-3 space-y-2 bg-white">
     <div class="flex items-center gap-3 flex-wrap">
       <p class="text-caption text-ink-soft font-medium">Decoration theme</p>
@@ -150,20 +150,44 @@ body.fs-lock { overflow: hidden !important; }
         <input type="checkbox" x-model="showDecorations">
         <span class="text-small">Show decorations</span>
       </label>
-      <div class="flex-1"></div>
-    </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <template x-for="theme in availableThemes" :key="theme.id">
-        <button type="button" @click="applyTheme(theme.id)"
-                :class="currentTheme === theme.id ? 'btn-primary text-small' : 'btn-secondary text-small'">
-          <span x-text="theme.name"></span>
-        </button>
-      </template>
       <button type="button" @click="applyTheme(null)"
-              :class="!currentTheme ? 'btn-primary text-small' : 'btn-secondary text-small'">
-        None
+              class="btn-secondary text-small ml-auto"
+              x-show="currentTheme" x-cloak>
+        Clear theme
       </button>
     </div>
+    <div class="grid gap-2" style="grid-template-columns: 1fr 1fr 1fr;">
+      <label class="block">
+        <span class="text-caption text-ink-soft">Category</span>
+        <select x-model="selectedCategoryId" @change="selectedSubcategoryId = ''; selectedThemeId = ''" class="input mt-1 w-full text-small">
+          <option value="">Select category...</option>
+          <template x-for="cat in categories" :key="cat.id">
+            <option :value="cat.id" x-text="cat.name"></option>
+          </template>
+        </select>
+      </label>
+      <label class="block">
+        <span class="text-caption text-ink-soft">Type</span>
+        <select x-model="selectedSubcategoryId" @change="selectedThemeId = ''" :disabled="!selectedCategoryId" class="input mt-1 w-full text-small">
+          <option value="">Select type...</option>
+          <template x-for="sub in currentCategorySubcategories" :key="sub.id">
+            <option :value="sub.id" x-text="sub.name"></option>
+          </template>
+        </select>
+      </label>
+      <label class="block">
+        <span class="text-caption text-ink-soft">Theme</span>
+        <select x-model="selectedThemeId" @change="selectedThemeId && applyTheme(selectedThemeId)" :disabled="!selectedSubcategoryId" class="input mt-1 w-full text-small">
+          <option value="">Select theme...</option>
+          <template x-for="th in currentSubcategoryThemes" :key="th.id">
+            <option :value="th.id" x-text="th.name"></option>
+          </template>
+        </select>
+      </label>
+    </div>
+    <p x-show="currentTheme" x-cloak class="text-caption text-emerald-700 mt-1">
+      Applied: <span x-text="currentTheme"></span>
+    </p>
   </div>
 
   {# Caption styling controls #}
@@ -560,17 +584,46 @@ function previewPage() {
     // Decorations
     showDecorations: true,
     currentTheme: null,
+    currentSubcategory: null,
     availableThemes: [],
     currentThemeData: null,
+    categories: [],
+    selectedCategoryId: '',
+    selectedSubcategoryId: '',
+    selectedThemeId: '',
     decoClips: [],
+
+    get currentCategorySubcategories() {
+      var cat = this.categories.find(c => c.id === this.selectedCategoryId);
+      return cat ? cat.subcategories : [];
+    },
+    get currentSubcategoryThemes() {
+      var sub = this.currentCategorySubcategories.find(s => s.id === this.selectedSubcategoryId);
+      return sub ? sub.themes : [];
+    },
 
     async loadDecorationTheme() {
       try {
         const r = await fetch('/events/' + this.eventId + '/decoration-theme', {credentials: 'same-origin'});
         const data = await r.json();
         this.currentTheme = data.current_theme;
+        this.currentSubcategory = data.current_subcategory;
         this.currentThemeData = data.current_theme_data;
         this.availableThemes = data.available_themes || [];
+        this.categories = data.categories || [];
+        // Try to find and pre-select the category/subcategory for current theme
+        if (this.currentTheme) {
+          for (var c of this.categories) {
+            for (var s of c.subcategories) {
+              if (s.themes.some(t => t.id === this.currentTheme)) {
+                this.selectedCategoryId = c.id;
+                this.selectedSubcategoryId = s.id;
+                this.selectedThemeId = this.currentTheme;
+                break;
+              }
+            }
+          }
+        }
         await this.rebuildDecoClips();
       } catch (e) {
         console.error('load theme', e);
@@ -611,7 +664,7 @@ function previewPage() {
           positions.splice(pIdx, 1);
           // Fetch SVG content
           try {
-            const svgRes = await fetch('/static/clips/' + this.currentTheme + '/' + clipDef.file);
+            const svgRes = await fetch('/static/clips/' + (this.currentSubcategory || this.currentTheme) + '/' + clipDef.file);
             const svgText = await svgRes.text();
             this.decoClips.push({
               svg: svgText,

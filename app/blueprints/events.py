@@ -1896,14 +1896,19 @@ def delete_render_share(event_id, token):
 @bp.route("/<event_id>/decoration-theme", methods=["GET"])
 @login_required
 def get_decoration_theme(event_id):
-    """Return current theme + list of available themes."""
-    from app.services.decoration_themes import list_themes, get_theme
+    """Return current theme + full category tree of available themes."""
+    from app.services.decoration_themes import list_themes, list_categories, get_theme
     evt = db.session.query(Event)\
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    theme_data = get_theme(evt.decoration_theme) if evt.decoration_theme else None
+    # Determine subcategory for the current theme (for clip path)
+    subcategory_id = theme_data.get("_subcategory_id") if theme_data else None
     return jsonify({
         "current_theme": evt.decoration_theme,
-        "current_theme_data": get_theme(evt.decoration_theme) if evt.decoration_theme else None,
+        "current_theme_data": theme_data,
+        "current_subcategory": subcategory_id,
         "available_themes": list_themes(),
+        "categories": list_categories(),
     })
 
 
