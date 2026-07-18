@@ -163,7 +163,24 @@ body.fs-lock { overflow: hidden !important; }
           <button type="button" @click="nextSong()" class="fs-btn" title="Next song">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
           </button>
-          <div class="fs-song" x-show="currentSong" x-text="currentSong ? currentSong.name : ''"></div>
+          <div class="fs-song" x-show="currentSong" x-data="{ fsdd: false }" @click.outside="fsdd = false" style="position:relative; cursor:pointer;">
+            <button type="button" @click="fsdd = !fsdd" x-text="currentSong ? currentSong.name : ''"
+                    style="background:none; border:none; color:white; font-size:14px; cursor:pointer;"></button>
+            <div x-show="fsdd" x-cloak
+                 class="bg-white text-ink border border-line rounded-standard shadow-lg overflow-y-auto"
+                 style="position:absolute; bottom:calc(100% + 4px); right:0; max-height:300px; min-width:250px; z-index:10000;">
+              <template x-for="(song, idx) in songs" :key="song.id">
+                <button type="button"
+                        @click="playSongByIndex(idx); fsdd = false"
+                        class="w-full text-left px-3 py-2 text-small hover:bg-line-soft border-b border-line"
+                        :class="idx === songIndex ? 'bg-indigo-soft' : ''"
+                        style="display:block; color:#0f172a;">
+                  <span class="font-medium" x-text="song.name"></span>
+                  <span x-show="idx === songIndex" class="text-caption text-indigo ml-2">(now playing)</span>
+                </button>
+              </template>
+            </div>
+          </div>
         </div>
       </div>
     </div>
