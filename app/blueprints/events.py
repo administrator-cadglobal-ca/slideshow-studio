@@ -792,17 +792,20 @@ def render_mp4(event_id):
     version  = data.get("version", "hd-landscape")
     playlist_id = data.get("playlist_id")
     duration = float(data.get("duration", 4.0))
-    include_event_caption  = bool(data.get("include_event_caption", False))
+    include_event_title    = bool(data.get("include_event_title", False))
+    include_event_subtitle = bool(data.get("include_event_subtitle", False))
     include_photo_captions = bool(data.get("include_photo_captions", False))
     from app.models import log_activity
-    log_activity(evt, "render_started", {"version": version, "playlist_id": playlist_id, "duration": duration, "captions": include_event_caption or include_photo_captions})
+    log_activity(evt, "render_started", {"version": version, "playlist_id": playlist_id, "duration": duration, "captions": include_event_title or include_event_subtitle or include_photo_captions})
 
     # Gather caption data
     event_caption_text = ""
-    if include_event_caption:
-        parts = []
-        if evt.title_text: parts.append(evt.title_text)
-        if evt.title_subtitle: parts.append(evt.title_subtitle)
+    parts = []
+    if include_event_title and evt.title_text:
+        parts.append(evt.title_text)
+    if include_event_subtitle and evt.title_subtitle:
+        parts.append(evt.title_subtitle)
+    if parts:
         event_caption_text = "\\N".join(parts)
 
     photo_captions = []
@@ -846,7 +849,7 @@ def render_mp4(event_id):
     _frame_names = frame_names
     _event_caption = event_caption_text
     _photo_captions = photo_captions
-    _use_subs = include_event_caption or include_photo_captions
+    _use_subs = include_event_title or include_event_subtitle or include_photo_captions
     import tempfile as _tmp_r
     _rlog_dir = Path(_tmp_r.gettempdir()) / "slideshow_logs"
     _rlog_dir.mkdir(exist_ok=True)
@@ -1003,7 +1006,7 @@ def render_mp4(event_id):
             if srt_path and srt_path.exists():
                 # Escape path for ffmpeg subtitles filter (single-quote wrap + colon escape)
                 srt_esc = str(srt_path).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-                subs_style = "FontName=Arial,FontSize=22,PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=2,Shadow=0,BorderStyle=1"
+                subs_style = "FontName=Arial,FontSize=14,PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=1,Shadow=0,BorderStyle=1"
                 vf = f"subtitles='{srt_esc}':force_style='{subs_style}'," + vf
 
             cmd += ["-vf", vf,

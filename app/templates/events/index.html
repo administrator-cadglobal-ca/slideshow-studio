@@ -818,8 +818,12 @@
       <div class="mt-4 space-y-2 border-t border-line pt-3">
         <p class="text-caption text-ink-soft font-medium">Captions in video</p>
         <label class="flex items-center gap-2">
-          <input type="checkbox" x-model="renderIncludeEventCaption">
-          <span class="text-small">Burn in event caption (title + subtitle)</span>
+          <input type="checkbox" x-model="renderIncludeEventTitle">
+          <span class="text-small">Burn in event title</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" x-model="renderIncludeEventSubtitle">
+          <span class="text-small">Burn in event subtitle</span>
         </label>
         <label class="flex items-center gap-2">
           <input type="checkbox" x-model="renderIncludePhotoCaptions">
@@ -1089,7 +1093,8 @@ function eventsPage() {
     renderVersion: '',
     renderPlaylistId: '',
     renderDuration: 4.0,
-    renderIncludeEventCaption: true,
+    renderIncludeEventTitle: true,
+    renderIncludeEventSubtitle: true,
     renderIncludePhotoCaptions: true,
     renderFilename: '',
     renderFilenameModalOpen: false,
@@ -1967,7 +1972,8 @@ function eventsPage() {
             version: this.renderVersion,
             playlist_id: this.renderPlaylistId ? parseInt(this.renderPlaylistId, 10) : null,
             duration: this.renderDuration,
-            include_event_caption: this.renderIncludeEventCaption,
+            include_event_title: this.renderIncludeEventTitle,
+            include_event_subtitle: this.renderIncludeEventSubtitle,
             include_photo_captions: this.renderIncludePhotoCaptions,
             filename: this.renderFilename || null,
           }),
