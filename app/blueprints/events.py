@@ -1891,3 +1891,33 @@ def delete_render_share(event_id, token):
     db.session.delete(rs)
     db.session.commit()
     return jsonify({"ok": True})
+
+# ── Decoration theme endpoints ──────────────────────────────────────────────
+@bp.route("/<event_id>/decoration-theme", methods=["GET"])
+@login_required
+def get_decoration_theme(event_id):
+    """Return current theme + list of available themes."""
+    from app.services.decoration_themes import list_themes, get_theme
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    return jsonify({
+        "current_theme": evt.decoration_theme,
+        "current_theme_data": get_theme(evt.decoration_theme) if evt.decoration_theme else None,
+        "available_themes": list_themes(),
+    })
+
+
+@bp.route("/<event_id>/decoration-theme", methods=["POST"])
+@login_required
+def set_decoration_theme(event_id):
+    """Apply a decoration theme to the event, or clear it."""
+    from app.services.decoration_themes import THEMES
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    data = request.json or {}
+    theme = data.get("theme")
+    if theme and theme not in THEMES:
+        return jsonify({"ok": False, "error": f"Unknown theme: {theme}"}), 400
+    evt.decoration_theme = theme or None
+    db.session.commit()
+    return jsonify({"ok": True, "theme": evt.decoration_theme})
