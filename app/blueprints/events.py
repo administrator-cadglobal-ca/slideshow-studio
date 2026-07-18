@@ -262,6 +262,13 @@ def preview(event_id):
     all_events = db.session.query(Event)\
                     .filter_by(user_id=current_user.id)\
                     .order_by(Event.updated_at.desc()).all()
+    import json as _json_p
+    caption_styles_parsed = None
+    if evt.caption_styles:
+        try:
+            caption_styles_parsed = _json_p.loads(evt.caption_styles)
+        except Exception:
+            pass
     return render_template("events/preview.html",
         event=evt,
         all_events=all_events,
@@ -272,6 +279,7 @@ def preview(event_id):
         labels_clips=labels_clips,
         event_playlist_id=evt.playlist.id if evt.playlist else None,
         audio_files=audio_files,
+        caption_styles=caption_styles_parsed,
     )
 
 

@@ -367,14 +367,34 @@ function previewPage() {
     // Caption overlay
     captionTitle: {{ (event.title_text or '')|tojson|safe }},
     captionSubtitle: {{ (event.title_subtitle or '')|tojson|safe }},
+    captionStyles: {{ (caption_styles|tojson|safe) if caption_styles else '{"title":{"enabled":true,"size":8,"font":"DejaVu Sans,Bold","color":"#ffffff"},"subtitle":{"enabled":true,"size":6,"font":"DejaVu Sans","color":"#ffffff"},"photo":{"enabled":true,"size":6,"font":"DejaVu Sans","color":"#ffffff"}}' }},
 
     get currentPhotoCaption() {
       var img = this.images[this.currentIndex];
       return (img && img.caption) ? img.caption : '';
     },
     get hasCaption() {
-      return !!(this.captionTitle || this.captionSubtitle || this.currentPhotoCaption);
+      // Respect enable/disable flags
+      return !!(
+        (this.captionStyles.title.enabled && this.captionTitle) ||
+        (this.captionStyles.subtitle.enabled && this.captionSubtitle) ||
+        (this.captionStyles.photo.enabled && this.currentPhotoCaption)
+      );
     },
+    _mkCaptionStyle(s) {
+      var fontName = (s.font || 'DejaVu Sans').split(',')[0];
+      var isBold = (s.font || '').includes('Bold');
+      var pxSize = (s.size || 8) * 3;
+      return 'color:' + (s.color || '#ffffff')
+        + '; font-family:\'' + fontName + '\',sans-serif'
+        + '; font-size:' + pxSize + 'px'
+        + '; font-weight:' + (isBold ? '700' : '400')
+        + '; text-shadow: 0 0 3px black, 0 0 2px black'
+        + '; line-height:1.2; margin:0.15rem 0;';
+    },
+    get titleStyle() { return this._mkCaptionStyle(this.captionStyles.title); },
+    get subtitleStyle() { return this._mkCaptionStyle(this.captionStyles.subtitle); },
+    get photoStyle() { return this._mkCaptionStyle(this.captionStyles.photo); },
     playing: false,
     slideDur: 3,
     slideTimer: null,
