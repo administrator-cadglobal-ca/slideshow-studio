@@ -621,6 +621,27 @@
     </div>
   </div>
 
+  {# Render filename confirmation modal #}
+  <div x-show="renderFilenameModalOpen" x-cloak
+       @keydown.escape.window="cancelRenderFilename()"
+       style="z-index:75;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-md w-full p-6 space-y-4">
+      <div>
+        <h3 class="text-h3 text-ink">Confirm output filename</h3>
+        <p class="text-caption text-ink-soft">This will be the name of the MP4 file. You can change it.</p>
+      </div>
+      <label class="block">
+        <span class="text-caption text-ink-soft">Filename (without .mp4)</span>
+        <input type="text" x-model="renderFilename" class="input mt-1 w-full text-small" @keydown.enter="confirmRenderStart()">
+      </label>
+      <p class="text-caption text-ink-faint">Will save as <span x-text="renderFilename + '.mp4'"></span></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn-secondary" @click="cancelRenderFilename()">Cancel</button>
+        <button type="button" class="btn-primary" @click="confirmRenderStart()" :disabled="!renderFilename.trim()">Start render</button>
+      </div>
+    </div>
+  </div>
+
   {# Render progress modal #}
   <div x-show="renderModalOpen" x-cloak
        @keydown.escape.window="if (renderDone) closeRenderModal()"
@@ -793,11 +814,6 @@
         </label>
       </div>
 
-      <label class="block mt-4">
-        <span class="text-caption text-ink-soft">Output filename (without .mp4)</span>
-        <input type="text" x-model="renderFilename" placeholder="Auto: version_event-name" class="input mt-1 w-full text-small">
-        <p class="text-caption text-ink-faint mt-1">Leave blank to use default. Will be saved as [filename].mp4</p>
-      </label>
 
       <div class="mt-4 space-y-2 border-t border-line pt-3">
         <p class="text-caption text-ink-soft font-medium">Captions in video</p>
@@ -812,7 +828,7 @@
       </div>
 
       <div class="mt-4 flex items-center gap-3">
-        <button type="button" class="btn-primary text-small" @click="startRender()" :disabled="rendering || renderVersions.length === 0">
+        <button type="button" class="btn-primary text-small" @click="openRenderFilenameModal()" :disabled="rendering || renderVersions.length === 0">
           <span x-show="!rendering">Start render</span>
           <span x-show="rendering" x-cloak>Rendering&hellip;</span>
         </button>
@@ -1076,6 +1092,7 @@ function eventsPage() {
     renderIncludeEventCaption: true,
     renderIncludePhotoCaptions: true,
     renderFilename: '',
+    renderFilenameModalOpen: false,
     rendering: false,
     renderStarted: false,
     renderError: '',
@@ -1915,6 +1932,22 @@ function eventsPage() {
       } catch (e) {
         console.error('load slideshows', e);
       }
+    },
+
+    openRenderFilenameModal() {
+      // Compute default filename
+      var safeName = (this.eventName || 'event').replace(/[^a-zA-Z0-9\-_]/g, '-').substring(0, 60);
+      this.renderFilename = this.renderVersion + '_' + safeName;
+      this.renderFilenameModalOpen = true;
+    },
+
+    confirmRenderStart() {
+      this.renderFilenameModalOpen = false;
+      this.startRender();
+    },
+
+    cancelRenderFilename() {
+      this.renderFilenameModalOpen = false;
     },
 
     async startRender() {
