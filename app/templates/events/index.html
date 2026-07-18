@@ -621,6 +621,28 @@
     </div>
   </div>
 
+  {# Render progress modal #}
+  <div x-show="renderModalOpen" x-cloak
+       @keydown.escape.window="if (renderDone) closeRenderModal()"
+       style="z-index:75;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+      <div class="p-6 pb-0">
+        <h3 class="text-h3 text-ink">Rendering video</h3>
+        <p class="text-caption text-ink-soft" x-show="!renderDone">This may take a few minutes...</p>
+        <p class="text-caption text-emerald-700" x-show="renderDone" x-cloak>Done.</p>
+      </div>
+      <pre class="flex-1 mx-6 my-4 p-3 bg-slate-900 text-slate-100 rounded-standard text-caption overflow-auto whitespace-pre-wrap" x-text="renderLog"></pre>
+      <div class="p-6 pt-0 flex justify-end gap-2">
+        <button type="button" class="btn-secondary" @click="closeRenderModal()" x-show="!renderDone" x-cloak>
+          Continue in background
+        </button>
+        <button type="button" class="btn-primary" @click="closeRenderModal()" x-show="renderDone" x-cloak>
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   {# Play render video modal #}
   <div x-show="playRenderOpen" x-cloak
        @click="closePlayRender()"
@@ -1049,6 +1071,10 @@ function eventsPage() {
     rendering: false,
     renderStarted: false,
     renderError: '',
+    renderModalOpen: false,
+    renderLog: '',
+    renderDone: false,
+    renderPollTimer: null,
     renders: [],
     playRenderOpen: false,
     playRenderUrl: '',
@@ -1887,6 +1913,9 @@ function eventsPage() {
       this.rendering = true;
       this.renderError = '';
       this.renderStarted = false;
+      this.renderModalOpen = true;
+      this.renderLog = 'Starting render...\n';
+      this.renderDone = false;
       try {
         const r = await fetch('/events/' + this.eventId + '/render-mp4', {
           method: 'POST',
@@ -1903,13 +1932,42 @@ function eventsPage() {
         const data = await r.json();
         if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
         this.renderStarted = true;
-        setTimeout(() => { this.renderStarted = false; }, 5000);
-        // Refresh renders list after 5 seconds
-        setTimeout(() => this.loadRenders(), 5000);
+        this.pollRenderLog();
       } catch (e) {
         this.renderError = 'Render failed: ' + e.message;
+        this.renderLog += 'Error: ' + e.message + '\n';
+        this.renderDone = true;
       } finally {
         this.rendering = false;
+      }
+    },
+
+    async pollRenderLog() {
+      const self = this;
+      const tick = async () => {
+        try {
+          const r = await fetch('/events/' + self.eventId + '/render-mp4/log', {credentials: 'same-origin'});
+          const data = await r.json();
+          self.renderLog = data.content || '';
+          if (data.done) {
+            self.renderDone = true;
+            clearInterval(self.renderPollTimer);
+            self.renderPollTimer = null;
+            self.loadRenders();
+          }
+        } catch (e) {
+          console.error('poll render', e);
+        }
+      };
+      tick();
+      this.renderPollTimer = setInterval(tick, 2000);
+    },
+
+    closeRenderModal() {
+      this.renderModalOpen = false;
+      if (this.renderPollTimer) {
+        clearInterval(this.renderPollTimer);
+        this.renderPollTimer = null;
       }
     },
 

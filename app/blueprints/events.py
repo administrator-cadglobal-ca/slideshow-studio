@@ -760,6 +760,23 @@ def list_r2_versions(event_id):
     return jsonify({"versions": list(versions.keys())})
 
 
+@bp.route("/<event_id>/render-mp4/log")
+@login_required
+def get_render_log(event_id):
+    """Read the render log file for live progress."""
+    from pathlib import Path
+    import tempfile
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    log_path = Path(tempfile.gettempdir()) / "slideshow_logs" / f"{event_id}.log"
+    if not log_path.exists():
+        return jsonify({"content": "", "done": False})
+    content = log_path.read_text(encoding='utf-8', errors='replace')
+    # Look for our completion markers in the log
+    done = ("uploaded to R2" in content) or ("FAILED" in content) or ("RENDER ERROR" in content)
+    return jsonify({"content": content, "done": done})
+
+
 @bp.route("/<event_id>/render-mp4", methods=["POST"])
 @login_required
 def render_mp4(event_id):
