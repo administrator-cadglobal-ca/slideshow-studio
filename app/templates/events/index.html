@@ -921,7 +921,7 @@
       </div>
 
 
-      <div class="mt-4 space-y-2 border-t border-line pt-3">
+      <div class="mt-4 space-y-2 border-t border-line pt-3" @change="saveEventCaptionStyles()">
         <p class="text-caption text-ink-soft font-medium">Captions in video</p>
 
         <div class="grid gap-2" style="grid-template-columns: 90px 60px 1fr 40px;">
@@ -1407,6 +1407,7 @@ function eventsPage() {
       this.initCaptions();
       this.loadRenderVersions();
       this.loadRenders();
+      this.loadEventCaptionStyles();
       this.loadSlideshows();
     },
 
@@ -1760,6 +1761,83 @@ function eventsPage() {
     },
 
     // ─── Renders ─────────────────────────────────────────────────────────
+    async loadEventCaptionStyles() {
+      try {
+        const r = await fetch('/events/' + this.eventId + '/caption/styles', {credentials: 'same-origin'});
+        const data = await r.json();
+        var s = data.caption_styles;
+        if (s) {
+          if (s.title) {
+            this.renderIncludeEventTitle = !!s.title.enabled;
+            this.renderTitleFontSize = s.title.size || 8;
+            this.renderTitleFontFamily = s.title.font || 'DejaVu Sans,Bold';
+            this.renderTitleColor = s.title.color || '#ffffff';
+            // Also mirror into Create Slideshow modal state
+            this.ssIncludeTitle = !!s.title.enabled;
+            this.ssTitleSize = s.title.size || 8;
+            this.ssTitleFont = s.title.font || 'DejaVu Sans,Bold';
+            this.ssTitleColor = s.title.color || '#ffffff';
+          }
+          if (s.subtitle) {
+            this.renderIncludeEventSubtitle = !!s.subtitle.enabled;
+            this.renderSubtitleFontSize = s.subtitle.size || 6;
+            this.renderSubtitleFontFamily = s.subtitle.font || 'DejaVu Sans';
+            this.renderSubtitleColor = s.subtitle.color || '#ffffff';
+            this.ssIncludeSubtitle = !!s.subtitle.enabled;
+            this.ssSubtitleSize = s.subtitle.size || 6;
+            this.ssSubtitleFont = s.subtitle.font || 'DejaVu Sans';
+            this.ssSubtitleColor = s.subtitle.color || '#ffffff';
+          }
+          if (s.photo) {
+            this.renderIncludePhotoCaptions = !!s.photo.enabled;
+            this.renderPhotoFontSize = s.photo.size || 6;
+            this.renderPhotoFontFamily = s.photo.font || 'DejaVu Sans';
+            this.renderPhotoColor = s.photo.color || '#ffffff';
+            this.ssIncludePhoto = !!s.photo.enabled;
+            this.ssPhotoSize = s.photo.size || 6;
+            this.ssPhotoFont = s.photo.font || 'DejaVu Sans';
+            this.ssPhotoColor = s.photo.color || '#ffffff';
+          }
+        }
+      } catch (e) {
+        console.error('load caption styles', e);
+      }
+    },
+
+    async saveEventCaptionStyles() {
+      // Called after any Render form caption control changes
+      try {
+        var body = {
+          caption_styles: {
+            title:    { enabled: this.renderIncludeEventTitle,    size: this.renderTitleFontSize,    font: this.renderTitleFontFamily,    color: this.renderTitleColor    },
+            subtitle: { enabled: this.renderIncludeEventSubtitle, size: this.renderSubtitleFontSize, font: this.renderSubtitleFontFamily, color: this.renderSubtitleColor },
+            photo:    { enabled: this.renderIncludePhotoCaptions, size: this.renderPhotoFontSize,    font: this.renderPhotoFontFamily,    color: this.renderPhotoColor    },
+          }
+        };
+        await fetch('/events/' + this.eventId + '/caption/styles', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify(body),
+        });
+        // Also mirror to Create Slideshow modal state
+        this.ssIncludeTitle = this.renderIncludeEventTitle;
+        this.ssTitleSize = this.renderTitleFontSize;
+        this.ssTitleFont = this.renderTitleFontFamily;
+        this.ssTitleColor = this.renderTitleColor;
+        this.ssIncludeSubtitle = this.renderIncludeEventSubtitle;
+        this.ssSubtitleSize = this.renderSubtitleFontSize;
+        this.ssSubtitleFont = this.renderSubtitleFontFamily;
+        this.ssSubtitleColor = this.renderSubtitleColor;
+        this.ssIncludePhoto = this.renderIncludePhotoCaptions;
+        this.ssPhotoSize = this.renderPhotoFontSize;
+        this.ssPhotoFont = this.renderPhotoFontFamily;
+        this.ssPhotoColor = this.renderPhotoColor;
+      } catch (e) {
+        console.error('save caption styles', e);
+      }
+    },
+
     async loadRenderVersions() {
       try {
         const r = await fetch('/events/' + this.eventId + '/versions-r2', {credentials: 'same-origin'});
