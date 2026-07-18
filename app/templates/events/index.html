@@ -601,6 +601,26 @@
     </div>
   </div>
 
+  {# Delete all processed - live log modal #}
+  <div x-show="deleteAllModalOpen" x-cloak
+       @keydown.escape.window="if (deleteAllDone) closeDeleteAllModal()"
+       style="z-index:75;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+      <div class="p-6 pb-0">
+        <h3 class="text-h3 text-ink">Deleting processed frames</h3>
+        <p class="text-caption text-ink-soft" x-show="!deleteAllDone">This may take a few moments...</p>
+        <p class="text-caption text-emerald-700" x-show="deleteAllDone" x-cloak>Done.</p>
+      </div>
+      <pre class="flex-1 mx-6 my-4 p-3 bg-slate-900 text-slate-100 rounded-standard text-caption overflow-auto whitespace-pre-wrap" x-text="deleteAllLog"></pre>
+      <div class="p-6 pt-0 flex justify-end">
+        <button type="button" class="btn-primary" @click="closeDeleteAllModal()" :disabled="!deleteAllDone">
+          <span x-show="deleteAllDone">Close</span>
+          <span x-show="!deleteAllDone" x-cloak>Working&hellip;</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   {# Lightbox modal - full-size photo viewer (outside all tabs) #}
   <div x-show="lightboxOpen" x-cloak
        @click="closeLightbox()"
@@ -982,6 +1002,10 @@ function eventsPage() {
     renderError: '',
     renders: [],
     processedVersion: '',
+    deleteAllModalOpen: false,
+    deleteAllLog: '',
+    deleteAllDone: false,
+    deleteAllPollTimer: null,
     processedFrames: [],
     processedFilenames: [],
     selectedFrameIndices: [],
@@ -1442,6 +1466,9 @@ function eventsPage() {
       var versionCount = this.renderVersions.length;
       if (versionCount === 0) return;
       if (!confirm('Delete ALL processed frames across ALL ' + versionCount + ' version(s)? Originals will not be affected. You can reprocess to regenerate.')) return;
+      this.deleteAllModalOpen = true;
+      this.deleteAllLog = 'Starting...\n';
+      this.deleteAllDone = false;
       try {
         const r = await fetch('/events/' + this.eventId + '/processed-frames/delete-all', {
           method: 'POST',
@@ -1449,14 +1476,44 @@ function eventsPage() {
         });
         const data = await r.json();
         if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
-        this.processedFrames = [];
-        this.processedFilenames = [];
-        this.selectedFrameIndices = [];
-        this.processedVersion = '';
-        this.renderVersions = [];
-        if (window.showToast) window.showToast('Deleted ' + data.deleted + ' processed frames', 'success');
+        this.pollDeleteAllLog();
       } catch (e) {
-        alert('Delete all failed: ' + e.message);
+        this.deleteAllLog += 'Error: ' + e.message + '\n';
+        this.deleteAllDone = true;
+      }
+    },
+
+    async pollDeleteAllLog() {
+      const self = this;
+      const tick = async () => {
+        try {
+          const r = await fetch('/events/' + this.eventId + '/processed-frames/delete-all/log', {credentials: 'same-origin'});
+          const data = await r.json();
+          self.deleteAllLog = data.content || '';
+          if (data.done) {
+            self.deleteAllDone = true;
+            clearInterval(self.deleteAllPollTimer);
+            self.deleteAllPollTimer = null;
+            // Refresh version list
+            self.processedFrames = [];
+            self.processedFilenames = [];
+            self.selectedFrameIndices = [];
+            self.processedVersion = '';
+            await self.loadRenderVersions();
+          }
+        } catch (e) {
+          console.error('poll error', e);
+        }
+      };
+      tick();
+      this.deleteAllPollTimer = setInterval(tick, 1500);
+    },
+
+    closeDeleteAllModal() {
+      this.deleteAllModalOpen = false;
+      if (this.deleteAllPollTimer) {
+        clearInterval(this.deleteAllPollTimer);
+        this.deleteAllPollTimer = null;
       }
     },
 

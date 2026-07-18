@@ -665,23 +665,71 @@ def list_processed_frames(event_id, version):
 @bp.route("/<event_id>/processed-frames/delete-all", methods=["POST"])
 @login_required
 def delete_all_processed_frames(event_id):
-    """Delete all processed frames across all versions for this event."""
+    """Delete all processed frames across all versions for this event (background)."""
     from app.services import r2 as R2
     from app.services.storage import list_processed_versions_r2
+    from pathlib import Path
+    import tempfile, datetime as _dt, threading
     db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
-    versions_map = list_processed_versions_r2(current_user.id, event_id)
-    deleted = 0
-    failed = 0
-    for ver, frames in versions_map.items():
-        for f in frames:
-            try:
-                key = R2.processed_key(current_user.id, event_id, ver, f)
-                R2.delete(key)
-                deleted += 1
-            except Exception:
-                failed += 1
-    return jsonify({"ok": True, "deleted": deleted, "failed": failed})
+
+    _user_id = current_user.id
+    _event_id = event_id
+    log_dir = Path(tempfile.gettempdir()) / "slideshow_logs"
+    log_dir.mkdir(exist_ok=True)
+    log_path = log_dir / f"delete_processed_{event_id}.log"
+
+    def _log(msg):
+        ts = _dt.datetime.now().strftime("%H:%M:%S")
+        try:
+            with open(str(log_path), 'a', encoding='utf-8') as f:
+                f.write(f"[{ts}] {msg}\n")
+        except Exception:
+            pass
+
+    def _run():
+        try:
+            with open(str(log_path), 'w', encoding='utf-8') as f:
+                f.write(f"[{_dt.datetime.now().strftime('%H:%M:%S')}] Starting delete-all...\n")
+            versions_map = list_processed_versions_r2(_user_id, _event_id)
+            total = sum(len(v) for v in versions_map.values())
+            _log(f"Found {len(versions_map)} version(s), {total} total frames")
+            deleted = 0
+            failed = 0
+            for ver, frames in versions_map.items():
+                _log(f"Deleting version: {ver} ({len(frames)} frames)")
+                for i, f in enumerate(frames, 1):
+                    try:
+                        key = R2.processed_key(_user_id, _event_id, ver, f)
+                        R2.delete(key)
+                        deleted += 1
+                    except Exception as e:
+                        failed += 1
+                        _log(f"  FAIL {f}: {e}")
+                    if i % 5 == 0 or i == len(frames):
+                        _log(f"  {ver}: {i}/{len(frames)} done")
+            _log(f"DONE - {deleted} deleted, {failed} failed")
+        except Exception as e:
+            _log(f"ERROR: {e}")
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"ok": True, "started": True, "log_url": f"/events/{event_id}/processed-frames/delete-all/log"})
+
+
+@bp.route("/<event_id>/processed-frames/delete-all/log")
+@login_required
+def get_delete_all_log(event_id):
+    """Read the delete-all log file."""
+    from pathlib import Path
+    import tempfile
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    log_path = Path(tempfile.gettempdir()) / "slideshow_logs" / f"delete_processed_{event_id}.log"
+    if not log_path.exists():
+        return jsonify({"content": "", "done": False})
+    content = log_path.read_text(encoding='utf-8', errors='replace')
+    done = "DONE" in content or "ERROR" in content
+    return jsonify({"content": content, "done": done})
 
 
 @bp.route("/<event_id>/processed-frames/<version>/<filename>", methods=["DELETE"])
