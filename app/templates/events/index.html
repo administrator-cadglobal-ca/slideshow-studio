@@ -516,10 +516,6 @@
           <input type="text" x-model="newSlideshowName" class="input mt-1 w-full text-small" placeholder="e.g. Family only">
         </label>
 
-        <label class="block">
-          <span class="text-caption text-ink-soft">Description (optional)</span>
-          <input type="text" x-model="newSlideshowDescription" class="input mt-1 w-full text-small" placeholder="e.g. Highlights from ceremony">
-        </label>
 
         <label class="block">
           <span class="text-caption text-ink-soft">Password</span>
@@ -2041,7 +2037,7 @@ function eventsPage() {
         .filter(i => i < this.photos.length)
         .map(i => this.photos[i].id);
       this.newSlideshowPhotoIds = selectedPhotoIds;
-      this.newSlideshowName = this.processedVersion + ' - selection';
+      this.newSlideshowName = (this.eventName || 'Event') + ' - ' + this.processedVersion;
       this.newSlideshowDescription = '';
       this.newSlideshowPassword = 'WELCOME';
       this.newSlideshowVersion = this.processedVersion;
