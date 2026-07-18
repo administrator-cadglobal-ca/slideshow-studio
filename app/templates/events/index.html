@@ -668,6 +668,16 @@
                      @click.stop
                      class="w-5 h-5 rounded accent-indigo cursor-pointer">
             </div>
+            <div class="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button type="button" @click.stop="deleteProcessedFrame(i)"
+                      class="w-6 h-6 rounded-full bg-white/90 hover:bg-white flex items-center justify-center"
+                      title="Delete this frame">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </template>
       </div>
@@ -964,6 +974,7 @@ function eventsPage() {
     renders: [],
     processedVersion: '',
     processedFrames: [],
+    processedFilenames: [],
     selectedFrameIndices: [],
 
     // Create slideshow modal
@@ -1409,10 +1420,32 @@ function eventsPage() {
         const r = await fetch('/events/' + this.eventId + '/processed-frames/' + encodeURIComponent(this.processedVersion), {credentials: 'same-origin'});
         const data = await r.json();
         this.processedFrames = data.frames || [];
+        this.processedFilenames = data.filenames || [];
         this.selectedFrameIndices = [];
       } catch (e) {
         console.error('load processed frames', e);
         this.processedFrames = [];
+        this.processedFilenames = [];
+      }
+    },
+
+    async deleteProcessedFrame(idx) {
+      if (!confirm('Delete this frame from ' + this.processedVersion + '? This does not affect the original photo.')) return;
+      var fname = this.processedFilenames[idx];
+      if (!fname) return;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/processed-frames/' + encodeURIComponent(this.processedVersion) + '/' + encodeURIComponent(fname), {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        // Remove from local state
+        this.processedFrames.splice(idx, 1);
+        this.processedFilenames.splice(idx, 1);
+        this.selectedFrameIndices = this.selectedFrameIndices.filter(i => i !== idx).map(i => i > idx ? i - 1 : i);
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
       }
     },
 

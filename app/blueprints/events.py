@@ -659,7 +659,22 @@ def list_processed_frames(event_id, version):
     versions_map = list_processed_versions_r2(current_user.id, event_id)
     frames = versions_map.get(version, [])
     urls = [f"/api/v1/media/processed/{current_user.id}/{event_id}/{version}/{f}" for f in frames]
-    return jsonify({"frames": urls})
+    return jsonify({"frames": urls, "filenames": frames})
+
+
+@bp.route("/<event_id>/processed-frames/<version>/<filename>", methods=["DELETE"])
+@login_required
+def delete_processed_frame(event_id, version, filename):
+    """Delete a single processed frame from R2 (leaves originals untouched)."""
+    from app.services import r2 as R2
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    try:
+        key = R2.processed_key(current_user.id, event_id, version, filename)
+        R2.delete(key)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @bp.route("/<event_id>/versions-r2")
