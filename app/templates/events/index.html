@@ -638,6 +638,9 @@
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
             </svg>
           </button>
+          <button type="button" @click="deleteAllProcessedAllVersions()" class="text-small text-rose-700 hover:underline" x-show="renderVersions.length > 0" x-cloak title="Delete all processed frames across all versions">
+            Delete all processed
+          </button>
         </div>
       </div>
 
@@ -1432,6 +1435,28 @@ function eventsPage() {
         console.error('load processed frames', e);
         this.processedFrames = [];
         this.processedFilenames = [];
+      }
+    },
+
+    async deleteAllProcessedAllVersions() {
+      var versionCount = this.renderVersions.length;
+      if (versionCount === 0) return;
+      if (!confirm('Delete ALL processed frames across ALL ' + versionCount + ' version(s)? Originals will not be affected. You can reprocess to regenerate.')) return;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/processed-frames/delete-all', {
+          method: 'POST',
+          credentials: 'same-origin',
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.processedFrames = [];
+        this.processedFilenames = [];
+        this.selectedFrameIndices = [];
+        this.processedVersion = '';
+        this.renderVersions = [];
+        if (window.showToast) window.showToast('Deleted ' + data.deleted + ' processed frames', 'success');
+      } catch (e) {
+        alert('Delete all failed: ' + e.message);
       }
     },
 
