@@ -662,6 +662,28 @@ def list_processed_frames(event_id, version):
     return jsonify({"frames": urls, "filenames": frames})
 
 
+@bp.route("/<event_id>/processed-frames/delete-all", methods=["POST"])
+@login_required
+def delete_all_processed_frames(event_id):
+    """Delete all processed frames across all versions for this event."""
+    from app.services import r2 as R2
+    from app.services.storage import list_processed_versions_r2
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    versions_map = list_processed_versions_r2(current_user.id, event_id)
+    deleted = 0
+    failed = 0
+    for ver, frames in versions_map.items():
+        for f in frames:
+            try:
+                key = R2.processed_key(current_user.id, event_id, ver, f)
+                R2.delete(key)
+                deleted += 1
+            except Exception:
+                failed += 1
+    return jsonify({"ok": True, "deleted": deleted, "failed": failed})
+
+
 @bp.route("/<event_id>/processed-frames/<version>/<filename>", methods=["DELETE"])
 @login_required
 def delete_processed_frame(event_id, version, filename):
