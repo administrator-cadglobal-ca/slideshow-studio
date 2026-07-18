@@ -1444,6 +1444,10 @@ function eventsPage() {
         this.processedFrames.splice(idx, 1);
         this.processedFilenames.splice(idx, 1);
         this.selectedFrameIndices = this.selectedFrameIndices.filter(i => i !== idx).map(i => i > idx ? i - 1 : i);
+        if (this.processedFrames.length === 0) {
+          this.processedVersion = '';
+          this.loadRenderVersions();
+        }
       } catch (e) {
         alert('Delete failed: ' + e.message);
       }
