@@ -818,43 +818,39 @@
       <div class="mt-4 space-y-2 border-t border-line pt-3">
         <p class="text-caption text-ink-soft font-medium">Captions in video</p>
 
-        <div class="flex items-center gap-2">
-          <label class="flex items-center gap-2 flex-1">
+        <div class="grid gap-2" style="grid-template-columns: 1fr 70px 140px;">
+          <label class="flex items-center gap-2">
             <input type="checkbox" x-model="renderIncludeEventTitle">
-            <span class="text-small">Event title</span>
+            <span class="text-small">Title</span>
           </label>
-          <input type="number" x-model.number="renderTitleFontSize" min="4" max="30" class="input text-caption py-0.5 px-1 w-14" title="Font size" :disabled="!renderIncludeEventTitle">
-          <select x-model="renderTitleFontFamily" class="input text-caption py-0.5 px-1 w-40" title="Font family" :disabled="!renderIncludeEventTitle">
+          <input type="number" x-model.number="renderTitleFontSize" min="4" max="30" class="input text-caption py-0.5 px-1" title="Font size" :disabled="!renderIncludeEventTitle">
+          <select x-model="renderTitleFontFamily" class="input text-caption py-0.5 px-1" title="Font family" :disabled="!renderIncludeEventTitle">
             <option value="DejaVu Sans">DejaVu Sans</option>
             <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
             <option value="Cantarell">Cantarell</option>
             <option value="Cantarell,Bold">Cantarell Bold</option>
             <option value="Bitstream Charter">Bitstream Charter</option>
           </select>
-        </div>
 
-        <div class="flex items-center gap-2">
-          <label class="flex items-center gap-2 flex-1">
+          <label class="flex items-center gap-2">
             <input type="checkbox" x-model="renderIncludeEventSubtitle">
-            <span class="text-small">Event subtitle</span>
+            <span class="text-small">Sub-title</span>
           </label>
-          <input type="number" x-model.number="renderSubtitleFontSize" min="4" max="30" class="input text-caption py-0.5 px-1 w-14" title="Font size" :disabled="!renderIncludeEventSubtitle">
-          <select x-model="renderSubtitleFontFamily" class="input text-caption py-0.5 px-1 w-40" title="Font family" :disabled="!renderIncludeEventSubtitle">
+          <input type="number" x-model.number="renderSubtitleFontSize" min="4" max="30" class="input text-caption py-0.5 px-1" title="Font size" :disabled="!renderIncludeEventSubtitle">
+          <select x-model="renderSubtitleFontFamily" class="input text-caption py-0.5 px-1" title="Font family" :disabled="!renderIncludeEventSubtitle">
             <option value="DejaVu Sans">DejaVu Sans</option>
             <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
             <option value="Cantarell">Cantarell</option>
             <option value="Cantarell,Bold">Cantarell Bold</option>
             <option value="Bitstream Charter">Bitstream Charter</option>
           </select>
-        </div>
 
-        <div class="flex items-center gap-2">
-          <label class="flex items-center gap-2 flex-1">
+          <label class="flex items-center gap-2">
             <input type="checkbox" x-model="renderIncludePhotoCaptions">
-            <span class="text-small">Per-photo captions</span>
+            <span class="text-small">Page</span>
           </label>
-          <input type="number" x-model.number="renderPhotoFontSize" min="4" max="30" class="input text-caption py-0.5 px-1 w-14" title="Font size" :disabled="!renderIncludePhotoCaptions">
-          <select x-model="renderPhotoFontFamily" class="input text-caption py-0.5 px-1 w-40" title="Font family" :disabled="!renderIncludePhotoCaptions">
+          <input type="number" x-model.number="renderPhotoFontSize" min="4" max="30" class="input text-caption py-0.5 px-1" title="Font size" :disabled="!renderIncludePhotoCaptions">
+          <select x-model="renderPhotoFontFamily" class="input text-caption py-0.5 px-1" title="Font family" :disabled="!renderIncludePhotoCaptions">
             <option value="DejaVu Sans">DejaVu Sans</option>
             <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
             <option value="Cantarell">Cantarell</option>
