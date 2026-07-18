@@ -28,7 +28,9 @@ def view_render(token):
     if rs.is_expired:
         return render_template("share/invalid.html", is_share_view=True), 410
 
-    session_key = f"rshare_{token}"
+    import hashlib
+    pw_sig = hashlib.md5((rs.plain_password or "WELCOME").encode()).hexdigest()[:8]
+    session_key = f"rshare_{token}_{pw_sig}"
 
     if request.method == "POST":
         submitted = (request.form.get("password") or "").strip()
@@ -65,7 +67,9 @@ def view_render_video(token):
     rs = db.session.query(RenderShare).filter_by(token=token).first()
     if not rs or rs.is_expired:
         abort(404)
-    session_key = f"rshare_{token}"
+    import hashlib
+    pw_sig = hashlib.md5((rs.plain_password or "WELCOME").encode()).hexdigest()[:8]
+    session_key = f"rshare_{token}_{pw_sig}"
     if not session.get(session_key):
         abort(403)
     from app.services import r2 as R2
