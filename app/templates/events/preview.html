@@ -709,6 +709,7 @@ function previewPage() {
         this.version = this.availableVersions.includes('source') ? 'source' : this.availableVersions[0];
         this.loadVersion();
       }
+      this.loadDecorationTheme();
       // Load playlist if set
       if (this.playlistId) this.loadPlaylist();
       // Keyboard shortcuts
