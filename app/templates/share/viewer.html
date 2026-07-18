@@ -189,6 +189,28 @@ body.fs-lock { overflow: hidden !important; }
 
 
 
+  <div class="p-3 border border-line rounded-standard flex items-center gap-3 justify-end ml-auto max-w-md" x-show="songs.length > 0" x-cloak>
+    <div class="w-8 h-8 rounded-full bg-indigo-soft flex items-center justify-center flex-shrink-0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-small font-medium truncate" x-text="currentSong ? currentSong.name : 'No music playing'"></p>
+      <p class="text-caption text-ink-soft" x-text="'Song ' + (songIndex + 1) + ' of ' + songs.length"></p>
+    </div>
+    <div class="flex items-center gap-1">
+      <button type="button" @click="prevSong()" class="btn-secondary" title="Previous song">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+      </button>
+      <button type="button" @click="toggleAudio()" class="btn-secondary" :title="audioPlaying ? 'Pause' : 'Play'">
+        <svg x-show="!audioPlaying" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+        <svg x-show="audioPlaying" x-cloak width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="5" height="16"></rect><rect x="14" y="4" width="5" height="16"></rect></svg>
+      </button>
+      <button type="button" @click="nextSong()" class="btn-secondary" title="Next song">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+      </button>
+    </div>
+  </div>
+
   <audio x-ref="audioEl" @ended="onAudioEnded()" preload="auto"></audio>
 </div>
 {% endblock %}
