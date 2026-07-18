@@ -340,7 +340,7 @@
   {# Create Slideshow modal #}
   <div x-show="createSlideshowModal" x-cloak
        @keydown.escape.window="closeCreateSlideshowModal()"
-       class="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4">
+       style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
     <div @click.stop class="bg-white rounded-comfortable max-w-lg w-full max-h-[90vh] overflow-y-auto">
 
       <div x-show="!createSlideshowResult" class="p-6 space-y-4">
