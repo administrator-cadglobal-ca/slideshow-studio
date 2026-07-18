@@ -1,0 +1,22 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ event_name }} - Video{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-6">
+  <div class="mb-4">
+    <h1 class="text-h3 text-ink">{{ event_name }}</h1>
+    <p class="text-caption text-ink-soft">{{ filename }}</p>
+  </div>
+  <div class="bg-black rounded-comfortable overflow-hidden">
+    <video controls autoplay class="w-full" style="max-height:80vh;">
+      <source src="{{ url_for('render_share.view_render_video', token=token) }}" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  </div>
+  <div class="mt-3 text-center">
+    <form method="post" action="{{ url_for('render_share.logout_render', token=token) }}" class="inline">
+      <button type="submit" class="text-caption text-ink-soft hover:underline">Sign out</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
