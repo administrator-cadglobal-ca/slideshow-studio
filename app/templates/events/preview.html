@@ -191,15 +191,9 @@ body.fs-lock { overflow: hidden !important; }
 
     {# Caption overlay - MUST be descendant of stage (which gets .fs-fake) #}
       <div class="caption-overlay" x-show="hasCaption" x-cloak>
-        <template x-if="captionTitle">
-          <div class="caption-overlay__title" x-text="captionTitle"></div>
-        </template>
-        <template x-if="captionSubtitle">
-          <div class="caption-overlay__subtitle" x-text="captionSubtitle"></div>
-        </template>
-        <template x-if="currentPhotoCaption">
-          <div class="caption-overlay__photo" x-text="currentPhotoCaption"></div>
-        </template>
+        <div x-show="captionStyles.title.enabled && captionTitle" :style="titleStyle" x-text="captionTitle"></div>
+        <div x-show="captionStyles.subtitle.enabled && captionSubtitle" :style="subtitleStyle" x-text="captionSubtitle"></div>
+        <div x-show="captionStyles.photo.enabled && currentPhotoCaption" :style="photoStyle" x-text="currentPhotoCaption"></div>
       </div>
   </div>
 
