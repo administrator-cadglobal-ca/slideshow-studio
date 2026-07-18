@@ -1935,9 +1935,9 @@ function eventsPage() {
     },
 
     openRenderFilenameModal() {
-      // Compute default filename
+      // Compute default filename: event name first, then version, joined with hyphen
       var safeName = (this.eventName || 'event').replace(/[^a-zA-Z0-9\-_]/g, '-').substring(0, 60);
-      this.renderFilename = this.renderVersion + '_' + safeName;
+      this.renderFilename = safeName + '-' + this.renderVersion;
       this.renderFilenameModalOpen = true;
     },
 

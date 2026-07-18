@@ -840,7 +840,7 @@ def render_mp4(event_id):
         safe_custom = "".join(c if c.isalnum() or c in "-_. " else "-" for c in custom_filename)[:120].strip()
         out_name = f"{safe_custom}.mp4" if safe_custom else f"{version}_{_safe_evt_name}.mp4"
     else:
-        out_name = f"{version}_{_safe_evt_name}.mp4"
+        out_name = f"{_safe_evt_name}-{version}.mp4"
     _user_id = current_user.id
     _event_id = event_id
     _frame_names = frame_names
