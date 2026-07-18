@@ -621,6 +621,24 @@
     </div>
   </div>
 
+  {# Play render video modal #}
+  <div x-show="playRenderOpen" x-cloak
+       @click="closePlayRender()"
+       @keydown.escape.window="closePlayRender()"
+       style="z-index:75;" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4">
+    <div @click.stop class="max-w-5xl w-full">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-white text-small" x-text="playRenderName"></p>
+        <button type="button" @click="closePlayRender()" class="text-white hover:text-white/70">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <video :src="playRenderUrl" controls autoplay class="w-full rounded-standard bg-black" style="max-height:80vh;"></video>
+    </div>
+  </div>
+
   {# Lightbox modal - full-size photo viewer (outside all tabs) #}
   <div x-show="lightboxOpen" x-cloak
        @click="closeLightbox()"
@@ -790,7 +808,24 @@
               <p class="text-small text-ink truncate" x-text="file.name"></p>
               <p class="text-caption text-ink-soft" x-text="file.size_mb + ' MB'"></p>
             </div>
-            <a :href="file.url" class="btn-secondary text-small flex-none" download>Download</a>
+            <div class="flex items-center gap-1 flex-none">
+              <button type="button" @click="playRender(file)" class="w-9 h-9 rounded-standard hover:bg-line-soft flex items-center justify-center text-ink-soft" title="Play">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              </button>
+              <a :href="file.url" class="w-9 h-9 rounded-standard hover:bg-line-soft flex items-center justify-center text-ink-soft" title="Download" download>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </a>
+              <button type="button" @click="deleteRender(file)" class="w-9 h-9 rounded-standard hover:bg-rose-50 flex items-center justify-center text-rose-700" title="Delete">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </template>
         <p class="text-caption text-ink-soft text-center py-6" x-show="renders.length === 0">
@@ -1001,6 +1036,9 @@ function eventsPage() {
     renderStarted: false,
     renderError: '',
     renders: [],
+    playRenderOpen: false,
+    playRenderUrl: '',
+    playRenderName: '',
     processedVersion: '',
     deleteAllModalOpen: false,
     deleteAllLog: '',
@@ -1440,6 +1478,32 @@ function eventsPage() {
         this.renders = data.files || [];
       } catch (e) {
         console.error('load renders', e);
+      }
+    },
+
+    playRender(file) {
+      this.playRenderUrl = '/events/' + this.eventId + '/play/' + encodeURIComponent(file.name);
+      this.playRenderName = file.name;
+      this.playRenderOpen = true;
+    },
+
+    closePlayRender() {
+      this.playRenderOpen = false;
+      this.playRenderUrl = '';
+    },
+
+    async deleteRender(file) {
+      if (!confirm('Delete render "' + file.name + '"? This cannot be undone.')) return;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/output-files/' + encodeURIComponent(file.name), {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.loadRenders();
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
       }
     },
 

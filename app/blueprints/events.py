@@ -985,7 +985,6 @@ def download_output(event_id, filename):
     db.session.query(Event)\
       .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     key = R2.output_key(current_user.id, event_id, filename)
-    # Add ResponseContentDisposition to force download instead of inline play
     url = R2.get_client().generate_presigned_url(
         "get_object",
         Params={
@@ -996,6 +995,34 @@ def download_output(event_id, filename):
         ExpiresIn=3600,
     )
     return redirect(url)
+
+
+@bp.route("/<event_id>/play/<filename>")
+@login_required
+def play_output(event_id, filename):
+    """Stream rendered MP4 inline for in-browser playback (no attachment header)."""
+    from app.services import r2 as R2
+    from flask import redirect
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    key = R2.output_key(current_user.id, event_id, filename)
+    url = R2.presigned_url(key, expires=3600)
+    return redirect(url)
+
+
+@bp.route("/<event_id>/output-files/<filename>", methods=["DELETE"])
+@login_required
+def delete_output(event_id, filename):
+    """Delete a rendered MP4 from R2."""
+    from app.services import r2 as R2
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    try:
+        key = R2.output_key(current_user.id, event_id, filename)
+        R2.delete(key)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # ── Share token management ────────────────────────────────────────────────────
