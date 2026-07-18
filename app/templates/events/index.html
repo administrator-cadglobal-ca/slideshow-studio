@@ -1113,7 +1113,11 @@ function eventsPage() {
         await fetch('/api/v1/events/' + encodeURIComponent(this.eventId) + '/photos/' + photoId + '/delete', {
           method: 'POST', credentials: 'same-origin'
         });
+        // Remove from local state
         this.photos = this.photos.filter(function(p) { return p.id !== photoId; });
+        this.captionsPhotos = this.captionsPhotos.filter(function(p) { return p.id !== photoId; });
+        // Refresh slideshows to reflect cascade
+        this.loadSlideshows();
       } catch (e) {
         console.error('Failed to delete photo', e);
       }
