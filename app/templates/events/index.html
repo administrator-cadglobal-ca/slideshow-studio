@@ -815,20 +815,77 @@
       </div>
 
 
-      <div class="mt-4 space-y-2 border-t border-line pt-3">
+      <div class="mt-4 space-y-3 border-t border-line pt-3">
         <p class="text-caption text-ink-soft font-medium">Captions in video</p>
-        <label class="flex items-center gap-2">
-          <input type="checkbox" x-model="renderIncludeEventTitle">
-          <span class="text-small">Burn in event title</span>
-        </label>
-        <label class="flex items-center gap-2">
-          <input type="checkbox" x-model="renderIncludeEventSubtitle">
-          <span class="text-small">Burn in event subtitle</span>
-        </label>
-        <label class="flex items-center gap-2">
-          <input type="checkbox" x-model="renderIncludePhotoCaptions">
-          <span class="text-small">Burn in per-photo captions</span>
-        </label>
+
+        <div class="border border-line rounded-standard p-3 space-y-2">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" x-model="renderIncludeEventTitle">
+            <span class="text-small font-medium">Event title</span>
+          </label>
+          <div class="grid grid-cols-2 gap-2 pl-6" x-show="renderIncludeEventTitle" x-cloak>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Font size</span>
+              <input type="number" x-model.number="renderTitleFontSize" min="4" max="30" class="input mt-1 w-full text-small">
+            </label>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Font family</span>
+              <select x-model="renderTitleFontFamily" class="input mt-1 w-full text-small">
+                <option value="DejaVu Sans">DejaVu Sans</option>
+                <option value="DejaVu Sans,Bold">DejaVu Sans (Bold)</option>
+                <option value="Cantarell">Cantarell</option>
+                <option value="Cantarell,Bold">Cantarell (Bold)</option>
+                <option value="Bitstream Charter">Bitstream Charter</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="border border-line rounded-standard p-3 space-y-2">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" x-model="renderIncludeEventSubtitle">
+            <span class="text-small font-medium">Event subtitle</span>
+          </label>
+          <div class="grid grid-cols-2 gap-2 pl-6" x-show="renderIncludeEventSubtitle" x-cloak>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Font size</span>
+              <input type="number" x-model.number="renderSubtitleFontSize" min="4" max="30" class="input mt-1 w-full text-small">
+            </label>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Font family</span>
+              <select x-model="renderSubtitleFontFamily" class="input mt-1 w-full text-small">
+                <option value="DejaVu Sans">DejaVu Sans</option>
+                <option value="DejaVu Sans,Bold">DejaVu Sans (Bold)</option>
+                <option value="Cantarell">Cantarell</option>
+                <option value="Cantarell,Bold">Cantarell (Bold)</option>
+                <option value="Bitstream Charter">Bitstream Charter</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="border border-line rounded-standard p-3 space-y-2">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" x-model="renderIncludePhotoCaptions">
+            <span class="text-small font-medium">Per-photo captions</span>
+          </label>
+          <div class="grid grid-cols-2 gap-2 pl-6" x-show="renderIncludePhotoCaptions" x-cloak>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Font size</span>
+              <input type="number" x-model.number="renderPhotoFontSize" min="4" max="30" class="input mt-1 w-full text-small">
+            </label>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Font family</span>
+              <select x-model="renderPhotoFontFamily" class="input mt-1 w-full text-small">
+                <option value="DejaVu Sans">DejaVu Sans</option>
+                <option value="DejaVu Sans,Bold">DejaVu Sans (Bold)</option>
+                <option value="Cantarell">Cantarell</option>
+                <option value="Cantarell,Bold">Cantarell (Bold)</option>
+                <option value="Bitstream Charter">Bitstream Charter</option>
+              </select>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div class="mt-4 flex items-center gap-3">
@@ -1095,6 +1152,12 @@ function eventsPage() {
     renderDuration: 4.0,
     renderIncludeEventTitle: true,
     renderIncludeEventSubtitle: true,
+    renderTitleFontSize: 8,
+    renderTitleFontFamily: 'DejaVu Sans,Bold',
+    renderSubtitleFontSize: 6,
+    renderSubtitleFontFamily: 'DejaVu Sans',
+    renderPhotoFontSize: 6,
+    renderPhotoFontFamily: 'DejaVu Sans',
     renderIncludePhotoCaptions: true,
     renderFilename: '',
     renderFilenameModalOpen: false,
@@ -1975,6 +2038,12 @@ function eventsPage() {
             include_event_title: this.renderIncludeEventTitle,
             include_event_subtitle: this.renderIncludeEventSubtitle,
             include_photo_captions: this.renderIncludePhotoCaptions,
+            title_font_size: this.renderTitleFontSize,
+            title_font_family: this.renderTitleFontFamily,
+            subtitle_font_size: this.renderSubtitleFontSize,
+            subtitle_font_family: this.renderSubtitleFontFamily,
+            photo_font_size: this.renderPhotoFontSize,
+            photo_font_family: this.renderPhotoFontFamily,
             filename: this.renderFilename || null,
           }),
         });

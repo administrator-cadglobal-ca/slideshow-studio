@@ -795,6 +795,12 @@ def render_mp4(event_id):
     include_event_title    = bool(data.get("include_event_title", False))
     include_event_subtitle = bool(data.get("include_event_subtitle", False))
     include_photo_captions = bool(data.get("include_photo_captions", False))
+    title_font_size    = int(data.get("title_font_size", 8) or 8)
+    title_font_family  = str(data.get("title_font_family", "DejaVu Sans") or "DejaVu Sans")
+    subtitle_font_size = int(data.get("subtitle_font_size", 6) or 6)
+    subtitle_font_family = str(data.get("subtitle_font_family", "DejaVu Sans") or "DejaVu Sans")
+    photo_font_size    = int(data.get("photo_font_size", 6) or 6)
+    photo_font_family  = str(data.get("photo_font_family", "DejaVu Sans") or "DejaVu Sans")
     from app.models import log_activity
     log_activity(evt, "render_started", {"version": version, "playlist_id": playlist_id, "duration": duration, "captions": include_event_title or include_event_subtitle or include_photo_captions})
 
@@ -850,6 +856,17 @@ def render_mp4(event_id):
     _event_caption = event_caption_text
     _photo_captions = photo_captions
     _use_subs = include_event_title or include_event_subtitle or include_photo_captions
+    _title_size = title_font_size
+    _title_font = title_font_family
+    _subtitle_size = subtitle_font_size
+    _subtitle_font = subtitle_font_family
+    _photo_size = photo_font_size
+    _photo_font = photo_font_family
+    _incl_title = include_event_title
+    _incl_subtitle = include_event_subtitle
+    _incl_photo = include_photo_captions
+    _evt_title = evt.title_text or ""
+    _evt_subtitle = evt.title_subtitle or ""
     import tempfile as _tmp_r
     _rlog_dir = Path(_tmp_r.gettempdir()) / "slideshow_logs"
     _rlog_dir.mkdir(exist_ok=True)
@@ -963,19 +980,36 @@ def render_mp4(event_id):
                 idx = 1
                 total_duration = len(frames) * duration
 
-                # Combined bottom-caption approach:
-                # Each frame gets a caption entry that stacks event caption (if any) above photo caption (if any)
-                event_esc = _srt_escape(_event_caption) if _event_caption else ""
+                # Per-line inline styling via ASS override tags
+                # {\fnFontName\fsSize}text
+                def _style_tag(font, size):
+                    # Handle "Family,Bold" pseudo-syntax
+                    if "," in font:
+                        base, weight = font.split(",", 1)
+                        base = base.strip()
+                        bold_tag = "\\b1" if "bold" in weight.lower() else ""
+                        return f"{{\\fn{base}\\fs{size}{bold_tag}}}"
+                    return f"{{\\fn{font}\\fs{size}}}"
+
+                title_tag    = _style_tag(_title_font, _title_size)
+                subtitle_tag = _style_tag(_subtitle_font, _subtitle_size)
+                photo_tag    = _style_tag(_photo_font, _photo_size)
+                reset_tag    = "{\\r}"  # reset styling between lines
+
+                title_esc = _srt_escape(_evt_title) if _incl_title else ""
+                subtitle_esc = _srt_escape(_evt_subtitle) if _incl_subtitle else ""
+
                 for i in range(len(frames)):
                     photo_cap = ""
-                    if _photo_captions and i < len(_photo_captions):
+                    if _incl_photo and _photo_captions and i < len(_photo_captions):
                         photo_cap = _srt_escape(_photo_captions[i])
-                    # Build combined text - event on top line, photo on bottom line (within block)
                     lines = []
-                    if event_esc:
-                        lines.append(event_esc)
+                    if title_esc:
+                        lines.append(f"{title_tag}{title_esc}{reset_tag}")
+                    if subtitle_esc:
+                        lines.append(f"{subtitle_tag}{subtitle_esc}{reset_tag}")
                     if photo_cap:
-                        lines.append(photo_cap)
+                        lines.append(f"{photo_tag}{photo_cap}{reset_tag}")
                     if not lines:
                         continue
                     combined = "\n".join(lines)
@@ -1006,7 +1040,7 @@ def render_mp4(event_id):
             if srt_path and srt_path.exists():
                 # Escape path for ffmpeg subtitles filter (single-quote wrap + colon escape)
                 srt_esc = str(srt_path).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-                subs_style = "FontName=Arial,FontSize=8,PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=1,Shadow=0,BorderStyle=1"
+                subs_style = "PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=1,Shadow=0,BorderStyle=1"
                 vf = f"subtitles='{srt_esc}':force_style='{subs_style}'," + vf
 
             cmd += ["-vf", vf,
