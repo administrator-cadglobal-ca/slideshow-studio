@@ -131,6 +131,8 @@ class ShareToken(db.Model):
     description    = db.Column(db.String(200), nullable=True)   # e.g. "Family group"
     plain_password = db.Column(db.String(100), nullable=True)   # stored locally for owner reference
     versions_list  = db.Column(db.Text, nullable=True)          # JSON list of uploaded versions
+    name           = db.Column(db.String(120), nullable=True)   # user-provided slideshow name
+    photo_ids      = db.Column(db.Text, nullable=True)          # JSON list of photo IDs (empty = all)
 
     event = db.relationship("Event", foreign_keys=[event_id],
                               backref=db.backref("share_tokens", lazy="dynamic"))
