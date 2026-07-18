@@ -346,6 +346,60 @@
 
   </div>
 
+  {# Photo picker modal (for editing slideshow selection) #}
+  <div x-show="photoPickerOpen" x-cloak
+       @keydown.escape.window="closePhotoPicker()"
+       style="z-index:85;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-h3 text-ink">Modify photos in slideshow</h3>
+            <p class="text-caption text-ink-soft" x-show="photoPickerFor">
+              Editing "<span x-text="photoPickerFor?.name"></span>". Select which photos appear in this slideshow.
+            </p>
+          </div>
+          <button type="button" @click="closePhotoPicker()" class="text-ink-soft hover:text-ink">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap p-3 bg-slate-50 rounded-standard border border-line">
+          <button type="button" class="btn-secondary text-small" @click="selectAllPhotoPicker()">Select all</button>
+          <button type="button" class="btn-secondary text-small" @click="deselectAllPhotoPicker()">Deselect all</button>
+          <span class="text-caption text-ink-soft">
+            <span x-text="photoPickerSelection.length"></span> of <span x-text="photos.length"></span> selected
+          </span>
+        </div>
+
+        <div class="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+          <template x-for="p in photos" :key="p.id">
+            <div class="relative group rounded-standard overflow-hidden bg-line-soft aspect-square cursor-pointer"
+                 :class="photoPickerSelection.includes(p.id) ? 'ring-2 ring-indigo' : ''"
+                 @click="togglePhotoPickerId(p.id)">
+              <img :src="p.thumb_url" class="w-full h-full object-cover pointer-events-none" loading="lazy">
+              <div class="absolute top-1 left-1 z-10">
+                <input type="checkbox" :checked="photoPickerSelection.includes(p.id)"
+                       class="w-5 h-5 rounded accent-indigo pointer-events-none">
+              </div>
+              <span class="absolute bottom-1 left-1 text-caption bg-white/80 px-1 rounded truncate" style="max-width:calc(100% - 8px);" x-text="p.orig_name || p.filename"></span>
+            </div>
+          </template>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-line">
+          <button type="button" class="btn-secondary" @click="closePhotoPicker()">Cancel</button>
+          <button type="button" class="btn-primary" @click="savePhotoPicker()" :disabled="savingPhotoPicker">
+            <span x-show="!savingPhotoPicker">Save selection</span>
+            <span x-show="savingPhotoPicker" x-cloak>Saving&hellip;</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {# Slideshows list modal #}
   <div x-show="slideshowsListModal" x-cloak
        @keydown.escape.window="closeSlideshowsList()"
@@ -404,7 +458,8 @@
                   </div>
                 </div>
                 <div class="mt-3 flex items-center gap-2 flex-wrap">
-                  <button type="button" class="btn-secondary text-small" @click="startEditSlideshow(ss)">Edit</button>
+                  <button type="button" class="btn-secondary text-small" @click="startEditSlideshow(ss)">Edit name/password</button>
+                  <button type="button" class="btn-secondary text-small" @click="openPhotoPicker(ss)">Modify photos</button>
                   <button type="button" class="btn-secondary text-small" @click="regenerateSlideshowUrl(ss)">Regenerate URL</button>
                   <button type="button" class="text-small text-rose-700 hover:underline" @click="deleteSlideshow(ss)">Delete</button>
                 </div>
@@ -1442,6 +1497,12 @@ function eventsPage() {
     editSlideshowError: '',
     savingEditSlideshow: false,
 
+    // Photo picker for editing slideshow selection
+    photoPickerOpen: false,
+    photoPickerSelection: [],
+    photoPickerFor: null,  // the slideshow being edited
+    savingPhotoPicker: false,
+
     openSlideshowsList() {
       this.slideshowsListModal = true;
       this.loadSlideshows();
@@ -1485,6 +1546,59 @@ function eventsPage() {
         this.editSlideshowError = 'Save failed: ' + e.message;
       } finally {
         this.savingEditSlideshow = false;
+      }
+    },
+
+    openPhotoPicker(ss) {
+      this.photoPickerFor = ss;
+      // Pre-select currently included photos (empty photo_ids means "all")
+      if (ss.photo_ids && ss.photo_ids.length > 0) {
+        this.photoPickerSelection = ss.photo_ids.slice();
+      } else {
+        this.photoPickerSelection = this.photos.map(p => p.id);
+      }
+      this.photoPickerOpen = true;
+    },
+
+    closePhotoPicker() {
+      this.photoPickerOpen = false;
+      this.photoPickerFor = null;
+      this.photoPickerSelection = [];
+    },
+
+    togglePhotoPickerId(id) {
+      var pos = this.photoPickerSelection.indexOf(id);
+      if (pos === -1) this.photoPickerSelection.push(id);
+      else this.photoPickerSelection.splice(pos, 1);
+    },
+
+    selectAllPhotoPicker() {
+      this.photoPickerSelection = this.photos.map(p => p.id);
+    },
+
+    deselectAllPhotoPicker() {
+      this.photoPickerSelection = [];
+    },
+
+    async savePhotoPicker() {
+      if (!this.photoPickerFor) return;
+      this.savingPhotoPicker = true;
+      try {
+        var body = { photo_ids: this.photoPickerSelection };
+        const r = await fetch('/events/' + this.eventId + '/share/' + this.photoPickerFor.token, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.closePhotoPicker();
+        this.loadSlideshows();
+      } catch (e) {
+        alert('Save failed: ' + e.message);
+      } finally {
+        this.savingPhotoPicker = false;
       }
     },
 
