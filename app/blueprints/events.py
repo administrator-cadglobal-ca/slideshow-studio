@@ -1004,16 +1004,18 @@ def render_mp4(event_id):
                 cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]
             cmd.append(str(out_file))
 
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+            # -loglevel error keeps ffmpeg quiet except for progress and real errors
+            cmd_quiet = cmd[:1] + ["-loglevel", "error", "-stats"] + cmd[1:]
+            proc = subprocess.Popen(cmd_quiet, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, text=True,
                                     bufsize=1)
             _last_frame_logged = 0
             for line in proc.stdout:
                 l = line.strip()
-                if "error" in l.lower() or "Error" in l:
+                # Only log genuine errors (skip harmless "no error" tags in config)
+                if any(k in l for k in ["Error opening", "No such file", "Invalid", "cannot", "failed"]) and "error" in l.lower():
                     log(f"  {l}")
                 elif l.startswith("frame="):
-                    # Only log every 200 frames to reduce noise
                     try:
                         n = int(l.split("frame=")[1].split()[0])
                         if n - _last_frame_logged >= 200:
@@ -1021,6 +1023,7 @@ def render_mp4(event_id):
                             _last_frame_logged = n
                     except Exception:
                         pass
+                # Skip everything else (ffmpeg config header, codec info, etc.)
             proc.wait()
 
             if proc.returncode == 0 and out_file.exists():
