@@ -142,6 +142,30 @@ body.fs-lock { overflow: hidden !important; }
     </button>
   </div>
 
+  {# Decoration theme #}
+  <div class="mb-4 rounded-standard border border-line p-3 space-y-2 bg-white">
+    <div class="flex items-center gap-3 flex-wrap">
+      <p class="text-caption text-ink-soft font-medium">Decoration theme</p>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" x-model="showDecorations">
+        <span class="text-small">Show decorations</span>
+      </label>
+      <div class="flex-1"></div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <template x-for="theme in availableThemes" :key="theme.id">
+        <button type="button" @click="applyTheme(theme.id)"
+                :class="currentTheme === theme.id ? 'btn-primary text-small' : 'btn-secondary text-small'">
+          <span x-text="theme.name"></span>
+        </button>
+      </template>
+      <button type="button" @click="applyTheme(null)"
+              :class="!currentTheme ? 'btn-primary text-small' : 'btn-secondary text-small'">
+        None
+      </button>
+    </div>
+  </div>
+
   {# Caption styling controls #}
   <div class="mb-4 rounded-standard border border-line p-3 space-y-2 bg-white" @change="saveEventCaptionStyles()">
     <p class="text-caption text-ink-soft font-medium">Caption styling</p>
@@ -532,6 +556,75 @@ function previewPage() {
         console.error('save caption styles', e);
       }
     },
+
+    // Decorations
+    showDecorations: true,
+    currentTheme: null,
+    availableThemes: [],
+    currentThemeData: null,
+    decoClips: [],
+
+    async loadDecorationTheme() {
+      try {
+        const r = await fetch('/events/' + this.eventId + '/decoration-theme', {credentials: 'same-origin'});
+        const data = await r.json();
+        this.currentTheme = data.current_theme;
+        this.currentThemeData = data.current_theme_data;
+        this.availableThemes = data.available_themes || [];
+        await this.rebuildDecoClips();
+      } catch (e) {
+        console.error('load theme', e);
+      }
+    },
+
+    async applyTheme(themeId) {
+      try {
+        const r = await fetch('/events/' + this.eventId + '/decoration-theme', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({ theme: themeId }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.currentTheme = data.theme;
+        await this.loadDecorationTheme();
+      } catch (e) {
+        alert('Apply theme failed: ' + e.message);
+      }
+    },
+
+    async rebuildDecoClips() {
+      this.decoClips = [];
+      if (!this.currentThemeData || !this.currentThemeData.clips) return;
+      const clips = this.currentThemeData.clips;
+      // Randomize per-photo (but consistent for same photo index)
+      const seed = this.currentIndex + 1;
+      const rand = (n) => ((seed * 9301 + 49297) % 233280 + n * 137) % 100;
+      for (var ci = 0; ci < clips.length; ci++) {
+        const clipDef = clips[ci];
+        // Pick position(s) - up to clipDef.count from allowed positions
+        const positions = clipDef.positions.slice();
+        for (var i = 0; i < clipDef.count && positions.length > 0; i++) {
+          const pIdx = rand(ci * 10 + i) % positions.length;
+          const position = positions[pIdx];
+          positions.splice(pIdx, 1);
+          // Fetch SVG content
+          try {
+            const svgRes = await fetch('/static/clips/' + this.currentTheme + '/' + clipDef.file);
+            const svgText = await svgRes.text();
+            this.decoClips.push({
+              svg: svgText,
+              position: position,
+              size: clipDef.size,
+              animate: clipDef.animate || 'twinkle',
+            });
+          } catch (e) {
+            console.error('load clip', clipDef.file, e);
+          }
+        }
+      }
+    },
     playing: false,
     slideDur: 3,
     slideTimer: null,
@@ -646,11 +739,13 @@ function previewPage() {
     prev() {
       if (this.images.length === 0) return;
       this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
+      this.rebuildDecoClips();
     },
 
     next() {
       if (this.images.length === 0) return;
       this.currentIndex = (this.currentIndex + 1) % this.images.length;
+      this.rebuildDecoClips();
     },
 
     playAudio() {
