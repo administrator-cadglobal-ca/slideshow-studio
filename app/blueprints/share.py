@@ -61,6 +61,14 @@ def view_share(token):
     # Build versions_data (source + processed)
     versions_data = {}
     photos_ordered = sorted(evt.photos, key=lambda p: p.sort_order)
+    # Filter photos if slideshow has explicit photo_ids selection
+    if st.photo_ids:
+        try:
+            allowed_ids = set(json.loads(st.photo_ids))
+            if allowed_ids:
+                photos_ordered = [p for p in photos_ordered if p.id in allowed_ids]
+        except Exception:
+            pass
     if photos_ordered:
         versions_data["source"] = [
             {
@@ -71,15 +79,27 @@ def view_share(token):
             for p in photos_ordered
         ]
 
+    # Track which indices are "kept" for filtering processed frames
+    if st.photo_ids:
+        all_photos_ordered = sorted(evt.photos, key=lambda p: p.sort_order)
+        try:
+            allowed_ids2 = set(json.loads(st.photo_ids))
+            kept_indices = [i for i, p in enumerate(all_photos_ordered) if p.id in allowed_ids2]
+        except Exception:
+            kept_indices = None
+    else:
+        kept_indices = None
     r2_versions = list_processed_versions_r2(evt.user_id, evt.id)
     for ver, frames in sorted(r2_versions.items()):
+        # If we're filtering by photo_ids, only keep frames at those indices
+        filtered_frames = [frames[i] for i in kept_indices if i < len(frames)] if kept_indices is not None else frames
         versions_data[ver] = [
             {
                 "url":      f"/api/v1/media/processed/{evt.user_id}/{evt.id}/{ver}/{f}",
                 "full_url": f"/api/v1/media/processed/{evt.user_id}/{evt.id}/{ver}/{f}",
                 "name":     f,
             }
-            for f in frames
+            for f in filtered_frames
         ]
 
     # Filter versions if versions_list constraint set
