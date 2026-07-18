@@ -929,29 +929,29 @@ def render_mp4(event_id):
                 idx = 1
                 total_duration = len(frames) * duration
 
-                # Event caption spans the whole video (top)
-                if _event_caption:
+                # Combined bottom-caption approach:
+                # Each frame gets a caption entry that stacks event caption (if any) above photo caption (if any)
+                event_esc = _srt_escape(_event_caption) if _event_caption else ""
+                for i in range(len(frames)):
+                    photo_cap = ""
+                    if _photo_captions and i < len(_photo_captions):
+                        photo_cap = _srt_escape(_photo_captions[i])
+                    # Build combined text - event on top line, photo on bottom line (within block)
+                    lines = []
+                    if event_esc:
+                        lines.append(event_esc)
+                    if photo_cap:
+                        lines.append(photo_cap)
+                    if not lines:
+                        continue
+                    combined = "\n".join(lines)
+                    start = i * duration
+                    end = (i + 1) * duration
                     srt_lines.append(f"{idx}")
-                    srt_lines.append(f"{_srt_time(0)} --> {_srt_time(total_duration)}")
-                    srt_lines.append(f"{{\\an8}}{_srt_escape(_event_caption)}")
+                    srt_lines.append(f"{_srt_time(start)} --> {_srt_time(end)}")
+                    srt_lines.append(f"{{\\an2}}{combined}")
                     srt_lines.append("")
                     idx += 1
-
-                # Per-photo captions (bottom, per slice)
-                if _photo_captions:
-                    for i, cap in enumerate(_photo_captions):
-                        if not cap:
-                            continue
-                        # Only add if we have a matching frame slot
-                        if i >= len(frames):
-                            break
-                        start = i * duration
-                        end = (i + 1) * duration
-                        srt_lines.append(f"{idx}")
-                        srt_lines.append(f"{_srt_time(start)} --> {_srt_time(end)}")
-                        srt_lines.append(f"{{\\an2}}{_srt_escape(cap)}")
-                        srt_lines.append("")
-                        idx += 1
 
                 if len(srt_lines) > 0:
                     with open(str(srt_path), 'w', encoding='utf-8') as f:
