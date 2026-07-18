@@ -27,6 +27,37 @@ body.fs-lock { overflow: hidden !important; }
 .fs-fake .caption-overlay { padding: 4rem 2rem 2rem; }
 .fs-fake .caption-overlay__title { font-size: 1.75rem; }
 .fs-fake .caption-overlay__photo { font-size: 1.35rem; }
+
+/* Decoration overlay */
+.deco-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
+.deco-clip { position: absolute; opacity: 0.9; }
+.deco-clip svg { width: 100%; height: 100%; }
+
+/* Position presets */
+.deco-top-left     { top: 4%;  left: 4%;  }
+.deco-top-right    { top: 4%;  right: 4%; }
+.deco-bottom-left  { bottom: 20%; left: 4%; }
+.deco-bottom-right { bottom: 20%; right: 4%; }
+.deco-center-top   { top: 8%; left: 50%; transform: translateX(-50%); }
+
+/* Animations */
+@keyframes float-pulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.05); } }
+.deco-anim-float-pulse { animation: float-pulse 2.5s ease-in-out infinite; }
+
+@keyframes sway-gentle { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+.deco-anim-sway-gentle { animation: sway-gentle 3.5s ease-in-out infinite; transform-origin: 50% 100%; }
+
+@keyframes twinkle { 0%,100% { opacity: 0.6; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
+.deco-anim-twinkle { animation: twinkle 1.5s ease-in-out infinite; }
+
+@keyframes confetti-fall { 0% { transform: translateY(-20px) rotate(0deg); } 100% { transform: translateY(10px) rotate(360deg); } }
+.deco-anim-confetti-fall { animation: confetti-fall 4s linear infinite; }
+
+@keyframes float-flutter { 0%,100% { transform: translate(0,0) rotate(-5deg); } 50% { transform: translate(5px,-5px) rotate(5deg); } }
+.deco-anim-float-flutter { animation: float-flutter 2s ease-in-out infinite; }
+
+/* Preset for center-top of stage: adjust for aspect */
+.deco-center-top .deco-clip-inner { transform: translateX(-50%); }
 </style>
 {% endblock %}
 
@@ -276,6 +307,15 @@ body.fs-lock { overflow: hidden !important; }
           <div class="fs-song" x-show="currentSong" x-text="currentSong ? currentSong.name : ''"></div>
         </div>
       </div>
+    </div>
+
+    {# Decoration overlay #}
+    <div class="deco-layer" x-show="showDecorations && currentTheme" x-cloak>
+      <template x-for="(clip, i) in decoClips" :key="i">
+        <div :class="'deco-clip deco-' + clip.position + ' deco-anim-' + clip.animate"
+             :style="'width:' + clip.size + '%; height:' + clip.size + '%;'"
+             x-html="clip.svg"></div>
+      </template>
     </div>
 
     {# Caption overlay - MUST be descendant of stage (which gets .fs-fake) #}
