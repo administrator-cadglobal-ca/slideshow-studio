@@ -1036,6 +1036,8 @@ def create_share_token(event_id):
     versions_list = data.get("versions_list")  # list of versions viewer can pick from
     password      = (data.get("password") or "").strip() or "WELCOME"
     description   = data.get("description")
+    slideshow_name = (data.get("name") or "").strip() or "Untitled slideshow"
+    photo_ids     = data.get("photo_ids")
 
     from datetime import datetime, timedelta
     token = secrets.token_urlsafe(24)
