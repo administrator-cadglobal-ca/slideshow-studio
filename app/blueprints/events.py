@@ -845,6 +845,12 @@ def render_mp4(event_id):
     log_path = _rlog_dir / f"{event_id}.log"
     ffmpeg   = current_app.config.get("FFMPEG_PATH", "ffmpeg")
     app_obj  = current_app._get_current_object()
+    # Clear log at start of each render for a clean modal view
+    try:
+        with open(str(log_path), 'w', encoding='utf-8') as f:
+            f.write("")
+    except Exception:
+        pass
 
     def log(msg):
         ts2  = datetime.datetime.now().strftime("%H:%M:%S")
@@ -1001,10 +1007,20 @@ def render_mp4(event_id):
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT, text=True,
                                     bufsize=1)
+            _last_frame_logged = 0
             for line in proc.stdout:
                 l = line.strip()
-                if any(k in l for k in ["frame=", "time=", "error", "Error"]):
+                if "error" in l.lower() or "Error" in l:
                     log(f"  {l}")
+                elif l.startswith("frame="):
+                    # Only log every 200 frames to reduce noise
+                    try:
+                        n = int(l.split("frame=")[1].split()[0])
+                        if n - _last_frame_logged >= 200:
+                            log(f"  frame {n}")
+                            _last_frame_logged = n
+                    except Exception:
+                        pass
             proc.wait()
 
             if proc.returncode == 0 and out_file.exists():
