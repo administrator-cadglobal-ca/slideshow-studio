@@ -675,3 +675,95 @@ def clip_editor(song_id):
     if not song or song.user_id != current_user.id:
         abort(404)
     return render_template("audio/clip_editor.html", song=song)
+
+def _handle_zip_upload(zip_file, library_id):
+    """Extract audio files from ZIP and upload each. Returns summary."""
+    import zipfile
+    import tempfile
+    import os as _os
+    from io import BytesIO
+    from werkzeug.datastructures import FileStorage
+    from flask import jsonify as _jsonify
+
+    AUDIO_EXTS = {".mp3", ".m4a", ".mp4", ".wav", ".ogg", ".flac", ".aac", ".webm"}
+
+    try:
+        # Read zip into memory
+        data = zip_file.read()
+        zf = zipfile.ZipFile(BytesIO(data))
+    except zipfile.BadZipFile:
+        return _jsonify({"error": "Invalid or corrupted ZIP file"}), 400
+
+    uploaded_count = 0
+    skipped = []
+    errors = []
+
+    # Resolve library
+    library = None
+    if library_id:
+        library = db.session.get(Library, int(library_id))
+        if not library or library.user_id != current_user.id:
+            library = None
+    if library is None:
+        library = Library.query.filter_by(user_id=current_user.id, name="Unsorted").first()
+        if library is None:
+            library = Library(user_id=current_user.id, name="Unsorted", color="#8A90A8", sort_order=999)
+            db.session.add(library)
+            db.session.commit()
+
+    default_playlist = library.playlists[0] if library.playlists else None
+    if default_playlist is None:
+        default_playlist = Playlist(library_id=library.id, name="Default", user_id=current_user.id)
+        db.session.add(default_playlist)
+        db.session.commit()
+
+    for member in zf.namelist():
+        # Skip directories and hidden/macOS metadata files
+        if member.endswith("/") or "__MACOSX" in member or _os.path.basename(member).startswith("."):
+            continue
+        ext = _os.path.splitext(member)[1].lower()
+        if ext not in AUDIO_EXTS:
+            skipped.append(_os.path.basename(member))
+            continue
+        try:
+            with zf.open(member) as inner:
+                file_bytes = inner.read()
+            file_stream = BytesIO(file_bytes)
+            safe_name = _os.path.basename(member)
+            fs = FileStorage(stream=file_stream, filename=safe_name, content_type="audio/mpeg")
+            result = save_uploaded_audio(fs, current_user.id)
+            # Create song row
+            from app.models.audio import Song
+            song = Song(
+                library_id  = library.id,
+                user_id     = current_user.id,
+                filename    = result["filename"],
+                orig_name   = safe_name,
+                duration_sec = result.get("duration"),
+            )
+            db.session.add(song)
+            db.session.flush()
+            # Auto-add default clip
+            from app.models.audio import Clip
+            clip = Clip(
+                playlist_id = default_playlist.id,
+                song_id     = song.id,
+                name        = _os.path.splitext(safe_name)[0][:100],
+                trim_start  = 0,
+                trim_end    = result.get("duration"),
+                sort_order  = default_playlist.clips.count() if hasattr(default_playlist.clips, 'count') else len(default_playlist.clips),
+            )
+            db.session.add(clip)
+            uploaded_count += 1
+        except Exception as e:
+            errors.append({"file": member, "error": str(e)[:100]})
+
+    db.session.commit()
+    return _jsonify({
+        "ok": True,
+        "uploaded": uploaded_count,
+        "skipped_count": len(skipped),
+        "error_count": len(errors),
+        "errors": errors[:5],
+        "message": f"Uploaded {uploaded_count} audio file(s) from ZIP" + (f", skipped {len(skipped)} non-audio" if skipped else ""),
+    })
