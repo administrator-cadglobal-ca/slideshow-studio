@@ -111,6 +111,92 @@ body.fs-lock { overflow: hidden !important; }
     </button>
   </div>
 
+  {# Caption styling controls #}
+  <div class="mb-4 rounded-standard border border-line p-3 space-y-2 bg-white" @change="saveEventCaptionStyles()">
+    <p class="text-caption text-ink-soft font-medium">Caption styling</p>
+    <div class="grid gap-2" style="grid-template-columns: 90px 60px 1fr 40px;">
+      <label class="flex items-center gap-2">
+        <input type="checkbox" x-model="captionStyles.title.enabled">
+        <span class="text-small">Title</span>
+      </label>
+      <input type="number" x-model.number="captionStyles.title.size" min="4" max="30" class="input text-caption py-0.5 px-1" :disabled="!captionStyles.title.enabled">
+      <select x-model="captionStyles.title.font" class="input text-caption py-0.5 px-1" :disabled="!captionStyles.title.enabled">
+        <optgroup label="Sans-serif">
+          <option value="DejaVu Sans">DejaVu Sans</option>
+          <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
+          <option value="Montserrat">Montserrat</option>
+          <option value="Montserrat,Bold">Montserrat Bold</option>
+          <option value="Poppins">Poppins</option>
+          <option value="Poppins,Bold">Poppins Bold</option>
+          <option value="Roboto">Roboto</option>
+          <option value="Open Sans">Open Sans</option>
+          <option value="Bebas Neue">Bebas Neue</option>
+          <option value="Oswald">Oswald</option>
+        </optgroup>
+        <optgroup label="Serif">
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Playfair Display,Bold">Playfair Display Bold</option>
+          <option value="Merriweather">Merriweather</option>
+        </optgroup>
+        <optgroup label="Script">
+          <option value="Great Vibes">Great Vibes</option>
+          <option value="Dancing Script">Dancing Script</option>
+          <option value="Dancing Script,Bold">Dancing Script Bold</option>
+        </optgroup>
+      </select>
+      <input type="color" x-model="captionStyles.title.color" class="w-8 h-8 rounded cursor-pointer" :disabled="!captionStyles.title.enabled">
+
+      <label class="flex items-center gap-2">
+        <input type="checkbox" x-model="captionStyles.subtitle.enabled">
+        <span class="text-small">Sub-title</span>
+      </label>
+      <input type="number" x-model.number="captionStyles.subtitle.size" min="4" max="30" class="input text-caption py-0.5 px-1" :disabled="!captionStyles.subtitle.enabled">
+      <select x-model="captionStyles.subtitle.font" class="input text-caption py-0.5 px-1" :disabled="!captionStyles.subtitle.enabled">
+        <optgroup label="Sans-serif">
+          <option value="DejaVu Sans">DejaVu Sans</option>
+          <option value="DejaVu Sans,Bold">DejaVu Sans Bold</option>
+          <option value="Montserrat">Montserrat</option>
+          <option value="Poppins">Poppins</option>
+          <option value="Roboto">Roboto</option>
+          <option value="Open Sans">Open Sans</option>
+        </optgroup>
+        <optgroup label="Serif">
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Merriweather">Merriweather</option>
+        </optgroup>
+        <optgroup label="Script">
+          <option value="Great Vibes">Great Vibes</option>
+          <option value="Dancing Script">Dancing Script</option>
+        </optgroup>
+      </select>
+      <input type="color" x-model="captionStyles.subtitle.color" class="w-8 h-8 rounded cursor-pointer" :disabled="!captionStyles.subtitle.enabled">
+
+      <label class="flex items-center gap-2">
+        <input type="checkbox" x-model="captionStyles.photo.enabled">
+        <span class="text-small">Page</span>
+      </label>
+      <input type="number" x-model.number="captionStyles.photo.size" min="4" max="30" class="input text-caption py-0.5 px-1" :disabled="!captionStyles.photo.enabled">
+      <select x-model="captionStyles.photo.font" class="input text-caption py-0.5 px-1" :disabled="!captionStyles.photo.enabled">
+        <optgroup label="Sans-serif">
+          <option value="DejaVu Sans">DejaVu Sans</option>
+          <option value="Montserrat">Montserrat</option>
+          <option value="Poppins">Poppins</option>
+          <option value="Roboto">Roboto</option>
+          <option value="Open Sans">Open Sans</option>
+        </optgroup>
+        <optgroup label="Serif">
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Merriweather">Merriweather</option>
+        </optgroup>
+        <optgroup label="Script">
+          <option value="Great Vibes">Great Vibes</option>
+          <option value="Dancing Script">Dancing Script</option>
+        </optgroup>
+      </select>
+      <input type="color" x-model="captionStyles.photo.color" class="w-8 h-8 rounded cursor-pointer" :disabled="!captionStyles.photo.enabled">
+    </div>
+  </div>
+
   {# Main stage #}
   <div class="relative bg-black rounded-comfortable overflow-hidden mb-4"
        :class="isFullscreen ? 'fs-fake' : ''"
@@ -393,6 +479,19 @@ function previewPage() {
     get titleStyle() { return this._mkCaptionStyle(this.captionStyles.title); },
     get subtitleStyle() { return this._mkCaptionStyle(this.captionStyles.subtitle); },
     get photoStyle() { return this._mkCaptionStyle(this.captionStyles.photo); },
+
+    async saveEventCaptionStyles() {
+      try {
+        await fetch('/events/' + this.eventId + '/caption/styles', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({ caption_styles: this.captionStyles }),
+        });
+      } catch (e) {
+        console.error('save caption styles', e);
+      }
+    },
     playing: false,
     slideDur: 3,
     slideTimer: null,
