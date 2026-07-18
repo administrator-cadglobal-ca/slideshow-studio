@@ -1204,6 +1204,39 @@ def delete_output(event_id, filename):
 # ── Share token management ────────────────────────────────────────────────────
 
 # ─── Captions ─────────────────────────────────────────────────────────────
+@bp.route("/<event_id>/caption/styles", methods=["POST"])
+@login_required
+def save_caption_styles(event_id):
+    """Save caption style settings (title/subtitle/photo font, size, color) at event level."""
+    import json
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    data = request.json or {}
+    styles = data.get("caption_styles")
+    if styles:
+        evt.caption_styles = json.dumps(styles)
+    else:
+        evt.caption_styles = None
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@bp.route("/<event_id>/caption/styles", methods=["GET"])
+@login_required
+def get_caption_styles(event_id):
+    """Return caption style settings for this event."""
+    import json
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    styles = None
+    if evt.caption_styles:
+        try:
+            styles = json.loads(evt.caption_styles)
+        except Exception:
+            pass
+    return jsonify({"caption_styles": styles})
+
+
 @bp.route("/<event_id>/caption/event", methods=["POST"])
 @login_required
 def save_event_caption(event_id):

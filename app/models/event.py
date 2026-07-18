@@ -18,6 +18,7 @@ class Event(db.Model):
     title_duration  = db.Column(db.Float,       default=5.0)
     title_bg        = db.Column(db.String(10),  default="#0d1b2a")
     title_color     = db.Column(db.String(10),  default="#ffffff")
+    caption_styles  = db.Column(db.Text, nullable=True)  # JSON: {title:{},subtitle:{},photo:{}}
 
     end_text        = db.Column(db.String(255), default="Thank You for Watching")
     end_duration    = db.Column(db.Float,       default=4.0)
