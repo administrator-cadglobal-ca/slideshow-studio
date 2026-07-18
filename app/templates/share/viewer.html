@@ -193,9 +193,24 @@ body.fs-lock { overflow: hidden !important; }
     <div class="w-8 h-8 rounded-full bg-indigo-soft flex items-center justify-center flex-shrink-0">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
     </div>
-    <div class="flex-1 min-w-0">
-      <p class="text-small font-medium truncate" x-text="currentSong ? currentSong.name : 'No music playing'"></p>
-      <p class="text-caption text-ink-soft" x-text="'Song ' + (songIndex + 1) + ' of ' + songs.length"></p>
+    <div class="flex-1 min-w-0 relative" x-data="{ dd: false }" @click.outside="dd = false">
+      <button type="button" @click="dd = !dd" class="w-full text-left">
+        <p class="text-small font-medium truncate" x-text="currentSong ? currentSong.name : 'No music playing'"></p>
+        <p class="text-caption text-ink-soft" x-text="'Song ' + (songIndex + 1) + ' of ' + songs.length + ' - click to change'"></p>
+      </button>
+      <div x-show="dd" x-cloak
+           class="absolute bottom-full right-0 mb-1 bg-white border border-line rounded-standard shadow-lg overflow-y-auto"
+           style="max-height: 300px; min-width: 250px; z-index: 30;">
+        <template x-for="(song, idx) in songs" :key="song.id">
+          <button type="button"
+                  @click="playSongByIndex(idx); dd = false"
+                  class="w-full text-left px-3 py-2 text-small hover:bg-line-soft border-b border-line"
+                  :class="idx === songIndex ? 'bg-indigo-soft' : ''">
+            <span class="font-medium" x-text="song.name"></span>
+            <span x-show="idx === songIndex" class="text-caption text-indigo ml-2">(now playing)</span>
+          </button>
+        </template>
+      </div>
     </div>
     <div class="flex items-center gap-1">
       <button type="button" @click="prevSong()" class="btn-secondary" title="Previous song">
@@ -411,6 +426,12 @@ function viewerPage() {
       this.songIndex = (this.songIndex + 1) % this.songs.length;
       this.loadCurrentSong();
       if (this.audioPlaying) this.playAudio();
+    },
+    playSongByIndex(idx) {
+      if (!this.songs.length || idx < 0 || idx >= this.songs.length) return;
+      this.songIndex = idx;
+      this.loadCurrentSong();
+      this.playAudio();
     },
     onAudioEnded() { this.nextSong(); },
 
