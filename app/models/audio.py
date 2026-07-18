@@ -21,7 +21,6 @@ class Library(db.Model):
     name       = db.Column(db.String(100), nullable=False)
     color      = db.Column(db.String(10))
     sort_order = db.Column(db.Integer, default=0)
-    is_default = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user     = db.relationship("User")
