@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <g transform="translate(50,50)" stroke-width="2">
+    <line x1="0" y1="0" x2="0" y2="-30" stroke="#FFD700"/>
+    <line x1="0" y1="0" x2="21" y2="-21" stroke="#FF6B6B"/>
+    <line x1="0" y1="0" x2="30" y2="0" stroke="#4ECDC4"/>
+    <line x1="0" y1="0" x2="21" y2="21" stroke="#FF69B4"/>
+    <line x1="0" y1="0" x2="0" y2="30" stroke="#FFA500"/>
+    <line x1="0" y1="0" x2="-21" y2="21" stroke="#B4A7D6"/>
+    <line x1="0" y1="0" x2="-30" y2="0" stroke="#FFE66D"/>
+    <line x1="0" y1="0" x2="-21" y2="-21" stroke="#A8E6CF"/>
+    <circle cx="0" cy="-30" r="4" fill="#FFD700"/>
+    <circle cx="21" cy="-21" r="4" fill="#FF6B6B"/>
+    <circle cx="30" cy="0" r="4" fill="#4ECDC4"/>
+    <circle cx="21" cy="21" r="4" fill="#FF69B4"/>
+    <circle cx="0" cy="30" r="4" fill="#FFA500"/>
+    <circle cx="-21" cy="21" r="4" fill="#B4A7D6"/>
+    <circle cx="-30" cy="0" r="4" fill="#FFE66D"/>
+    <circle cx="-21" cy="-21" r="4" fill="#A8E6CF"/>
+    <circle r="5" fill="#FFF"/>
+  </g>
+</svg>
