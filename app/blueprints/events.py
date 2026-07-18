@@ -1050,6 +1050,8 @@ def create_share_token(event_id):
         playlist_ids   = json.dumps(playlist_ids) if playlist_ids else None,
         plain_password = password,
         description    = description,
+        name           = slideshow_name,
+        photo_ids      = json.dumps(photo_ids) if photo_ids else None,
         expires_at     = datetime.utcnow() + timedelta(days=int(expires_in))
                           if expires_in else None,
     )
@@ -1073,13 +1075,80 @@ def list_share_tokens(event_id):
              .filter_by(id=event_id, user_id=current_user.id).first_or_404()
     tokens = evt.share_tokens.filter_by(share_type="public")\
                                .order_by(ShareToken.created_at.desc()).all()
+    import json as _json
     return jsonify({"tokens": [
-        {"token": t.token, "url": t.public_url,
-         "created_at": t.created_at.strftime("%Y-%m-%d %H:%M"),
-         "expires_at": t.expires_at.strftime("%Y-%m-%d") if t.expires_at else None,
-         "use_count": t.use_count, "version": t.version}
+        {
+            "token": t.token,
+            "url": t.public_url,
+            "name": t.name or "Untitled slideshow",
+            "description": t.description or "",
+            "created_at": t.created_at.strftime("%Y-%m-%d %H:%M"),
+            "expires_at": t.expires_at.strftime("%Y-%m-%d") if t.expires_at else None,
+            "use_count": t.use_count,
+            "version": t.version,
+            "versions_list": _json.loads(t.versions_list) if t.versions_list else [],
+            "playlist_ids": _json.loads(t.playlist_ids) if t.playlist_ids else [],
+            "photo_ids": _json.loads(t.photo_ids) if t.photo_ids else [],
+            "photo_count": len(_json.loads(t.photo_ids)) if t.photo_ids else None,
+            "password": t.plain_password or "WELCOME",
+        }
         for t in tokens
     ]})
+
+
+@bp.route("/<event_id>/share/<token>", methods=["PATCH"])
+@login_required
+def update_slideshow(event_id, token):
+    """Update slideshow: name, description, password, photo_ids, playlist_ids, versions, expiry."""
+    import json
+    from datetime import datetime, timedelta
+    from app.models.event import ShareToken
+    db.session.query(Event).filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    st = db.session.query(ShareToken).filter_by(token=token, event_id=event_id).first()
+    if st is None:
+        return jsonify({"ok": False, "error": "Not found"}), 404
+    data = request.json or {}
+    if "name" in data:
+        st.name = (data["name"] or "").strip() or "Untitled slideshow"
+    if "description" in data:
+        st.description = data["description"]
+    if "password" in data:
+        st.plain_password = (data["password"] or "").strip() or "WELCOME"
+    if "photo_ids" in data:
+        st.photo_ids = json.dumps(data["photo_ids"]) if data["photo_ids"] else None
+    if "playlist_ids" in data:
+        st.playlist_ids = json.dumps(data["playlist_ids"]) if data["playlist_ids"] else None
+    if "versions_list" in data:
+        st.versions_list = json.dumps(data["versions_list"]) if data["versions_list"] else None
+    if "version" in data:
+        st.version = data["version"]
+    if "expires_days" in data:
+        d = data["expires_days"]
+        st.expires_at = (datetime.utcnow() + timedelta(days=int(d))) if d else None
+    db.session.commit()
+    from app.models import log_activity
+    log_activity(st.event, "slideshow_updated", {"token": token, "fields": list(data.keys())})
+    return jsonify({"ok": True})
+
+
+@bp.route("/<event_id>/share/<token>/regenerate-token", methods=["POST"])
+@login_required
+def regenerate_share_token(event_id, token):
+    """Generate a new URL for the slideshow (keeps all settings)."""
+    import secrets
+    from app.models.event import ShareToken
+    db.session.query(Event).filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    st = db.session.query(ShareToken).filter_by(token=token, event_id=event_id).first()
+    if st is None:
+        return jsonify({"ok": False, "error": "Not found"}), 404
+    new_token = secrets.token_urlsafe(24)
+    st.token = new_token
+    db.session.commit()
+    from app.models import log_activity
+    log_activity(st.event, "slideshow_regenerated", {"old_token": token, "new_token": new_token})
+    from flask import request as _req
+    scheme = _req.headers.get("X-Forwarded-Proto") or _req.scheme
+    return jsonify({"ok": True, "token": new_token, "url": f"/s/{new_token}", "absolute_url": f"{scheme}://{_req.host}/s/{new_token}"})
 
 
 @bp.route("/<event_id>/share/<token>/password", methods=["POST"])
