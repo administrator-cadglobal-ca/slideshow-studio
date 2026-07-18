@@ -650,10 +650,16 @@
             <span x-text="selectedFrameIndices.length"></span> of <span x-text="processedFrames.length"></span> selected
           </span>
         </div>
-        <button type="button" @click="openCreateSlideshowFromSelection()" :disabled="selectedFrameIndices.length === 0"
-                :class="selectedFrameIndices.length === 0 ? 'bg-line text-ink-faint px-3 py-1.5 rounded-standard text-small cursor-not-allowed' : 'btn-primary text-small'">
-          Create slideshow from selection
-        </button>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button type="button" @click="deleteSelectedProcessed()" x-show="selectedFrameIndices.length > 0" x-cloak
+                  class="text-small text-rose-700 hover:underline">
+            Delete selected (<span x-text="selectedFrameIndices.length"></span>)
+          </button>
+          <button type="button" @click="openCreateSlideshowFromSelection()" :disabled="selectedFrameIndices.length === 0"
+                  :class="selectedFrameIndices.length === 0 ? 'bg-line text-ink-faint px-3 py-1.5 rounded-standard text-small cursor-not-allowed' : 'btn-primary text-small'">
+            Create slideshow from selection
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
@@ -1427,6 +1433,40 @@ function eventsPage() {
         this.processedFrames = [];
         this.processedFilenames = [];
       }
+    },
+
+    async deleteSelectedProcessed() {
+      var count = this.selectedFrameIndices.length;
+      if (count === 0) return;
+      if (!confirm('Delete ' + count + ' selected frame(s) from ' + this.processedVersion + '? Originals will not be affected.')) return;
+      var sorted = this.selectedFrameIndices.slice().sort(function(a, b) { return b - a; });
+      var deleted = 0;
+      var failed = 0;
+      for (var i = 0; i < sorted.length; i++) {
+        var idx = sorted[i];
+        var fname = this.processedFilenames[idx];
+        if (!fname) continue;
+        try {
+          const r = await fetch('/events/' + this.eventId + '/processed-frames/' + encodeURIComponent(this.processedVersion) + '/' + encodeURIComponent(fname), {
+            method: 'DELETE',
+            credentials: 'same-origin',
+          });
+          const data = await r.json();
+          if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+          this.processedFrames.splice(idx, 1);
+          this.processedFilenames.splice(idx, 1);
+          deleted++;
+        } catch (e) {
+          failed++;
+          console.error('delete frame', fname, e);
+        }
+      }
+      this.selectedFrameIndices = [];
+      if (this.processedFrames.length === 0) {
+        this.processedVersion = '';
+        this.loadRenderVersions();
+      }
+      if (failed > 0) alert('Deleted ' + deleted + ', ' + failed + ' failed.');
     },
 
     async deleteProcessedFrame(idx) {
