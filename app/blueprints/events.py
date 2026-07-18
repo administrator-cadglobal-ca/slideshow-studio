@@ -1776,3 +1776,118 @@ def share_to_cloud(event_id):
         "reused_token": existing == token
     })
 
+
+
+# ── Render Share endpoints ──────────────────────────────────────────────────
+@bp.route("/<event_id>/render-shares", methods=["POST"])
+@login_required
+def create_render_share(event_id):
+    """Create a new share for a rendered MP4."""
+    from app.models.event import RenderShare
+    from datetime import datetime, timedelta
+    import secrets
+    evt = db.session.query(Event)\
+             .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    data = request.json or {}
+    filename = (data.get("filename") or "").strip()
+    if not filename:
+        return jsonify({"ok": False, "error": "filename required"}), 400
+    password = (data.get("password") or "").strip() or "WELCOME"
+    expires_days = data.get("expires_days")
+    expires_at = None
+    if expires_days:
+        try:
+            expires_at = datetime.utcnow() + timedelta(days=int(expires_days))
+        except Exception:
+            pass
+    token = secrets.token_urlsafe(24)
+    rs = RenderShare(
+        token          = token,
+        event_id       = evt.id,
+        filename       = filename,
+        plain_password = password,
+        created_by     = current_user.id,
+        expires_at     = expires_at,
+    )
+    db.session.add(rs)
+    db.session.commit()
+    from flask import request as _req
+    scheme = _req.headers.get("X-Forwarded-Proto") or _req.scheme
+    absolute_url = f"{scheme}://{_req.host}/r/{token}"
+    return jsonify({
+        "ok": True,
+        "token": token,
+        "url": f"/r/{token}",
+        "absolute_url": absolute_url,
+        "password": password,
+    })
+
+
+@bp.route("/<event_id>/render-shares")
+@login_required
+def list_render_shares(event_id):
+    """List all shares for this event (optionally filtered by filename)."""
+    from app.models.event import RenderShare
+    from flask import request as _req
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    filename = _req.args.get("filename")
+    q = db.session.query(RenderShare).filter_by(event_id=event_id)
+    if filename:
+        q = q.filter_by(filename=filename)
+    shares = q.order_by(RenderShare.created_at.desc()).all()
+    scheme = _req.headers.get("X-Forwarded-Proto") or _req.scheme
+    return jsonify({
+        "shares": [
+            {
+                "token": s.token,
+                "filename": s.filename,
+                "url": f"/r/{s.token}",
+                "absolute_url": f"{scheme}://{_req.host}/r/{s.token}",
+                "password": s.plain_password,
+                "created_at": s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "",
+                "expires_at": s.expires_at.strftime("%Y-%m-%d %H:%M") if s.expires_at else None,
+                "use_count": s.use_count or 0,
+                "is_expired": s.is_expired,
+            }
+            for s in shares
+        ]
+    })
+
+
+@bp.route("/<event_id>/render-shares/<token>", methods=["PATCH"])
+@login_required
+def update_render_share(event_id, token):
+    """Update password or expiry of a render share."""
+    from app.models.event import RenderShare
+    from datetime import datetime, timedelta
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    rs = db.session.query(RenderShare).filter_by(token=token, event_id=event_id).first_or_404()
+    data = request.json or {}
+    if "password" in data:
+        rs.plain_password = (data["password"] or "").strip() or "WELCOME"
+    if "expires_days" in data:
+        d = data["expires_days"]
+        if d is None or d == "":
+            rs.expires_at = None
+        else:
+            try:
+                rs.expires_at = datetime.utcnow() + timedelta(days=int(d))
+            except Exception:
+                pass
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@bp.route("/<event_id>/render-shares/<token>", methods=["DELETE"])
+@login_required
+def delete_render_share(event_id, token):
+    """Revoke a render share."""
+    from app.models.event import RenderShare
+    db.session.query(Event)\
+      .filter_by(id=event_id, user_id=current_user.id).first_or_404()
+    rs = db.session.query(RenderShare).filter_by(token=token, event_id=event_id).first_or_404()
+    db.session.delete(rs)
+    db.session.commit()
+    return jsonify({"ok": True})
