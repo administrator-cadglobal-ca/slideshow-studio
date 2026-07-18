@@ -631,7 +631,8 @@
         <p class="text-caption text-ink-soft" x-show="!renderDone">This may take a few minutes...</p>
         <p class="text-caption text-emerald-700" x-show="renderDone" x-cloak>Done.</p>
       </div>
-      <pre class="flex-1 mx-6 my-4 p-3 bg-slate-900 text-slate-100 rounded-standard text-caption overflow-auto whitespace-pre-wrap" x-text="renderLog"></pre>
+      <pre class="flex-1 mx-6 my-4 p-3 bg-slate-900 text-slate-100 rounded-standard text-caption overflow-auto whitespace-pre-wrap"
+           x-text="renderLog && renderLog.trim() ? renderLog : 'Preparing render pipeline...\n\nSetting up temporary directory\nDownloading frames from R2\nBuilding SRT captions\nStarting ffmpeg\n\nPlease wait a few seconds...'"></pre>
       <div class="p-6 pt-0 flex justify-end gap-2">
         <button type="button" class="btn-secondary" @click="closeRenderModal()" x-show="!renderDone" x-cloak>
           Continue in background
