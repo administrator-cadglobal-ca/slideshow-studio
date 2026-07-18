@@ -337,6 +337,114 @@
 
   </div>
 
+  {# Create Slideshow modal #}
+  <div x-show="createSlideshowModal" x-cloak
+       @keydown.escape.window="closeCreateSlideshowModal()"
+       class="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-lg w-full max-h-[90vh] overflow-y-auto">
+
+      <div x-show="!createSlideshowResult" class="p-6 space-y-4">
+        <div>
+          <h3 class="text-h3 text-ink">Create slideshow</h3>
+          <p class="text-caption text-ink-soft">Share <span x-text="newSlideshowPhotoIds.length"></span> selected photos as a password-protected slideshow.</p>
+        </div>
+
+        <label class="block">
+          <span class="text-caption text-ink-soft">Slideshow name</span>
+          <input type="text" x-model="newSlideshowName" class="input mt-1 w-full text-small" placeholder="e.g. Family only">
+        </label>
+
+        <label class="block">
+          <span class="text-caption text-ink-soft">Description (optional)</span>
+          <input type="text" x-model="newSlideshowDescription" class="input mt-1 w-full text-small" placeholder="e.g. Highlights from ceremony">
+        </label>
+
+        <label class="block">
+          <span class="text-caption text-ink-soft">Password</span>
+          <input type="text" x-model="newSlideshowPassword" class="input mt-1 w-full text-small">
+        </label>
+
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-caption text-ink-soft">Default version</span>
+            <select x-model="newSlideshowVersion" class="input mt-1 w-full text-small">
+              <template x-for="v in renderVersions" :key="v">
+                <option :value="v" x-text="v"></option>
+              </template>
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-caption text-ink-soft">Expiry (days, blank = never)</span>
+            <input type="number" x-model="newSlideshowExpiresDays" min="1" max="365" class="input mt-1 w-full text-small">
+          </label>
+        </div>
+
+        <div>
+          <span class="text-caption text-ink-soft">Versions viewer can access</span>
+          <div class="mt-1 border border-line rounded-standard p-3 max-h-32 overflow-auto">
+            <template x-for="v in renderVersions" :key="v">
+              <label class="flex items-center gap-2 text-small">
+                <input type="checkbox" :value="v" x-model="newSlideshowVersionsList">
+                <span x-text="v"></span>
+              </label>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-caption text-ink-soft">Playlists to include</span>
+          <div class="mt-1 border border-line rounded-standard p-3 max-h-32 overflow-auto">
+            {% for pl in playlists %}
+            <label class="flex items-center gap-2 text-small">
+              <input type="checkbox" :value="{{ pl.id }}" x-model="newSlideshowPlaylistIds">
+              <span>{{ pl.name }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <p class="text-caption text-rose-700" x-show="createSlideshowError" x-text="createSlideshowError"></p>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" class="btn-secondary" @click="closeCreateSlideshowModal()">Cancel</button>
+          <button type="button" class="btn-primary" @click="createSlideshow()" :disabled="creatingSlideshow || !newSlideshowName">
+            <span x-show="!creatingSlideshow">Create slideshow</span>
+            <span x-show="creatingSlideshow" x-cloak>Creating&hellip;</span>
+          </button>
+        </div>
+      </div>
+
+      {# Result view #}
+      <div x-show="createSlideshowResult" x-cloak class="p-6 space-y-4">
+        <div>
+          <h3 class="text-h3 text-ink">Slideshow created</h3>
+          <p class="text-caption text-ink-soft">Share this URL with viewers. They will need the password.</p>
+        </div>
+
+        <label class="block">
+          <span class="text-caption text-ink-soft">Share URL</span>
+          <div class="flex gap-2 mt-1">
+            <input type="text" :value="createSlideshowResult?.absolute_url" readonly class="input flex-1 text-small">
+            <button type="button" class="btn-secondary text-small" @click="copyToClipboard(createSlideshowResult?.absolute_url)">Copy</button>
+          </div>
+        </label>
+
+        <label class="block">
+          <span class="text-caption text-ink-soft">Password</span>
+          <div class="flex gap-2 mt-1">
+            <input type="text" :value="createSlideshowResult?.password" readonly class="input flex-1 text-small">
+            <button type="button" class="btn-secondary text-small" @click="copyToClipboard(createSlideshowResult?.password)">Copy</button>
+          </div>
+        </label>
+
+        <div class="flex justify-end pt-2">
+          <button type="button" class="btn-primary" @click="closeCreateSlideshowModal()">Done</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   {# Lightbox modal - full-size photo viewer (outside all tabs) #}
   <div x-show="lightboxOpen" x-cloak
        @click="closeLightbox()"
@@ -377,11 +485,33 @@
         </div>
       </div>
 
+      {# Selection controls #}
+      <div x-show="processedFrames.length > 0" class="mb-3 flex items-center justify-between flex-wrap gap-3 p-3 rounded-standard bg-slate-50 border border-line">
+        <div class="flex items-center gap-3 flex-wrap">
+          <button type="button" @click="selectAllProcessed()" class="btn-secondary text-small">Select all</button>
+          <button type="button" @click="deselectAllProcessed()" class="btn-secondary text-small">Deselect all</button>
+          <span class="text-caption text-ink-soft">
+            <span x-text="selectedFrameIndices.length"></span> of <span x-text="processedFrames.length"></span> selected
+          </span>
+        </div>
+        <button type="button" @click="openCreateSlideshowFromSelection()" :disabled="selectedFrameIndices.length === 0"
+                :class="selectedFrameIndices.length === 0 ? 'bg-line text-ink-faint px-3 py-1.5 rounded-standard text-small cursor-not-allowed' : 'btn-primary text-small'">
+          Create slideshow from selection
+        </button>
+      </div>
+
       <div class="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
         <template x-for="(frame, i) in processedFrames" :key="i">
           <div class="relative group rounded-standard overflow-hidden bg-line-soft aspect-video cursor-pointer"
-               @click="openLightbox(frame)">
-            <img :src="frame" class="w-full h-full object-cover pointer-events-none" loading="lazy">
+               :class="selectedFrameIndices.includes(i) ? 'ring-2 ring-indigo' : ''">
+            <img :src="frame" class="w-full h-full object-cover pointer-events-none" loading="lazy"
+                 @click="openLightbox(frame)">
+            <div class="absolute top-1 left-1 z-10">
+              <input type="checkbox" :checked="selectedFrameIndices.includes(i)"
+                     @change="toggleFrameSelection(i)"
+                     @click.stop
+                     class="w-5 h-5 rounded accent-indigo cursor-pointer">
+            </div>
           </div>
         </template>
       </div>
@@ -678,6 +808,21 @@ function eventsPage() {
     renders: [],
     processedVersion: '',
     processedFrames: [],
+    selectedFrameIndices: [],
+
+    // Create slideshow modal
+    createSlideshowModal: false,
+    newSlideshowName: '',
+    newSlideshowDescription: '',
+    newSlideshowPassword: 'WELCOME',
+    newSlideshowPhotoIds: [],
+    newSlideshowVersion: '',
+    newSlideshowVersionsList: [],
+    newSlideshowPlaylistIds: [],
+    newSlideshowExpiresDays: '',
+    creatingSlideshow: false,
+    createSlideshowResult: null,
+    createSlideshowError: '',
     autoFillFields: { place: true, country: true, date: true, time: false, camera: false, filename: false, settings: false },
     newEventModal: false,
 
@@ -1096,15 +1241,105 @@ function eventsPage() {
     async loadProcessedFrames() {
       if (!this.processedVersion) {
         this.processedFrames = [];
+        this.selectedFrameIndices = [];
         return;
       }
       try {
         const r = await fetch('/events/' + this.eventId + '/processed-frames/' + encodeURIComponent(this.processedVersion), {credentials: 'same-origin'});
         const data = await r.json();
         this.processedFrames = data.frames || [];
+        this.selectedFrameIndices = [];
       } catch (e) {
         console.error('load processed frames', e);
         this.processedFrames = [];
+      }
+    },
+
+    toggleFrameSelection(idx) {
+      var pos = this.selectedFrameIndices.indexOf(idx);
+      if (pos === -1) this.selectedFrameIndices.push(idx);
+      else this.selectedFrameIndices.splice(pos, 1);
+    },
+
+    selectAllProcessed() {
+      this.selectedFrameIndices = this.processedFrames.map((_, i) => i);
+    },
+
+    deselectAllProcessed() {
+      this.selectedFrameIndices = [];
+    },
+
+    openCreateSlideshowFromSelection() {
+      // Map selected frame indices to photo IDs (photos are in same order)
+      var selectedPhotoIds = this.selectedFrameIndices
+        .filter(i => i < this.photos.length)
+        .map(i => this.photos[i].id);
+      this.newSlideshowPhotoIds = selectedPhotoIds;
+      this.newSlideshowName = this.processedVersion + ' - selection';
+      this.newSlideshowDescription = '';
+      this.newSlideshowPassword = 'WELCOME';
+      this.newSlideshowVersion = this.processedVersion;
+      this.newSlideshowVersionsList = [this.processedVersion];
+      this.newSlideshowPlaylistIds = this.playlistId ? [parseInt(this.playlistId, 10)] : [];
+      this.newSlideshowExpiresDays = '';
+      this.createSlideshowResult = null;
+      this.createSlideshowError = '';
+      this.createSlideshowModal = true;
+    },
+
+    async createSlideshow() {
+      this.creatingSlideshow = true;
+      this.createSlideshowError = '';
+      try {
+        const body = {
+          name: this.newSlideshowName,
+          description: this.newSlideshowDescription || null,
+          password: this.newSlideshowPassword || 'WELCOME',
+          photo_ids: this.newSlideshowPhotoIds,
+          version: this.newSlideshowVersion,
+          versions_list: this.newSlideshowVersionsList.slice(),
+          playlist_ids: this.newSlideshowPlaylistIds.map(id => parseInt(id, 10)),
+          expires_days: this.newSlideshowExpiresDays ? parseInt(this.newSlideshowExpiresDays, 10) : null,
+        };
+        const r = await fetch('/events/' + this.eventId + '/share', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.createSlideshowResult = data;
+        this.loadSlideshows();
+      } catch (e) {
+        this.createSlideshowError = 'Could not create: ' + e.message;
+      } finally {
+        this.creatingSlideshow = false;
+      }
+    },
+
+    closeCreateSlideshowModal() {
+      this.createSlideshowModal = false;
+      this.createSlideshowResult = null;
+    },
+
+    copyToClipboard(text) {
+      if (navigator.clipboard) navigator.clipboard.writeText(text);
+      else {
+        var t = document.createElement('textarea');
+        t.value = text; document.body.appendChild(t); t.select();
+        document.execCommand('copy'); document.body.removeChild(t);
+      }
+    },
+
+    slideshows: [],
+    async loadSlideshows() {
+      try {
+        const r = await fetch('/events/' + this.eventId + '/share', {credentials: 'same-origin'});
+        const data = await r.json();
+        this.slideshows = data.tokens || [];
+      } catch (e) {
+        console.error('load slideshows', e);
       }
     },
 
