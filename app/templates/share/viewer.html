@@ -3,6 +3,8 @@
 
 {% block head_extras %}
 <style>
+    .caption-overlay { position: absolute; left: 0; right: 0; bottom: 0; padding: 2.5rem 1.25rem 1.25rem; background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%); color: white; text-align: center; z-index: 5; pointer-events: none; }
+    .fs-fake .caption-overlay { padding: 4rem 2rem 2rem; }
 [x-cloak] { display: none !important; }
 .fs-fake { position: fixed !important; inset: 0 !important; z-index: 9999 !important; width: 100vw !important; height: 100vh !important; background: #000 !important; border-radius: 0 !important; max-height: 100vh !important; aspect-ratio: auto !important; margin: 0 !important; }
 .fs-fake img { width: 100vw !important; height: 100vh !important; max-height: 100vh !important; object-fit: contain !important; }
@@ -80,6 +82,19 @@ body.fs-lock { overflow: hidden !important; }
          x-show="currentImage" x-cloak>
     <div x-show="!currentImage" x-cloak class="absolute inset-0 flex items-center justify-center text-white">No photos</div>
 
+    {# Caption overlay with saved styles #}
+    <div class="caption-overlay" x-show="hasCaption()" x-cloak>
+      <div x-show="captionStyles.title.enabled && eventTitle"
+           :style="titleStyle"
+           x-text="eventTitle"></div>
+      <div x-show="captionStyles.subtitle.enabled && eventSubtitle"
+           :style="subtitleStyle"
+           x-text="eventSubtitle"></div>
+      <div x-show="captionStyles.photo.enabled && currentPhotoCaption"
+           :style="photoStyle"
+           x-text="currentPhotoCaption"></div>
+    </div>
+
     <div class="fs-overlay" x-show="isFullscreen && overlayVisible" x-cloak>
       <div class="fs-controls-top">
         <div class="flex items-center gap-2 flex-wrap">
@@ -154,6 +169,11 @@ body.fs-lock { overflow: hidden !important; }
 {% block scripts %}
 <script>
 const VIEWER_VERSIONS = {{ versions_data | tojson | safe }};
+const VIEWER_PHOTO_CAPTIONS = {{ photo_captions | tojson | safe }};
+const VIEWER_PHOTO_IDS = {{ photo_ids_in_order | tojson | safe }};
+const VIEWER_EVENT_TITLE = {{ event_title | tojson | safe }};
+const VIEWER_EVENT_SUBTITLE = {{ event_subtitle | tojson | safe }};
+const VIEWER_CAPTION_STYLES = {{ caption_styles | tojson | safe }};
 const VIEWER_LABELS_CLIPS = {{ labels_clips | tojson | safe }};
 
 {% set _pl_list = [] %}
@@ -174,6 +194,41 @@ function viewerPage() {
     playlistId: VIEWER_DEFAULT_PLAYLIST_ID ? String(VIEWER_DEFAULT_PLAYLIST_ID) : '',
     images: [],
     currentIndex: 0,
+
+    // Caption state
+    eventTitle: VIEWER_EVENT_TITLE || '',
+    eventSubtitle: VIEWER_EVENT_SUBTITLE || '',
+    photoCaptions: VIEWER_PHOTO_CAPTIONS || {},
+    photoIdsInOrder: VIEWER_PHOTO_IDS || [],
+    captionStyles: (VIEWER_CAPTION_STYLES) || {
+      title:    { enabled: true, size: 8, font: 'DejaVu Sans,Bold', color: '#ffffff' },
+      subtitle: { enabled: true, size: 6, font: 'DejaVu Sans',       color: '#ffffff' },
+      photo:    { enabled: true, size: 6, font: 'DejaVu Sans',       color: '#ffffff' },
+    },
+    get currentPhotoCaption() {
+      var pid = this.photoIdsInOrder[this.currentIndex];
+      return (pid && this.photoCaptions[pid]) ? this.photoCaptions[pid] : '';
+    },
+    hasCaption() {
+      return (this.captionStyles.title.enabled && this.eventTitle)
+          || (this.captionStyles.subtitle.enabled && this.eventSubtitle)
+          || (this.captionStyles.photo.enabled && this.currentPhotoCaption);
+    },
+    _mkStyle(s) {
+      var fontName = (s.font || 'DejaVu Sans').split(',')[0];
+      var isBold = (s.font || '').includes('Bold');
+      // Size scale: SRT 8pt on 1080 ≈ 32px; use ~4x scale for on-screen preview
+      var pxSize = (s.size || 8) * 3;
+      return 'color:' + (s.color || '#ffffff')
+        + '; font-family:\'' + fontName + '\',sans-serif'
+        + '; font-size:' + pxSize + 'px'
+        + '; font-weight:' + (isBold ? '700' : '400')
+        + '; text-shadow: 0 0 3px black, 0 0 2px black, 0 0 4px black'
+        + '; line-height:1.2; margin:0.15rem 0;';
+    },
+    get titleStyle() { return this._mkStyle(this.captionStyles.title); },
+    get subtitleStyle() { return this._mkStyle(this.captionStyles.subtitle); },
+    get photoStyle() { return this._mkStyle(this.captionStyles.photo); },
     playing: false,
     slideDur: 3,
     slideTimer: null,

@@ -139,6 +139,17 @@ def view_share(token):
     default_version = st.version or (list(versions_data.keys())[0] if versions_data else "")
     default_playlist_id = evt.playlist_id if evt.playlist_id in [p.id for p in all_playlists] else (all_playlists[0].id if all_playlists else None)
 
+    # Build caption data: photo_id -> caption
+    photo_captions = {p.id: (p.caption or "").strip() for p in photos_ordered}
+    photo_ids_in_order = [p.id for p in photos_ordered]
+
+    caption_styles_data = None
+    if st.caption_styles:
+        try:
+            caption_styles_data = json.loads(st.caption_styles)
+        except Exception:
+            pass
+
     return render_template("share/viewer.html",
         event=evt,
         token=token,
@@ -148,6 +159,11 @@ def view_share(token):
         labels_clips=labels_clips,
         default_version=default_version,
         default_playlist_id=default_playlist_id,
+        photo_captions=photo_captions,
+        photo_ids_in_order=photo_ids_in_order,
+        event_title=evt.title_text or "",
+        event_subtitle=evt.title_subtitle or "",
+        caption_styles=caption_styles_data,
         is_share_view=True,
     )
 
