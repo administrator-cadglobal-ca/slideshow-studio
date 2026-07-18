@@ -149,3 +149,33 @@ class ShareToken(db.Model):
     @property
     def public_url(self):
         return f"/s/{self.token}"
+
+
+class RenderShare(db.Model):
+    """Public shareable link for a rendered MP4 with password protection."""
+    __tablename__ = "render_shares"
+
+    id             = db.Column(db.Integer, primary_key=True)
+    token          = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    event_id       = db.Column(db.String(36), db.ForeignKey("events.id"), nullable=False)
+    filename       = db.Column(db.String(255), nullable=False)
+    plain_password = db.Column(db.String(100), default="WELCOME")
+    created_by     = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    expires_at     = db.Column(db.DateTime, nullable=True)
+    created_at     = db.Column(db.DateTime, default=db.func.now())
+    last_used_at   = db.Column(db.DateTime, nullable=True)
+    use_count      = db.Column(db.Integer, default=0)
+
+    event = db.relationship("Event", foreign_keys=[event_id],
+                            backref=db.backref("render_shares", lazy="dynamic"))
+
+    @property
+    def is_expired(self):
+        if not self.expires_at:
+            return False
+        from datetime import datetime
+        return datetime.utcnow() > self.expires_at
+
+    @property
+    def public_url(self):
+        return f"/r/{self.token}"
