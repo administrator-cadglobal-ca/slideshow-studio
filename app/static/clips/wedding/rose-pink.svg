@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <g transform="translate(50,50)">
+    <circle r="25" fill="#FF69B4" opacity="0.7"/>
+    <circle r="20" fill="#FFB6D9" opacity="0.8"/>
+    <circle r="14" fill="#FFC0CB"/>
+    <circle r="8" fill="#FF1493"/>
+    <path d="M-20,15 Q-10,25 0,20 Q10,25 20,15" fill="none" stroke="#228B22" stroke-width="2"/>
+  </g>
+</svg>
