@@ -767,6 +767,88 @@
     </div>
   </div>
 
+  {# Render share modal #}
+  <div x-show="shareRenderModal" x-cloak
+       @keydown.escape.window="closeShareRender()"
+       style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-h3 text-ink">Share rendered video</h3>
+            <p class="text-caption text-ink-soft" x-show="shareRenderFile" x-text="shareRenderFile?.name"></p>
+          </div>
+          <button type="button" @click="closeShareRender()" class="text-ink-soft hover:text-ink">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        {# Create new share #}
+        <div class="border border-line rounded-standard p-3 space-y-3">
+          <p class="text-caption text-ink-soft font-medium">Create new share link</p>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-caption text-ink-soft">Password</span>
+              <input type="text" x-model="shareRenderNewPassword" class="input mt-1 w-full text-small">
+            </label>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Expiry (days, blank = never)</span>
+              <input type="number" x-model="shareRenderNewExpiresDays" min="1" max="365" class="input mt-1 w-full text-small">
+            </label>
+          </div>
+          <button type="button" @click="createRenderShare()" :disabled="shareRenderCreating" class="btn-primary text-small">
+            <span x-show="!shareRenderCreating">Generate link</span>
+            <span x-show="shareRenderCreating" x-cloak>Creating&hellip;</span>
+          </button>
+        </div>
+
+        {# Existing shares list #}
+        <div class="space-y-2">
+          <p class="text-caption text-ink-soft font-medium">Active share links (<span x-text="shareRenderShares.length"></span>)</p>
+          <p x-show="shareRenderShares.length === 0" x-cloak class="text-caption text-ink-soft text-center py-4">
+            No shares yet for this video.
+          </p>
+          <template x-for="share in shareRenderShares" :key="share.token">
+            <div class="border border-line rounded-standard p-3">
+              {# Normal view #}
+              <div x-show="shareRenderEditingToken !== share.token">
+                <div class="flex items-center gap-2">
+                  <input type="text" :value="share.absolute_url" readonly class="input flex-1 text-small">
+                  <button type="button" class="btn-secondary text-small" @click="copyToClipboard(share.absolute_url)">Copy URL</button>
+                </div>
+                <div class="mt-2 text-caption text-ink-soft">
+                  Password: <span class="font-medium" x-text="share.password"></span>
+                  &bull; Created: <span x-text="share.created_at"></span>
+                  <span x-show="share.expires_at">&bull; Expires: <span x-text="share.expires_at"></span></span>
+                  &bull; Views: <span x-text="share.use_count"></span>
+                  <span x-show="share.is_expired" class="text-rose-700">&bull; EXPIRED</span>
+                </div>
+                <div class="mt-2 flex gap-2">
+                  <button type="button" class="btn-secondary text-small" @click="startEditRenderShare(share)">Change password</button>
+                  <button type="button" class="text-small text-rose-700 hover:underline" @click="deleteRenderShare(share)">Revoke</button>
+                </div>
+              </div>
+              {# Edit view #}
+              <div x-show="shareRenderEditingToken === share.token" x-cloak class="space-y-3">
+                <label class="block">
+                  <span class="text-caption text-ink-soft">New password</span>
+                  <input type="text" x-model="shareRenderEditPassword" class="input mt-1 w-full text-small">
+                </label>
+                <div class="flex justify-end gap-2">
+                  <button type="button" class="btn-secondary text-small" @click="shareRenderEditingToken = null">Cancel</button>
+                  <button type="button" class="btn-primary text-small" @click="saveRenderShareEdit(share)">Save</button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   {# Play render video modal #}
   <div x-show="playRenderOpen" x-cloak
        @click="closePlayRender()"
@@ -1889,6 +1971,105 @@ function eventsPage() {
         const data = await r.json();
         if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
         this.loadRenders();
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
+      }
+    },
+
+    // Render share modal
+    shareRenderModal: false,
+    shareRenderFile: null,
+    shareRenderShares: [],
+    shareRenderNewPassword: 'WELCOME',
+    shareRenderNewExpiresDays: '',
+    shareRenderCreating: false,
+    shareRenderEditingToken: null,
+    shareRenderEditPassword: '',
+
+    async openShareRender(file) {
+      this.shareRenderFile = file;
+      this.shareRenderModal = true;
+      this.shareRenderNewPassword = 'WELCOME';
+      this.shareRenderNewExpiresDays = '';
+      this.shareRenderEditingToken = null;
+      await this.loadRenderShares();
+    },
+
+    closeShareRender() {
+      this.shareRenderModal = false;
+      this.shareRenderFile = null;
+      this.shareRenderShares = [];
+      this.shareRenderEditingToken = null;
+    },
+
+    async loadRenderShares() {
+      if (!this.shareRenderFile) return;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/render-shares?filename=' + encodeURIComponent(this.shareRenderFile.name), {credentials: 'same-origin'});
+        const data = await r.json();
+        this.shareRenderShares = data.shares || [];
+      } catch (e) {
+        console.error('load render shares', e);
+      }
+    },
+
+    async createRenderShare() {
+      if (!this.shareRenderFile) return;
+      this.shareRenderCreating = true;
+      try {
+        const body = {
+          filename: this.shareRenderFile.name,
+          password: this.shareRenderNewPassword,
+          expires_days: this.shareRenderNewExpiresDays ? parseInt(this.shareRenderNewExpiresDays, 10) : null,
+        };
+        const r = await fetch('/events/' + this.eventId + '/render-shares', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        await this.loadRenderShares();
+      } catch (e) {
+        alert('Create failed: ' + e.message);
+      } finally {
+        this.shareRenderCreating = false;
+      }
+    },
+
+    startEditRenderShare(share) {
+      this.shareRenderEditingToken = share.token;
+      this.shareRenderEditPassword = share.password;
+    },
+
+    async saveRenderShareEdit(share) {
+      try {
+        const r = await fetch('/events/' + this.eventId + '/render-shares/' + share.token, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({ password: this.shareRenderEditPassword }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.shareRenderEditingToken = null;
+        await this.loadRenderShares();
+      } catch (e) {
+        alert('Save failed: ' + e.message);
+      }
+    },
+
+    async deleteRenderShare(share) {
+      if (!confirm('Revoke this share? The URL will stop working.')) return;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/render-shares/' + share.token, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        await this.loadRenderShares();
       } catch (e) {
         alert('Delete failed: ' + e.message);
       }
