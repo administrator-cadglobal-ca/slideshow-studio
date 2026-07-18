@@ -832,7 +832,15 @@ def render_mp4(event_id):
                 })
 
     _safe_evt_name = "".join(c if c.isalnum() or c in "-_" else "-" for c in (evt.name or "event"))[:60]
-    out_name = f"{version}_{_safe_evt_name}.mp4"
+    custom_filename = (data.get("filename") or "").strip()
+    if custom_filename:
+        # Sanitize user filename: alnum + safe punctuation + strip .mp4 if user added it
+        if custom_filename.lower().endswith(".mp4"):
+            custom_filename = custom_filename[:-4]
+        safe_custom = "".join(c if c.isalnum() or c in "-_. " else "-" for c in custom_filename)[:120].strip()
+        out_name = f"{safe_custom}.mp4" if safe_custom else f"{version}_{_safe_evt_name}.mp4"
+    else:
+        out_name = f"{version}_{_safe_evt_name}.mp4"
     _user_id = current_user.id
     _event_id = event_id
     _frame_names = frame_names

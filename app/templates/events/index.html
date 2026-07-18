@@ -793,6 +793,12 @@
         </label>
       </div>
 
+      <label class="block mt-4">
+        <span class="text-caption text-ink-soft">Output filename (without .mp4)</span>
+        <input type="text" x-model="renderFilename" placeholder="Auto: version_event-name" class="input mt-1 w-full text-small">
+        <p class="text-caption text-ink-faint mt-1">Leave blank to use default. Will be saved as [filename].mp4</p>
+      </label>
+
       <div class="mt-4 space-y-2 border-t border-line pt-3">
         <p class="text-caption text-ink-soft font-medium">Captions in video</p>
         <label class="flex items-center gap-2">
@@ -1069,6 +1075,7 @@ function eventsPage() {
     renderDuration: 4.0,
     renderIncludeEventCaption: true,
     renderIncludePhotoCaptions: true,
+    renderFilename: '',
     rendering: false,
     renderStarted: false,
     renderError: '',
@@ -1928,6 +1935,7 @@ function eventsPage() {
             duration: this.renderDuration,
             include_event_caption: this.renderIncludeEventCaption,
             include_photo_captions: this.renderIncludePhotoCaptions,
+            filename: this.renderFilename || null,
           }),
         });
         const data = await r.json();
