@@ -24,6 +24,15 @@
         </svg>
         Preview
       </a>
+      <button type="button" @click="openSlideshowsList()" class="btn-secondary" title="View existing slideshows">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        Slideshows
+        <span x-show="slideshows.length > 0" x-text="'(' + slideshows.length + ')'" class="text-caption"></span>
+      </button>
       {% endif %}
       <button type="button" @click="newEventModal = true" class="btn-primary">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -335,6 +344,98 @@
       </div>
     </section>
 
+  </div>
+
+  {# Slideshows list modal #}
+  <div x-show="slideshowsListModal" x-cloak
+       @keydown.escape.window="closeSlideshowsList()"
+       style="z-index:75;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-h3 text-ink">Slideshows</h3>
+            <p class="text-caption text-ink-soft">Shared views of this event. Each has its own password and URL.</p>
+          </div>
+          <button type="button" @click="closeSlideshowsList()" class="text-ink-soft hover:text-ink">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <p x-show="slideshows.length === 0" class="text-caption text-ink-soft text-center py-8">
+          No slideshows yet. Go to the Processed tab to select photos and create your first slideshow.
+        </p>
+
+        <div class="space-y-3" x-show="slideshows.length > 0">
+          <template x-for="ss in slideshows" :key="ss.token">
+            <div class="border border-line rounded-standard p-4">
+
+              {# Normal view #}
+              <div x-show="!editingSlideshow || editingSlideshow.token !== ss.token">
+                <div class="flex items-start justify-between gap-3 flex-wrap">
+                  <div class="flex-1 min-w-0">
+                    <h4 class="text-small font-semibold text-ink" x-text="ss.name"></h4>
+                    <p x-show="ss.description" class="text-caption text-ink-soft mt-0.5" x-text="ss.description"></p>
+                    <div class="mt-2 text-caption text-ink-soft space-y-1">
+                      <div>
+                        <span class="font-medium">Photos:</span>
+                        <span x-text="ss.photo_count === null ? 'all' : ss.photo_count"></span>
+                      </div>
+                      <div>
+                        <span class="font-medium">Password:</span>
+                        <span x-text="ss.password"></span>
+                      </div>
+                      <div>
+                        <span class="font-medium">Created:</span>
+                        <span x-text="ss.created_at"></span>
+                        <span x-show="ss.expires_at"> • Expires: <span x-text="ss.expires_at"></span></span>
+                      </div>
+                      <div>
+                        <span class="font-medium">Views:</span>
+                        <span x-text="ss.use_count || 0"></span>
+                      </div>
+                    </div>
+                    <div class="mt-2 flex items-center gap-2">
+                      <input type="text" :value="location.origin + ss.url" readonly class="input flex-1 text-small">
+                      <button type="button" class="btn-secondary text-small" @click="copyToClipboard(location.origin + ss.url)">Copy URL</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-center gap-2 flex-wrap">
+                  <button type="button" class="btn-secondary text-small" @click="startEditSlideshow(ss)">Edit</button>
+                  <button type="button" class="btn-secondary text-small" @click="regenerateSlideshowUrl(ss)">Regenerate URL</button>
+                  <button type="button" class="text-small text-rose-700 hover:underline" @click="deleteSlideshow(ss)">Delete</button>
+                </div>
+              </div>
+
+              {# Edit view #}
+              <div x-show="editingSlideshow && editingSlideshow.token === ss.token" x-cloak class="space-y-3">
+                <label class="block">
+                  <span class="text-caption text-ink-soft">Name</span>
+                  <input type="text" x-model="editSlideshowName" class="input mt-1 w-full text-small">
+                </label>
+                <label class="block">
+                  <span class="text-caption text-ink-soft">Password</span>
+                  <input type="text" x-model="editSlideshowPassword" class="input mt-1 w-full text-small">
+                </label>
+                <p x-show="editSlideshowError" class="text-caption text-rose-700" x-text="editSlideshowError"></p>
+                <div class="flex justify-end gap-2">
+                  <button type="button" class="btn-secondary text-small" @click="cancelEditSlideshow()">Cancel</button>
+                  <button type="button" class="btn-primary text-small" @click="saveEditSlideshow()" :disabled="savingEditSlideshow">
+                    <span x-show="!savingEditSlideshow">Save changes</span>
+                    <span x-show="savingEditSlideshow" x-cloak>Saving&hellip;</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </template>
+        </div>
+
+      </div>
+    </div>
   </div>
 
   {# Create Slideshow modal #}
@@ -865,6 +966,7 @@ function eventsPage() {
       this.initCaptions();
       this.loadRenderVersions();
       this.loadRenders();
+      this.loadSlideshows();
     },
 
     switchEvent(eventId) {
@@ -1333,6 +1435,89 @@ function eventsPage() {
     },
 
     slideshows: [],
+    slideshowsListModal: false,
+    editingSlideshow: null,
+    editSlideshowName: '',
+    editSlideshowPassword: '',
+    editSlideshowError: '',
+    savingEditSlideshow: false,
+
+    openSlideshowsList() {
+      this.slideshowsListModal = true;
+      this.loadSlideshows();
+    },
+
+    closeSlideshowsList() {
+      this.slideshowsListModal = false;
+      this.editingSlideshow = null;
+    },
+
+    startEditSlideshow(ss) {
+      this.editingSlideshow = ss;
+      this.editSlideshowName = ss.name;
+      this.editSlideshowPassword = ss.password;
+      this.editSlideshowError = '';
+    },
+
+    cancelEditSlideshow() {
+      this.editingSlideshow = null;
+    },
+
+    async saveEditSlideshow() {
+      if (!this.editingSlideshow) return;
+      this.savingEditSlideshow = true;
+      this.editSlideshowError = '';
+      try {
+        const r = await fetch('/events/' + this.eventId + '/share/' + this.editingSlideshow.token, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            name: this.editSlideshowName,
+            password: this.editSlideshowPassword,
+          }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.editingSlideshow = null;
+        this.loadSlideshows();
+      } catch (e) {
+        this.editSlideshowError = 'Save failed: ' + e.message;
+      } finally {
+        this.savingEditSlideshow = false;
+      }
+    },
+
+    async regenerateSlideshowUrl(ss) {
+      if (!confirm('Generate a new URL? The old URL will stop working.')) return;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/share/' + ss.token + '/regenerate-token', {
+          method: 'POST',
+          credentials: 'same-origin',
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.loadSlideshows();
+      } catch (e) {
+        alert('Could not regenerate: ' + e.message);
+      }
+    },
+
+    async deleteSlideshow(ss) {
+      if (!confirm('Delete slideshow "' + ss.name + '"? This cannot be undone.')) return;
+      try {
+        const r = await fetch('/events/' + this.eventId + '/share/' + ss.token, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) throw new Error(data.error || r.statusText);
+        this.loadSlideshows();
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
+      }
+    },
+
     async loadSlideshows() {
       try {
         const r = await fetch('/events/' + this.eventId + '/share', {credentials: 'same-origin'});
