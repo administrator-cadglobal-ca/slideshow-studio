@@ -818,7 +818,7 @@
       <div class="mt-4 space-y-2 border-t border-line pt-3">
         <p class="text-caption text-ink-soft font-medium">Captions in video</p>
 
-        <div class="grid gap-2" style="grid-template-columns: 90px 70px 1fr;">
+        <div class="grid gap-2" style="grid-template-columns: 90px 60px 1fr 40px;">
           <label class="flex items-center gap-2">
             <input type="checkbox" x-model="renderIncludeEventTitle">
             <span class="text-small">Title</span>
@@ -831,6 +831,7 @@
             <option value="Cantarell,Bold">Cantarell Bold</option>
             <option value="Bitstream Charter">Bitstream Charter</option>
           </select>
+          <input type="color" x-model="renderTitleColor" class="w-8 h-8 rounded cursor-pointer" title="Font color" :disabled="!renderIncludeEventTitle">
 
           <label class="flex items-center gap-2">
             <input type="checkbox" x-model="renderIncludeEventSubtitle">
@@ -844,6 +845,7 @@
             <option value="Cantarell,Bold">Cantarell Bold</option>
             <option value="Bitstream Charter">Bitstream Charter</option>
           </select>
+          <input type="color" x-model="renderSubtitleColor" class="w-8 h-8 rounded cursor-pointer" title="Font color" :disabled="!renderIncludeEventSubtitle">
 
           <label class="flex items-center gap-2">
             <input type="checkbox" x-model="renderIncludePhotoCaptions">
@@ -857,23 +859,24 @@
             <option value="Cantarell,Bold">Cantarell Bold</option>
             <option value="Bitstream Charter">Bitstream Charter</option>
           </select>
+          <input type="color" x-model="renderPhotoColor" class="w-8 h-8 rounded cursor-pointer" title="Font color" :disabled="!renderIncludePhotoCaptions">
         </div>
 
-        <div class="mt-2 rounded-standard bg-slate-800 p-4 text-center">
-          <p class="text-caption text-slate-400 mb-2">Preview</p>
-          <div class="text-white space-y-0.5">
+        <div class="mt-2 rounded-standard bg-black p-4 text-center">
+          <p class="text-caption text-slate-500 mb-2">Preview</p>
+          <div class="space-y-0.5">
             <div x-show="renderIncludeEventTitle" x-cloak
-                 :style="'font-family:\'' + renderTitleFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderTitleFontSize * 2.5) + 'px; font-weight:' + (renderTitleFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
+                 :style="'color:' + renderTitleColor + '; font-family:\'' + renderTitleFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderTitleFontSize * 2.5) + 'px; font-weight:' + (renderTitleFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
                  x-text="'Title Sample'"></div>
             <div x-show="renderIncludeEventSubtitle" x-cloak
-                 :style="'font-family:\'' + renderSubtitleFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderSubtitleFontSize * 2.5) + 'px; font-weight:' + (renderSubtitleFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
+                 :style="'color:' + renderSubtitleColor + '; font-family:\'' + renderSubtitleFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderSubtitleFontSize * 2.5) + 'px; font-weight:' + (renderSubtitleFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
                  x-text="'Sub-title Sample'"></div>
             <div x-show="renderIncludePhotoCaptions" x-cloak
-                 :style="'font-family:\'' + renderPhotoFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderPhotoFontSize * 2.5) + 'px; font-weight:' + (renderPhotoFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
+                 :style="'color:' + renderPhotoColor + '; font-family:\'' + renderPhotoFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderPhotoFontSize * 2.5) + 'px; font-weight:' + (renderPhotoFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
                  x-text="'Per-photo caption sample'"></div>
-            <p x-show="!renderIncludeEventTitle && !renderIncludeEventSubtitle && !renderIncludePhotoCaptions" x-cloak class="text-slate-500 text-caption">No captions enabled</p>
+            <p x-show="!renderIncludeEventTitle && !renderIncludeEventSubtitle && !renderIncludePhotoCaptions" x-cloak class="text-slate-600 text-caption">No captions enabled</p>
           </div>
-          <p class="text-caption text-slate-500 mt-2">Approximate preview - actual result depends on video resolution</p>
+          <p class="text-caption text-slate-600 mt-2">Approximate preview - actual result depends on video resolution</p>
         </div>
       </div>
 
@@ -1143,10 +1146,13 @@ function eventsPage() {
     renderIncludeEventSubtitle: true,
     renderTitleFontSize: 8,
     renderTitleFontFamily: 'DejaVu Sans,Bold',
+    renderTitleColor: '#ffffff',
     renderSubtitleFontSize: 6,
     renderSubtitleFontFamily: 'DejaVu Sans',
+    renderSubtitleColor: '#ffffff',
     renderPhotoFontSize: 6,
     renderPhotoFontFamily: 'DejaVu Sans',
+    renderPhotoColor: '#ffffff',
     renderIncludePhotoCaptions: true,
     renderFilename: '',
     renderFilenameModalOpen: false,

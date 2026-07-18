@@ -801,6 +801,24 @@ def render_mp4(event_id):
     subtitle_font_family = str(data.get("subtitle_font_family", "DejaVu Sans") or "DejaVu Sans")
     photo_font_size    = int(data.get("photo_font_size", 6) or 6)
     photo_font_family  = str(data.get("photo_font_family", "DejaVu Sans") or "DejaVu Sans")
+    title_color    = str(data.get("title_color", "#ffffff") or "#ffffff")
+    subtitle_color = str(data.get("subtitle_color", "#ffffff") or "#ffffff")
+    photo_color    = str(data.get("photo_color", "#ffffff") or "#ffffff")
+
+    def _hex_to_ass(hex_color):
+        """Convert #RRGGBB to ASS &HBBGGRR& format (ASS uses BGR order)."""
+        try:
+            h = hex_color.lstrip("#")
+            if len(h) == 6:
+                r, g, b = h[0:2], h[2:4], h[4:6]
+                return f"&H{b}{g}{r}&"
+        except Exception:
+            pass
+        return "&Hffffff&"
+
+    _title_color_ass    = _hex_to_ass(title_color)
+    _subtitle_color_ass = _hex_to_ass(subtitle_color)
+    _photo_color_ass    = _hex_to_ass(photo_color)
     from app.models import log_activity
     log_activity(evt, "render_started", {"version": version, "playlist_id": playlist_id, "duration": duration, "captions": include_event_title or include_event_subtitle or include_photo_captions})
 
@@ -862,6 +880,9 @@ def render_mp4(event_id):
     _subtitle_font = subtitle_font_family
     _photo_size = photo_font_size
     _photo_font = photo_font_family
+    _title_col = _title_color_ass
+    _subtitle_col = _subtitle_color_ass
+    _photo_col = _photo_color_ass
     _incl_title = include_event_title
     _incl_subtitle = include_event_subtitle
     _incl_photo = include_photo_captions
@@ -980,20 +1001,19 @@ def render_mp4(event_id):
                 idx = 1
                 total_duration = len(frames) * duration
 
-                # Per-line inline styling via ASS override tags
-                # {\fnFontName\fsSize}text
-                def _style_tag(font, size):
-                    # Handle "Family,Bold" pseudo-syntax
+                # Per-line inline styling via ASS override tags with color
+                # {\fnFontName\fsSize\1cColor}text
+                def _style_tag(font, size, color_ass):
                     if "," in font:
                         base, weight = font.split(",", 1)
                         base = base.strip()
                         bold_tag = "\\b1" if "bold" in weight.lower() else ""
-                        return f"{{\\fn{base}\\fs{size}{bold_tag}}}"
-                    return f"{{\\fn{font}\\fs{size}}}"
+                        return f"{{\\fn{base}\\fs{size}\\1c{color_ass}{bold_tag}}}"
+                    return f"{{\\fn{font}\\fs{size}\\1c{color_ass}}}"
 
-                title_tag    = _style_tag(_title_font, _title_size)
-                subtitle_tag = _style_tag(_subtitle_font, _subtitle_size)
-                photo_tag    = _style_tag(_photo_font, _photo_size)
+                title_tag    = _style_tag(_title_font, _title_size, _title_col)
+                subtitle_tag = _style_tag(_subtitle_font, _subtitle_size, _subtitle_col)
+                photo_tag    = _style_tag(_photo_font, _photo_size, _photo_col)
                 reset_tag    = "{\\r}"  # reset styling between lines
 
                 title_esc = _srt_escape(_evt_title) if _incl_title else ""
