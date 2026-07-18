@@ -1310,6 +1310,7 @@ def create_share_token(event_id):
     description   = data.get("description")
     slideshow_name = (data.get("name") or "").strip() or "Untitled slideshow"
     photo_ids     = data.get("photo_ids")
+    caption_styles = data.get("caption_styles")
 
     from datetime import datetime, timedelta
     token = secrets.token_urlsafe(24)
@@ -1326,6 +1327,7 @@ def create_share_token(event_id):
         description    = description,
         name           = slideshow_name,
         photo_ids      = json.dumps(photo_ids) if photo_ids else None,
+        caption_styles = json.dumps(caption_styles) if caption_styles else None,
         expires_at     = datetime.utcnow() + timedelta(days=int(expires_in))
                           if expires_in else None,
     )
@@ -1363,6 +1365,7 @@ def list_share_tokens(event_id):
             "versions_list": _json.loads(t.versions_list) if t.versions_list else [],
             "playlist_ids": _json.loads(t.playlist_ids) if t.playlist_ids else [],
             "photo_ids": _json.loads(t.photo_ids) if t.photo_ids else [],
+            "caption_styles": _json.loads(t.caption_styles) if t.caption_styles else None,
             "photo_count": len(_json.loads(t.photo_ids)) if t.photo_ids else None,
             "password": t.plain_password or "WELCOME",
         }
@@ -1394,6 +1397,8 @@ def update_slideshow(event_id, token):
         st.playlist_ids = json.dumps(data["playlist_ids"]) if data["playlist_ids"] else None
     if "versions_list" in data:
         st.versions_list = json.dumps(data["versions_list"]) if data["versions_list"] else None
+    if "caption_styles" in data:
+        st.caption_styles = json.dumps(data["caption_styles"]) if data["caption_styles"] else None
     if "version" in data:
         st.version = data["version"]
     if "expires_days" in data:

@@ -133,6 +133,7 @@ class ShareToken(db.Model):
     versions_list  = db.Column(db.Text, nullable=True)          # JSON list of uploaded versions
     name           = db.Column(db.String(120), nullable=True)   # user-provided slideshow name
     photo_ids      = db.Column(db.Text, nullable=True)          # JSON list of photo IDs (empty = all)
+    caption_styles = db.Column(db.Text, nullable=True)          # JSON: {title: {size, font, color, enabled}, subtitle: {...}, photo: {...}}
 
     event = db.relationship("Event", foreign_keys=[event_id],
                               backref=db.backref("share_tokens", lazy="dynamic"))
