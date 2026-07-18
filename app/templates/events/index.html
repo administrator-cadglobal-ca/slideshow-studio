@@ -858,6 +858,23 @@
             <option value="Bitstream Charter">Bitstream Charter</option>
           </select>
         </div>
+
+        <div class="mt-2 rounded-standard bg-slate-800 p-4 text-center">
+          <p class="text-caption text-slate-400 mb-2">Preview</p>
+          <div class="text-white space-y-0.5">
+            <div x-show="renderIncludeEventTitle" x-cloak
+                 :style="'font-family:\'' + renderTitleFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderTitleFontSize * 2.5) + 'px; font-weight:' + (renderTitleFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
+                 x-text="'Title Sample'"></div>
+            <div x-show="renderIncludeEventSubtitle" x-cloak
+                 :style="'font-family:\'' + renderSubtitleFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderSubtitleFontSize * 2.5) + 'px; font-weight:' + (renderSubtitleFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
+                 x-text="'Sub-title Sample'"></div>
+            <div x-show="renderIncludePhotoCaptions" x-cloak
+                 :style="'font-family:\'' + renderPhotoFontFamily.split(',')[0] + '\',sans-serif; font-size:' + (renderPhotoFontSize * 2.5) + 'px; font-weight:' + (renderPhotoFontFamily.includes('Bold') ? '700' : '400') + '; text-shadow: 0 0 3px black, 0 0 2px black;'"
+                 x-text="'Per-photo caption sample'"></div>
+            <p x-show="!renderIncludeEventTitle && !renderIncludeEventSubtitle && !renderIncludePhotoCaptions" x-cloak class="text-slate-500 text-caption">No captions enabled</p>
+          </div>
+          <p class="text-caption text-slate-500 mt-2">Approximate preview - actual result depends on video resolution</p>
+        </div>
       </div>
 
       <div class="mt-4 flex items-center gap-3">
