@@ -774,6 +774,39 @@ function themesPage() {
     draggingIndex: -1,
     dragMoved: false,
 
+    // Anchor -> XY coordinate map (matches CSS positions in preview/viewer)
+    _anchorCoords: {
+      'top-left':      {x: 8,  y: 8},
+      'top-right':     {x: 92, y: 8},
+      'center-top':    {x: 50, y: 10},
+      'left-center':   {x: 8,  y: 50},
+      'center':        {x: 50, y: 50},
+      'right-center':  {x: 92, y: 50},
+      'bottom-left':   {x: 8,  y: 92},
+      'center-bottom': {x: 50, y: 90},
+      'bottom-right':  {x: 92, y: 92},
+    },
+
+    switchToAnchorMode() {
+      if (this.uploadPositionType === 'freeform' && this.uploadFreeformPositions.length > 0) {
+        if (!confirm('Switching to Anchor mode will discard freeform positions. Continue?')) return;
+        this.uploadFreeformPositions = [];
+      }
+      this.uploadPositionType = 'anchor';
+    },
+    switchToFreeformMode() {
+      if (this.uploadPositionType === 'anchor' && this.selectedPositions.length > 0) {
+        var converted = [];
+        for (var i = 0; i < this.selectedPositions.length; i++) {
+          var anchor = this.selectedPositions[i];
+          var coords = this._anchorCoords[anchor];
+          if (coords) converted.push({x: coords.x, y: coords.y});
+        }
+        this.uploadFreeformPositions = [...this.uploadFreeformPositions, ...converted];
+      }
+      this.uploadPositionType = 'freeform';
+    },
+
     stageClickAdd(event) {
       // Only add if not currently dragging (drag doesn't fire click)
       if (this.draggingIndex !== -1 || this.dragMoved) {
