@@ -345,6 +345,99 @@ def delete_clip(clip_id):
     return jsonify({"ok": True})
 
 
+# ── Iconify API integration ─────────────────────────────────────────────────
+@bp.route("/api/iconify/search", methods=["GET"])
+@login_required
+def iconify_search():
+    """Proxy search to Iconify public API to find open-source icons."""
+    import requests
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"error": "query required"}), 400
+
+    limit = min(int(request.args.get("limit", 32) or 32), 64)
+    try:
+        r = requests.get(
+            f"https://api.iconify.design/search",
+            params={"query": query, "limit": limit},
+            timeout=10,
+        )
+        r.raise_for_status()
+        data = r.json()
+        # Return icons in a friendly format
+        icons = data.get("icons", [])  # ["prefix:name", ...]
+        results = []
+        for icon_ref in icons:
+            if ":" not in icon_ref:
+                continue
+            prefix, name = icon_ref.split(":", 1)
+            results.append({
+                "id": icon_ref,
+                "prefix": prefix,
+                "name": name,
+                "preview_url": f"https://api.iconify.design/{prefix}/{name}.svg",
+            })
+        return jsonify({"icons": results, "total": data.get("total", len(results))})
+    except Exception as e:
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+@bp.route("/api/themes/<int:theme_id>/import-iconify", methods=["POST"])
+@login_required
+def import_iconify_icon(theme_id):
+    """Download an Iconify icon and add it as a clip to the theme."""
+    import requests
+    theme = db.session.get(ThemeV2, theme_id)
+    if not theme:
+        return jsonify({"error": "not found"}), 404
+
+    data = request.json or {}
+    icon_id = data.get("icon_id", "")  # e.g. "mdi:balloon"
+    if ":" not in icon_id:
+        return jsonify({"error": "invalid icon_id"}), 400
+
+    prefix, name = icon_id.split(":", 1)
+    # Fetch SVG - allow color customization
+    color = data.get("color", "")
+    params = {}
+    if color:
+        params["color"] = color
+
+    try:
+        r = requests.get(f"https://api.iconify.design/{prefix}/{name}.svg", params=params, timeout=10)
+        r.raise_for_status()
+        svg_content = r.text
+    except Exception as e:
+        return jsonify({"error": f"fetch failed: {e}"}), 500
+
+    # Save to uploads
+    upload_dir = os.path.join(current_app.root_path, "static", "clips", "user_uploads", theme.slug)
+    os.makedirs(upload_dir, exist_ok=True)
+    safe_name = f"iconify_{prefix}_{name}.svg".replace("/", "_")
+    dest_path = os.path.join(upload_dir, safe_name)
+    with open(dest_path, "w", encoding="utf-8") as f:
+        f.write(svg_content)
+
+    file_path = f"user_uploads/{theme.slug}/{safe_name}"
+    positions = data.get("positions") or ["top-left", "top-right"]
+
+    max_order = db.session.query(db.func.coalesce(db.func.max(ThemeClip.sort_order), 0))\
+                  .filter_by(theme_id=theme_id).scalar() or 0
+    clip = ThemeClip(
+        theme_id=theme_id,
+        file_path=file_path,
+        positions_json=json.dumps(positions),
+        size_pct=int(data.get("size_pct", 10) or 10),
+        animation=data.get("animation", "twinkle"),
+        count=int(data.get("count", 2) or 2),
+        sort_order=max_order + 1,
+    )
+    db.session.add(clip)
+    db.session.commit()
+
+    return jsonify({"ok": True, "id": clip.id, "file_path": file_path})
+
+
 # ── Full tree for use by preview/render/viewer ─────────────────────────────
 @bp.route("/api/tree", methods=["GET"])
 @login_required
