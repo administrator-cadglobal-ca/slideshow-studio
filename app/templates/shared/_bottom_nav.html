@@ -27,6 +27,19 @@
         <span class="text-micro">Audio</span>
       </a>
     </li>
+    {# Themes #}
+    <li class="flex-1">
+      <a href="{{ url_for('themes.index') }}"
+         class="flex flex-col items-center justify-center gap-1 py-2
+                {% if section == 'themes' %}text-indigo{% else %}text-ink-soft{% endif %}"
+         aria-current="{% if section == 'themes' %}page{% endif %}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span class="text-micro">Themes</span>
+      </a>
+    </li>
 
     {# Home #}
     <li class="flex-1">
