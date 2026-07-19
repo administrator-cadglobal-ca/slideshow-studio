@@ -3,115 +3,161 @@
 {% block section %}themes{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto py-4 px-4" x-data="themesPage()" x-init="init()">
-  <div class="flex items-center justify-between mb-4">
-    <div>
-      <h1 class="text-h2 text-ink">Decoration Themes</h1>
-      <p class="text-caption text-ink-soft">Manage themes, subcategories, and decoration clips</p>
+<div class="max-w-5xl mx-auto py-4 px-4" x-data="themesPage()" x-init="init()">
+  {# Header #}
+  <div class="mb-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-standard bg-indigo-soft flex items-center justify-center text-indigo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-h2 text-ink leading-tight">Decoration Themes</h1>
+        <p class="text-caption text-ink-soft">Organize categories, themes, and clips</p>
+      </div>
     </div>
   </div>
 
-  <div class="grid gap-4" style="grid-template-columns: 260px 260px 1fr;">
-    {# Column 1: Categories #}
-    <div class="rounded-standard border border-line bg-white overflow-hidden">
-      <div class="p-3 border-b border-line flex items-center justify-between">
-        <p class="text-caption text-ink-soft font-medium">Categories</p>
-        <button type="button" @click="showAddCategory = true" class="text-caption text-indigo hover:underline">+ Add</button>
-      </div>
-      <div class="overflow-y-auto" style="max-height:70vh;">
-        <template x-for="cat in categories" :key="cat.id">
-          <div>
-            <button type="button" @click="selectCategory(cat)"
-                    class="w-full text-left px-3 py-2 text-small border-b border-line hover:bg-line-soft flex items-center justify-between group"
-                    :class="selectedCategoryId === cat.id ? 'bg-indigo-soft' : ''">
-              <span>
-                <span class="font-medium" x-text="cat.name"></span>
-                <span class="text-caption text-ink-soft ml-1" x-text="'(' + cat.subcategory_count + ')'"></span>
-                <span x-show="cat.is_builtin" class="text-micro text-ink-faint ml-1">built-in</span>
-              </span>
-              <span class="opacity-0 group-hover:opacity-100 flex gap-1">
-                <button type="button" @click.stop="editCategory(cat)" title="Edit" class="text-caption text-ink-soft hover:text-ink">edit</button>
-                <button x-show="!cat.is_builtin" type="button" @click.stop="deleteCategory(cat)" title="Delete" class="text-caption text-rose-600 hover:text-rose-800">del</button>
-              </span>
-            </button>
-          </div>
-        </template>
-      </div>
-      {# Add category modal #}
-      <div x-show="showAddCategory" x-cloak class="p-3 border-t border-line bg-line-soft">
-        <input type="text" x-model="newCatName" placeholder="Category name" class="input w-full text-small mb-2">
-        <div class="flex gap-2">
-          <button @click="createCategory()" class="btn-primary text-small flex-1">Create</button>
-          <button @click="showAddCategory = false; newCatName = ''" class="btn-secondary text-small">Cancel</button>
-        </div>
-      </div>
-    </div>
+  {# Breadcrumb #}
+  <div class="flex items-center gap-2 mb-4 text-caption text-ink-soft flex-wrap">
+    <button type="button" @click="clearAll()" class="hover:text-indigo" :class="!selectedCategoryId ? 'text-indigo font-medium' : ''">Categories</button>
+    <template x-if="selectedCategoryId">
+      <span class="flex items-center gap-2">
+        <span>›</span>
+        <button type="button" @click="clearSub()" class="hover:text-indigo" :class="selectedCategoryId && !selectedSubcategoryId ? 'text-indigo font-medium' : ''" x-text="selectedCategoryName"></button>
+      </span>
+    </template>
+    <template x-if="selectedSubcategoryId">
+      <span class="flex items-center gap-2">
+        <span>›</span>
+        <span class="text-indigo font-medium" x-text="selectedSubcategoryName"></span>
+      </span>
+    </template>
+  </div>
 
-    {# Column 2: Subcategories #}
-    <div class="rounded-standard border border-line bg-white overflow-hidden">
-      <div class="p-3 border-b border-line flex items-center justify-between">
-        <p class="text-caption text-ink-soft font-medium">Subcategories</p>
-        <button type="button" @click="showAddSub = true" :disabled="!selectedCategoryId" class="text-caption text-indigo hover:underline disabled:text-ink-faint">+ Add</button>
-      </div>
-      <div class="overflow-y-auto" style="max-height:70vh;">
-        <p x-show="!selectedCategoryId" x-cloak class="p-3 text-caption text-ink-soft">Select a category</p>
-        <template x-for="sub in subcategories" :key="sub.id">
-          <div>
-            <button type="button" @click="selectSubcategory(sub)"
-                    class="w-full text-left px-3 py-2 text-small border-b border-line hover:bg-line-soft flex items-center justify-between group"
-                    :class="selectedSubcategoryId === sub.id ? 'bg-indigo-soft' : ''">
-              <span>
-                <span class="font-medium" x-text="sub.name"></span>
-                <span class="text-caption text-ink-soft ml-1" x-text="'(' + sub.theme_count + ')'"></span>
-              </span>
-              <span class="opacity-0 group-hover:opacity-100 flex gap-1">
-                <button type="button" @click.stop="editSubcategory(sub)" class="text-caption text-ink-soft hover:text-ink">edit</button>
-                <button x-show="!sub.is_builtin" type="button" @click.stop="deleteSubcategory(sub)" class="text-caption text-rose-600 hover:text-rose-800">del</button>
-              </span>
-            </button>
-          </div>
-        </template>
-      </div>
-      <div x-show="showAddSub && selectedCategoryId" x-cloak class="p-3 border-t border-line bg-line-soft">
-        <input type="text" x-model="newSubName" placeholder="Subcategory name" class="input w-full text-small mb-2">
-        <div class="flex gap-2">
-          <button @click="createSubcategory()" class="btn-primary text-small flex-1">Create</button>
-          <button @click="showAddSub = false; newSubName = ''" class="btn-secondary text-small">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    {# Column 3: Themes #}
-    <div class="rounded-standard border border-line bg-white overflow-hidden">
-      <div class="p-3 border-b border-line flex items-center justify-between">
-        <p class="text-caption text-ink-soft font-medium">Themes</p>
-        <button type="button" @click="showAddTheme = true" :disabled="!selectedSubcategoryId" class="text-caption text-indigo hover:underline disabled:text-ink-faint">+ Add Theme</button>
-      </div>
-      <div class="overflow-y-auto p-3 space-y-3" style="max-height:70vh;">
-        <p x-show="!selectedSubcategoryId" x-cloak class="text-caption text-ink-soft">Select a subcategory</p>
-        <template x-for="theme in themes" :key="theme.id">
-          <div class="border border-line rounded-standard p-3">
-            <div class="flex items-center justify-between mb-2">
-              <div>
-                <p class="text-small font-medium" x-text="theme.name"></p>
-                <p class="text-caption text-ink-soft" x-text="theme.description"></p>
-              </div>
-              <div class="flex gap-2">
-                <button type="button" @click="openTheme(theme)" class="text-small text-indigo hover:underline">Edit clips</button>
-                <button x-show="!theme.is_builtin" type="button" @click="deleteTheme(theme)" class="text-small text-rose-600 hover:underline">Delete</button>
-              </div>
+  {# Categories view #}
+  <div x-show="!selectedCategoryId" x-cloak>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <template x-for="cat in categories" :key="cat.id">
+        <button type="button" @click="selectCategory(cat)"
+                class="text-left p-4 rounded-standard border border-line bg-white hover:border-indigo hover:shadow-sm transition group">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <p class="text-small font-medium text-ink" x-text="cat.name"></p>
+              <p class="text-caption text-ink-soft mt-0.5" x-text="cat.subcategory_count + ' subcategor' + (cat.subcategory_count === 1 ? 'y' : 'ies')"></p>
             </div>
-            <p class="text-caption text-ink-soft" x-text="theme.clip_count + ' clip(s)'"></p>
+            <span x-show="cat.is_builtin" class="text-micro text-ink-faint px-1.5 py-0.5 bg-line-soft rounded">built-in</span>
           </div>
-        </template>
-      </div>
-      <div x-show="showAddTheme && selectedSubcategoryId" x-cloak class="p-3 border-t border-line bg-line-soft">
-        <input type="text" x-model="newThemeName" placeholder="Theme name" class="input w-full text-small mb-2">
-        <input type="text" x-model="newThemeDesc" placeholder="Description (optional)" class="input w-full text-small mb-2">
-        <div class="flex gap-2">
-          <button @click="createTheme()" class="btn-primary text-small flex-1">Create</button>
-          <button @click="showAddTheme = false; newThemeName = ''; newThemeDesc = ''" class="btn-secondary text-small">Cancel</button>
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" @click.stop="editCategory(cat)" class="text-caption text-ink-soft hover:text-indigo">Rename</button>
+            <button x-show="!cat.is_builtin" type="button" @click.stop="deleteCategory(cat)" class="text-caption text-rose-600 hover:text-rose-800">Delete</button>
+          </div>
+        </button>
+      </template>
+      {# Add category card #}
+      <button type="button" @click="showAddCategory = true"
+              class="p-4 rounded-standard border-2 border-dashed border-line hover:border-indigo hover:bg-indigo-soft transition text-center">
+        <div class="text-indigo text-h3">+</div>
+        <p class="text-caption text-ink-soft mt-1">Add category</p>
+      </button>
+    </div>
+  </div>
+
+  {# Subcategories view #}
+  <div x-show="selectedCategoryId && !selectedSubcategoryId" x-cloak>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <template x-for="sub in subcategories" :key="sub.id">
+        <button type="button" @click="selectSubcategory(sub)"
+                class="text-left p-4 rounded-standard border border-line bg-white hover:border-indigo hover:shadow-sm transition">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <p class="text-small font-medium text-ink" x-text="sub.name"></p>
+              <p class="text-caption text-ink-soft mt-0.5" x-text="sub.theme_count + ' theme' + (sub.theme_count === 1 ? '' : 's')"></p>
+            </div>
+            <span x-show="sub.is_builtin" class="text-micro text-ink-faint px-1.5 py-0.5 bg-line-soft rounded">built-in</span>
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" @click.stop="editSubcategory(sub)" class="text-caption text-ink-soft hover:text-indigo">Rename</button>
+            <button x-show="!sub.is_builtin" type="button" @click.stop="deleteSubcategory(sub)" class="text-caption text-rose-600 hover:text-rose-800">Delete</button>
+          </div>
+        </button>
+      </template>
+      <button type="button" @click="showAddSub = true"
+              class="p-4 rounded-standard border-2 border-dashed border-line hover:border-indigo hover:bg-indigo-soft transition text-center">
+        <div class="text-indigo text-h3">+</div>
+        <p class="text-caption text-ink-soft mt-1">Add subcategory</p>
+      </button>
+    </div>
+  </div>
+
+  {# Themes view #}
+  <div x-show="selectedSubcategoryId" x-cloak>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <template x-for="theme in themes" :key="theme.id">
+        <div class="p-4 rounded-standard border border-line bg-white">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div class="flex-1 min-w-0">
+              <p class="text-small font-medium text-ink" x-text="theme.name"></p>
+              <p class="text-caption text-ink-soft mt-0.5" x-text="theme.description"></p>
+            </div>
+            <span x-show="theme.is_builtin" class="text-micro text-ink-faint px-1.5 py-0.5 bg-line-soft rounded flex-shrink-0">built-in</span>
+          </div>
+          <p class="text-caption text-ink-soft mb-3" x-text="theme.clip_count + ' clip' + (theme.clip_count === 1 ? '' : 's')"></p>
+          <div class="flex items-center gap-2">
+            <button type="button" @click="openTheme(theme)" class="btn-primary text-caption py-1 px-3">Edit clips</button>
+            <button x-show="!theme.is_builtin" type="button" @click="deleteTheme(theme)" class="text-caption text-rose-600 hover:underline">Delete</button>
+          </div>
         </div>
+      </template>
+      <button type="button" @click="showAddTheme = true"
+              class="p-4 rounded-standard border-2 border-dashed border-line hover:border-indigo hover:bg-indigo-soft transition text-center">
+        <div class="text-indigo text-h3">+</div>
+        <p class="text-caption text-ink-soft mt-1">Add theme</p>
+      </button>
+    </div>
+  </div>
+
+  {# Add category modal #}
+  <div x-show="showAddCategory" x-cloak @keydown.escape.window="showAddCategory = false"
+       style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-sm w-full p-5">
+      <p class="text-small font-medium text-ink mb-3">Add category</p>
+      <input type="text" x-model="newCatName" placeholder="e.g., Corporate Events" class="input w-full text-small mb-3">
+      <div class="flex justify-end gap-2">
+        <button @click="showAddCategory = false; newCatName = ''" class="btn-secondary text-small">Cancel</button>
+        <button @click="createCategory()" :disabled="!newCatName" class="btn-primary text-small">Create</button>
+      </div>
+    </div>
+  </div>
+
+  {# Add subcategory modal #}
+  <div x-show="showAddSub" x-cloak @keydown.escape.window="showAddSub = false"
+       style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-sm w-full p-5">
+      <p class="text-small font-medium text-ink mb-3">Add subcategory</p>
+      <input type="text" x-model="newSubName" placeholder="e.g., Product Launch" class="input w-full text-small mb-3">
+      <div class="flex justify-end gap-2">
+        <button @click="showAddSub = false; newSubName = ''" class="btn-secondary text-small">Cancel</button>
+        <button @click="createSubcategory()" :disabled="!newSubName" class="btn-primary text-small">Create</button>
+      </div>
+    </div>
+  </div>
+
+  {# Add theme modal #}
+  <div x-show="showAddTheme" x-cloak @keydown.escape.window="showAddTheme = false"
+       style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-md w-full p-5">
+      <p class="text-small font-medium text-ink mb-3">Add theme</p>
+      <label class="block mb-3">
+        <span class="text-caption text-ink-soft">Name</span>
+        <input type="text" x-model="newThemeName" placeholder="e.g., Modern Blue" class="input w-full text-small mt-1">
+      </label>
+      <label class="block mb-3">
+        <span class="text-caption text-ink-soft">Description (optional)</span>
+        <input type="text" x-model="newThemeDesc" placeholder="e.g., Cool blue tones for corporate look" class="input w-full text-small mt-1">
+      </label>
+      <div class="flex justify-end gap-2">
+        <button @click="showAddTheme = false; newThemeName = ''; newThemeDesc = ''" class="btn-secondary text-small">Cancel</button>
+        <button @click="createTheme()" :disabled="!newThemeName" class="btn-primary text-small">Create</button>
       </div>
     </div>
   </div>
@@ -119,59 +165,68 @@
   {# Theme clips editor modal #}
   <div x-show="showThemeEditor" x-cloak @keydown.escape.window="showThemeEditor = false"
        style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
-    <div @click.stop class="bg-white rounded-comfortable max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-h3 text-ink" x-text="editingTheme ? editingTheme.name + ' - Clips' : ''"></h3>
-        <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink">✕</button>
-      </div>
-
-      {# Upload new clip #}
-      <div class="border border-line rounded-standard p-3 mb-4">
-        <p class="text-caption text-ink-soft font-medium mb-2">Add clip</p>
-        <input type="file" x-ref="clipFile" accept=".svg,.png,.jpg,.jpeg,.gif" class="text-small mb-2">
-        <div class="grid gap-2 mb-2" style="grid-template-columns:1fr 100px 100px 60px;">
-          <div>
-            <label class="text-caption text-ink-soft">Positions (comma-separated)</label>
-            <input type="text" x-model="newClipPositions" placeholder="top-left,top-right" class="input w-full text-small">
-          </div>
-          <div>
-            <label class="text-caption text-ink-soft">Size %</label>
-            <input type="number" x-model.number="newClipSize" min="4" max="50" class="input w-full text-small">
-          </div>
-          <div>
-            <label class="text-caption text-ink-soft">Animation</label>
-            <select x-model="newClipAnim" class="input w-full text-small">
-              <option>twinkle</option>
-              <option>float-pulse</option>
-              <option>sway-gentle</option>
-              <option>float-flutter</option>
-              <option>confetti-fall</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-caption text-ink-soft">Count</label>
-            <input type="number" x-model.number="newClipCount" min="1" max="5" class="input w-full text-small">
-          </div>
+    <div @click.stop class="bg-white rounded-comfortable max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-5 border-b border-line flex items-center justify-between sticky top-0 bg-white z-10">
+        <div>
+          <p class="text-small font-medium text-ink" x-text="editingTheme ? editingTheme.name : ''"></p>
+          <p class="text-caption text-ink-soft">Manage decoration clips</p>
         </div>
-        <button type="button" @click="uploadClip()" :disabled="uploadingClip" class="btn-primary text-small">
-          <span x-show="!uploadingClip">Upload</span>
-          <span x-show="uploadingClip" x-cloak>Uploading...</span>
-        </button>
+        <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
       </div>
 
-      {# Existing clips #}
-      <div class="space-y-2">
-        <p class="text-caption text-ink-soft font-medium">Current clips</p>
-        <template x-for="clip in themeClips" :key="clip.id">
-          <div class="border border-line rounded-standard p-3 flex items-center gap-3">
-            <img :src="'/static/clips/' + clip.file_path" style="width:60px;height:60px;object-fit:contain;background:#f8f9fa;">
-            <div class="flex-1 min-w-0">
-              <p class="text-caption text-ink truncate" x-text="clip.file_path"></p>
-              <p class="text-caption text-ink-soft" x-text="'Positions: ' + clip.positions.join(', ') + ' | Size: ' + clip.size_pct + '% | Animation: ' + clip.animation + ' | Count: ' + clip.count"></p>
-            </div>
-            <button type="button" @click="deleteClip(clip)" class="text-caption text-rose-600 hover:underline">Delete</button>
+      <div class="p-5 space-y-4">
+        {# Upload new clip #}
+        <div class="border border-line rounded-standard p-4 bg-line-soft">
+          <p class="text-caption text-ink-soft font-medium mb-3">Add new clip</p>
+          <input type="file" x-ref="clipFile" accept=".svg,.png,.jpg,.jpeg,.gif" class="text-small mb-3 w-full">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <label class="block">
+              <span class="text-caption text-ink-soft">Positions (comma-separated)</span>
+              <input type="text" x-model="newClipPositions" placeholder="top-left,top-right" class="input w-full text-small mt-1">
+            </label>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Animation</span>
+              <select x-model="newClipAnim" class="input w-full text-small mt-1">
+                <option>twinkle</option>
+                <option>float-pulse</option>
+                <option>sway-gentle</option>
+                <option>float-flutter</option>
+                <option>confetti-fall</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Size (% of frame width)</span>
+              <input type="number" x-model.number="newClipSize" min="4" max="50" class="input w-full text-small mt-1">
+            </label>
+            <label class="block">
+              <span class="text-caption text-ink-soft">Count per photo</span>
+              <input type="number" x-model.number="newClipCount" min="1" max="5" class="input w-full text-small mt-1">
+            </label>
           </div>
-        </template>
+          <button type="button" @click="uploadClip()" :disabled="uploadingClip" class="btn-primary text-small w-full">
+            <span x-show="!uploadingClip">Upload clip</span>
+            <span x-show="uploadingClip" x-cloak>Uploading&hellip;</span>
+          </button>
+        </div>
+
+        {# Existing clips #}
+        <div class="space-y-2">
+          <p class="text-caption text-ink-soft font-medium">Current clips (<span x-text="themeClips.length"></span>)</p>
+          <p x-show="themeClips.length === 0" x-cloak class="text-caption text-ink-soft text-center py-4">No clips yet - upload one above</p>
+          <template x-for="clip in themeClips" :key="clip.id">
+            <div class="border border-line rounded-standard p-3 flex items-center gap-3">
+              <div class="w-14 h-14 rounded bg-line-soft flex-shrink-0 flex items-center justify-center">
+                <img :src="'/static/clips/' + clip.file_path" style="max-width:56px;max-height:56px;object-fit:contain;">
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-caption text-ink truncate" x-text="clip.file_path.split('/').pop()"></p>
+                <p class="text-caption text-ink-soft" x-text="'Positions: ' + clip.positions.join(', ')"></p>
+                <p class="text-caption text-ink-soft" x-text="'Size: ' + clip.size_pct + '% | ' + clip.animation + ' | count ' + clip.count"></p>
+              </div>
+              <button type="button" @click="deleteClip(clip)" class="text-caption text-rose-600 hover:underline flex-shrink-0">Delete</button>
+            </div>
+          </template>
+        </div>
       </div>
     </div>
   </div>
@@ -185,7 +240,9 @@ function themesPage() {
     themes: [],
     themeClips: [],
     selectedCategoryId: null,
+    selectedCategoryName: '',
     selectedSubcategoryId: null,
+    selectedSubcategoryName: '',
     editingTheme: null,
     showAddCategory: false,
     showAddSub: false,
@@ -201,9 +258,9 @@ function themesPage() {
     newClipCount: 2,
     uploadingClip: false,
 
-    async init() {
-      await this.loadCategories();
-    },
+    async init() { await this.loadCategories(); },
+    clearAll() { this.selectedCategoryId = null; this.selectedSubcategoryId = null; this.subcategories = []; this.themes = []; },
+    clearSub() { this.selectedSubcategoryId = null; this.themes = []; },
     async loadCategories() {
       const r = await fetch('/themes/api/categories', {credentials:'same-origin'});
       const d = await r.json();
@@ -211,6 +268,7 @@ function themesPage() {
     },
     async selectCategory(cat) {
       this.selectedCategoryId = cat.id;
+      this.selectedCategoryName = cat.name;
       this.selectedSubcategoryId = null;
       this.themes = [];
       const r = await fetch('/themes/api/categories/' + cat.id + '/subcategories', {credentials:'same-origin'});
@@ -219,6 +277,7 @@ function themesPage() {
     },
     async selectSubcategory(sub) {
       this.selectedSubcategoryId = sub.id;
+      this.selectedSubcategoryName = sub.name;
       const r = await fetch('/themes/api/subcategories/' + sub.id + '/themes', {credentials:'same-origin'});
       const d = await r.json();
       this.themes = d.themes || [];
@@ -228,29 +287,21 @@ function themesPage() {
         method:'POST', headers:{'Content-Type':'application/json'},
         credentials:'same-origin', body: JSON.stringify({name: this.newCatName})
       });
-      if (r.ok) {
-        this.newCatName = '';
-        this.showAddCategory = false;
-        await this.loadCategories();
-      } else { alert('Failed to create category'); }
+      if (r.ok) { this.newCatName = ''; this.showAddCategory = false; await this.loadCategories(); }
+      else { alert('Failed'); }
     },
     async editCategory(cat) {
       const name = prompt('New name:', cat.name);
       if (name && name !== cat.name) {
-        await fetch('/themes/api/categories/' + cat.id, {
-          method:'PATCH', headers:{'Content-Type':'application/json'},
-          credentials:'same-origin', body: JSON.stringify({name})
-        });
+        await fetch('/themes/api/categories/' + cat.id, {method:'PATCH', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({name})});
         await this.loadCategories();
       }
     },
     async deleteCategory(cat) {
-      if (!confirm('Delete category "' + cat.name + '"? This removes all its subcategories, themes, and clips.')) return;
+      if (!confirm('Delete "' + cat.name + '"? This removes all its subcategories, themes, and clips.')) return;
       const r = await fetch('/themes/api/categories/' + cat.id, {method:'DELETE', credentials:'same-origin'});
-      if (r.ok) {
-        if (this.selectedCategoryId === cat.id) { this.selectedCategoryId = null; this.subcategories = []; this.themes = []; }
-        await this.loadCategories();
-      } else { const d = await r.json(); alert(d.error || 'Delete failed'); }
+      if (r.ok) { await this.loadCategories(); }
+      else { const d = await r.json(); alert(d.error || 'Delete failed'); }
     },
     async createSubcategory() {
       const r = await fetch('/themes/api/categories/' + this.selectedCategoryId + '/subcategories', {
@@ -258,46 +309,39 @@ function themesPage() {
         credentials:'same-origin', body: JSON.stringify({name: this.newSubName})
       });
       if (r.ok) {
-        this.newSubName = '';
-        this.showAddSub = false;
-        await this.selectCategory({id: this.selectedCategoryId});
+        this.newSubName = ''; this.showAddSub = false;
+        await this.selectCategory({id: this.selectedCategoryId, name: this.selectedCategoryName});
         await this.loadCategories();
       } else { alert('Failed'); }
     },
     async editSubcategory(sub) {
       const name = prompt('New name:', sub.name);
       if (name && name !== sub.name) {
-        await fetch('/themes/api/subcategories/' + sub.id, {
-          method:'PATCH', headers:{'Content-Type':'application/json'},
-          credentials:'same-origin', body: JSON.stringify({name})
-        });
-        await this.selectCategory({id: this.selectedCategoryId});
+        await fetch('/themes/api/subcategories/' + sub.id, {method:'PATCH', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({name})});
+        await this.selectCategory({id: this.selectedCategoryId, name: this.selectedCategoryName});
       }
     },
     async deleteSubcategory(sub) {
-      if (!confirm('Delete subcategory "' + sub.name + '"?')) return;
+      if (!confirm('Delete "' + sub.name + '"?')) return;
       const r = await fetch('/themes/api/subcategories/' + sub.id, {method:'DELETE', credentials:'same-origin'});
-      if (r.ok) {
-        if (this.selectedSubcategoryId === sub.id) { this.selectedSubcategoryId = null; this.themes = []; }
-        await this.selectCategory({id: this.selectedCategoryId});
-      } else { const d = await r.json(); alert(d.error || 'Delete failed'); }
+      if (r.ok) { await this.selectCategory({id: this.selectedCategoryId, name: this.selectedCategoryName}); }
+      else { const d = await r.json(); alert(d.error || 'Delete failed'); }
     },
     async createTheme() {
       const r = await fetch('/themes/api/subcategories/' + this.selectedSubcategoryId + '/themes', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        credentials:'same-origin',
-        body: JSON.stringify({name: this.newThemeName, description: this.newThemeDesc})
+        credentials:'same-origin', body: JSON.stringify({name: this.newThemeName, description: this.newThemeDesc})
       });
       if (r.ok) {
         this.newThemeName = ''; this.newThemeDesc = '';
         this.showAddTheme = false;
-        await this.selectSubcategory({id: this.selectedSubcategoryId});
+        await this.selectSubcategory({id: this.selectedSubcategoryId, name: this.selectedSubcategoryName});
       } else { alert('Failed'); }
     },
     async deleteTheme(theme) {
-      if (!confirm('Delete theme "' + theme.name + '"?')) return;
+      if (!confirm('Delete "' + theme.name + '"?')) return;
       const r = await fetch('/themes/api/themes/' + theme.id, {method:'DELETE', credentials:'same-origin'});
-      if (r.ok) { await this.selectSubcategory({id: this.selectedSubcategoryId}); }
+      if (r.ok) { await this.selectSubcategory({id: this.selectedSubcategoryId, name: this.selectedSubcategoryName}); }
       else { const d = await r.json(); alert(d.error || 'Delete failed'); }
     },
     async openTheme(theme) {
@@ -309,7 +353,7 @@ function themesPage() {
     },
     async uploadClip() {
       const fileInput = this.$refs.clipFile;
-      if (!fileInput.files.length) { alert('Please choose a file'); return; }
+      if (!fileInput.files.length) { alert('Choose a file first'); return; }
       const fd = new FormData();
       fd.append('file', fileInput.files[0]);
       fd.append('positions', this.newClipPositions);
@@ -318,13 +362,9 @@ function themesPage() {
       fd.append('count', this.newClipCount);
       this.uploadingClip = true;
       try {
-        const r = await fetch('/themes/api/themes/' + this.editingTheme.id + '/clips', {
-          method:'POST', credentials:'same-origin', body: fd
-        });
-        if (r.ok) {
-          fileInput.value = '';
-          await this.openTheme(this.editingTheme);
-        } else { const d = await r.json(); alert(d.error || 'Upload failed'); }
+        const r = await fetch('/themes/api/themes/' + this.editingTheme.id + '/clips', {method:'POST', credentials:'same-origin', body: fd});
+        if (r.ok) { fileInput.value = ''; await this.openTheme(this.editingTheme); }
+        else { const d = await r.json(); alert(d.error || 'Upload failed'); }
       } finally { this.uploadingClip = false; }
     },
     async deleteClip(clip) {
