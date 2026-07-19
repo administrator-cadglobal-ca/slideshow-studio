@@ -358,9 +358,10 @@
         copyPromise = Promise.resolve();
       }
       copyPromise.then(function() {
-        showCopyToast('Message copied - paste into WhatsApp chat!');
+        showCopyToast('Message copied - open WhatsApp and paste into any chat');
         setTimeout(function() {
-          window.open('https://wa.me/', '_blank');
+          // Use whatsapp:// scheme which opens the app to Chats list (works on iOS+Android)
+          window.location.href = 'whatsapp://';
         }, 800);
       });
     } else {
