@@ -145,7 +145,7 @@
   {# Add theme modal #}
   <div x-show="showAddTheme" x-cloak @keydown.escape.window="showAddTheme = false"
        style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
-    <div @click.stop class="bg-white rounded-comfortable max-w-md w-full p-5">
+    <div @click.stop class="bg-white rounded-comfortable max-w-sm w-full p-5">
       <p class="text-small font-medium text-ink mb-3">Add theme</p>
       <label class="block mb-3">
         <span class="text-caption text-ink-soft">Name</span>
@@ -211,16 +211,16 @@
   {# Theme clips editor modal #}
   <div x-show="showThemeEditor" x-cloak @keydown.escape.window="showThemeEditor = false"
        style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
-    <div @click.stop class="bg-white rounded-comfortable max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-      <div class="p-5 border-b border-line flex items-center justify-between sticky top-0 bg-white z-10">
-        <div>
-          <p class="text-small font-medium text-ink" x-text="editingTheme ? editingTheme.name : ''"></p>
+    <div @click.stop class="bg-white rounded-comfortable max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b border-line flex items-center justify-between sticky top-0 bg-white z-10">
+        <div class="min-w-0">
+          <p class="text-small font-medium text-ink truncate" x-text="editingTheme ? editingTheme.name : ''"></p>
           <p class="text-caption text-ink-soft">Manage decoration clips</p>
         </div>
-        <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
+        <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink text-h3 leading-none ml-3">×</button>
       </div>
 
-      <div class="p-5 space-y-5">
+      <div class="px-6 py-5 space-y-5">
         {# Upload new clip #}
         <div class="border-2 border-dashed border-line rounded-standard p-4 bg-line-soft/30">
           <p class="text-small font-medium text-ink mb-3 flex items-center gap-2">
