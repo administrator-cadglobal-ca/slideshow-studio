@@ -16,3 +16,5 @@ __all__ = [
 
 from app.models.event import ShareToken
 from app.models.audit import AdminAuditLog, log_admin_action
+
+from app.models.theme import ThemeCategory, ThemeSubcategory, ThemeV2, ThemeClip
