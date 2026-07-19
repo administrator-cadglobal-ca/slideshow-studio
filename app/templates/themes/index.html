@@ -174,28 +174,71 @@
         <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
       </div>
 
-      <div class="p-5 space-y-4">
+      <div class="p-5 space-y-5">
         {# Upload new clip #}
-        <div class="border border-line rounded-standard p-4 bg-line-soft">
-          <p class="text-caption text-ink-soft font-medium mb-3">Add new clip</p>
-          <input type="file" x-ref="clipFile" accept=".svg,.png,.jpg,.jpeg,.gif" class="text-small mb-3 w-full">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-            <label class="block">
-              <span class="text-caption text-ink-soft">Positions (comma-separated)</span>
-              <input type="text" x-model="newClipPositions" placeholder="top-left,top-right" class="input w-full text-small mt-1">
+        <div class="border-2 border-dashed border-line rounded-standard p-4 bg-line-soft/30">
+          <p class="text-small font-medium text-ink mb-3 flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add new clip
+          </p>
+
+          {# Custom file drop zone with preview #}
+          <div class="mb-4">
+            <label class="block cursor-pointer">
+              <input type="file" x-ref="clipFile" @change="onFilePicked($event)" accept=".svg,.png,.jpg,.jpeg,.gif" class="hidden">
+              <div class="border border-line rounded-standard p-4 bg-white text-center hover:border-indigo transition"
+                   :class="clipPreviewUrl ? 'border-indigo' : ''">
+                <template x-if="clipPreviewUrl">
+                  <div class="flex items-center gap-3 justify-center">
+                    <div class="w-16 h-16 rounded bg-line-soft flex items-center justify-center flex-shrink-0">
+                      <img :src="clipPreviewUrl" style="max-width:64px;max-height:64px;object-fit:contain;">
+                    </div>
+                    <div class="text-left flex-1 min-w-0">
+                      <p class="text-small font-medium text-ink truncate" x-text="clipPreviewName"></p>
+                      <p class="text-caption text-ink-soft" x-text="clipPreviewSize"></p>
+                    </div>
+                  </div>
+                </template>
+                <template x-if="!clipPreviewUrl">
+                  <div>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-ink-soft mx-auto mb-1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <p class="text-caption text-ink-soft">Click to choose a file</p>
+                    <p class="text-micro text-ink-faint mt-0.5">SVG, PNG, JPG, or GIF</p>
+                  </div>
+                </template>
+              </div>
             </label>
+          </div>
+
+          {# Positions - checkbox pills #}
+          <div class="mb-4">
+            <p class="text-caption text-ink-soft mb-2">Positions (where the clip appears on each photo)</p>
+            <div class="flex flex-wrap gap-2">
+              <template x-for="pos in availablePositions" :key="pos.value">
+                <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition text-small"
+                       :class="selectedPositions.includes(pos.value) ? 'border-indigo bg-indigo-soft text-indigo font-medium' : 'border-line bg-white text-ink-soft hover:border-indigo'">
+                  <input type="checkbox" :value="pos.value" x-model="selectedPositions" class="sr-only">
+                  <span x-text="pos.label"></span>
+                </label>
+              </template>
+            </div>
+            <p x-show="selectedPositions.length === 0" x-cloak class="text-caption text-rose-600 mt-1">Select at least one position</p>
+          </div>
+
+          {# Animation + Size + Count in a compact row #}
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <label class="block">
               <span class="text-caption text-ink-soft">Animation</span>
               <select x-model="newClipAnim" class="input w-full text-small mt-1">
-                <option>twinkle</option>
-                <option>float-pulse</option>
-                <option>sway-gentle</option>
-                <option>float-flutter</option>
-                <option>confetti-fall</option>
+                <option value="twinkle">Twinkle (sparkle)</option>
+                <option value="float-pulse">Float & Pulse</option>
+                <option value="sway-gentle">Sway Gently</option>
+                <option value="float-flutter">Float & Flutter</option>
+                <option value="confetti-fall">Confetti Fall</option>
               </select>
             </label>
             <label class="block">
-              <span class="text-caption text-ink-soft">Size (% of frame width)</span>
+              <span class="text-caption text-ink-soft">Size (% of frame)</span>
               <input type="number" x-model.number="newClipSize" min="4" max="50" class="input w-full text-small mt-1">
             </label>
             <label class="block">
@@ -203,27 +246,37 @@
               <input type="number" x-model.number="newClipCount" min="1" max="5" class="input w-full text-small mt-1">
             </label>
           </div>
-          <button type="button" @click="uploadClip()" :disabled="uploadingClip" class="btn-primary text-small w-full">
-            <span x-show="!uploadingClip">Upload clip</span>
+
+          <button type="button" @click="uploadClip()"
+                  :disabled="uploadingClip || !clipPreviewUrl || selectedPositions.length === 0"
+                  class="btn-primary text-small w-full disabled:opacity-50 disabled:cursor-not-allowed">
+            <span x-show="!uploadingClip">Add this clip</span>
             <span x-show="uploadingClip" x-cloak>Uploading&hellip;</span>
           </button>
         </div>
 
         {# Existing clips #}
         <div class="space-y-2">
-          <p class="text-caption text-ink-soft font-medium">Current clips (<span x-text="themeClips.length"></span>)</p>
-          <p x-show="themeClips.length === 0" x-cloak class="text-caption text-ink-soft text-center py-4">No clips yet - upload one above</p>
+          <div class="flex items-center justify-between">
+            <p class="text-small font-medium text-ink">Current clips <span class="text-ink-soft" x-text="'(' + themeClips.length + ')'"></span></p>
+          </div>
+          <p x-show="themeClips.length === 0" x-cloak class="text-caption text-ink-soft text-center py-6 border border-dashed border-line rounded-standard">No clips yet - add one above</p>
           <template x-for="clip in themeClips" :key="clip.id">
-            <div class="border border-line rounded-standard p-3 flex items-center gap-3">
-              <div class="w-14 h-14 rounded bg-line-soft flex-shrink-0 flex items-center justify-center">
-                <img :src="'/static/clips/' + clip.file_path" style="max-width:56px;max-height:56px;object-fit:contain;">
+            <div class="border border-line rounded-standard p-3 flex items-start gap-3 hover:border-indigo transition">
+              <div class="w-16 h-16 rounded bg-line-soft flex-shrink-0 flex items-center justify-center border border-line">
+                <img :src="'/static/clips/' + clip.file_path" style="max-width:64px;max-height:64px;object-fit:contain;">
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-caption text-ink truncate" x-text="clip.file_path.split('/').pop()"></p>
-                <p class="text-caption text-ink-soft" x-text="'Positions: ' + clip.positions.join(', ')"></p>
-                <p class="text-caption text-ink-soft" x-text="'Size: ' + clip.size_pct + '% | ' + clip.animation + ' | count ' + clip.count"></p>
+                <p class="text-small font-medium text-ink truncate" x-text="clip.file_path.split('/').pop()"></p>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <template x-for="p in clip.positions" :key="p">
+                    <span class="text-micro px-2 py-0.5 rounded-full bg-indigo-soft text-indigo" x-text="p"></span>
+                  </template>
+                </div>
+                <p class="text-caption text-ink-soft mt-1" x-text="clip.size_pct + '% • ' + clip.animation + ' • x' + clip.count"></p>
               </div>
-              <button type="button" @click="deleteClip(clip)" class="text-caption text-rose-600 hover:underline flex-shrink-0">Delete</button>
+              <button type="button" @click="deleteClip(clip)"
+                      class="text-caption text-rose-600 hover:bg-rose-50 rounded px-2 py-1 flex-shrink-0">Delete</button>
             </div>
           </template>
         </div>
@@ -252,11 +305,31 @@ function themesPage() {
     newSubName: '',
     newThemeName: '',
     newThemeDesc: '',
-    newClipPositions: 'top-left,top-right',
     newClipSize: 10,
     newClipAnim: 'twinkle',
     newClipCount: 2,
     uploadingClip: false,
+    selectedPositions: ['top-left', 'top-right'],
+    availablePositions: [
+      {value: 'top-left',     label: 'Top-left'},
+      {value: 'top-right',    label: 'Top-right'},
+      {value: 'center-top',   label: 'Center-top'},
+      {value: 'bottom-left',  label: 'Bottom-left'},
+      {value: 'bottom-right', label: 'Bottom-right'},
+    ],
+    clipPreviewUrl: '',
+    clipPreviewName: '',
+    clipPreviewSize: '',
+    onFilePicked(event) {
+      const f = event.target.files[0];
+      if (!f) { this.clipPreviewUrl = ''; return; }
+      this.clipPreviewName = f.name;
+      const sizeKb = f.size / 1024;
+      this.clipPreviewSize = sizeKb < 1024 ? sizeKb.toFixed(1) + ' KB' : (sizeKb/1024).toFixed(2) + ' MB';
+      const reader = new FileReader();
+      reader.onload = (e) => { this.clipPreviewUrl = e.target.result; };
+      reader.readAsDataURL(f);
+    },
 
     async init() { await this.loadCategories(); },
     clearAll() { this.selectedCategoryId = null; this.selectedSubcategoryId = null; this.subcategories = []; this.themes = []; },
@@ -356,14 +429,18 @@ function themesPage() {
       if (!fileInput.files.length) { alert('Choose a file first'); return; }
       const fd = new FormData();
       fd.append('file', fileInput.files[0]);
-      fd.append('positions', this.newClipPositions);
+      fd.append('positions', this.selectedPositions.join(','));
       fd.append('size_pct', this.newClipSize);
       fd.append('animation', this.newClipAnim);
       fd.append('count', this.newClipCount);
       this.uploadingClip = true;
       try {
         const r = await fetch('/themes/api/themes/' + this.editingTheme.id + '/clips', {method:'POST', credentials:'same-origin', body: fd});
-        if (r.ok) { fileInput.value = ''; await this.openTheme(this.editingTheme); }
+        if (r.ok) {
+          fileInput.value = '';
+          this.clipPreviewUrl = ''; this.clipPreviewName = ''; this.clipPreviewSize = '';
+          await this.openTheme(this.editingTheme);
+        }
         else { const d = await r.json(); alert(d.error || 'Upload failed'); }
       } finally { this.uploadingClip = false; }
     },
