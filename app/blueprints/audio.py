@@ -767,9 +767,11 @@ def _handle_archive_upload(archive_file, library_id, filename):
             db.session.add(library)
             db.session.commit()
 
-    default_playlist = library.playlists[0] if library.playlists else None
+    default_playlist = db.session.query(Playlist).filter_by(library_id=library.id, is_default=True).first()
     if default_playlist is None:
-        default_playlist = Playlist(library_id=library.id, name="Default", user_id=current_user.id)
+        default_playlist = db.session.query(Playlist).filter_by(library_id=library.id).first()
+    if default_playlist is None:
+        default_playlist = Playlist(library_id=library.id, name=library.name, user_id=current_user.id, is_default=True, color=library.color)
         db.session.add(default_playlist)
         db.session.commit()
 
@@ -784,27 +786,26 @@ def _handle_archive_upload(archive_file, library_id, filename):
             fs = FileStorage(stream=file_stream, filename=safe_name, content_type="audio/mpeg")
             result = save_uploaded_audio(fs, current_user.id)
             # Create song row
-            from app.models.audio import Song
-            song = Song(
-                library_id  = library.id,
-                user_id     = current_user.id,
-                filename    = result["filename"],
-                orig_name   = safe_name,
-                duration_sec = result.get("duration"),
-            )
-            db.session.add(song)
-            db.session.flush()
-            # Auto-add default clip
-            from app.models.audio import Clip
-            clip = Clip(
-                playlist_id = default_playlist.id,
-                song_id     = song.id,
-                name        = _os.path.splitext(safe_name)[0][:100],
-                trim_start  = 0,
-                trim_end    = result.get("duration"),
-                sort_order  = default_playlist.clips.count() if hasattr(default_playlist.clips, 'count') else len(default_playlist.clips),
-            )
-            db.session.add(clip)
+            # save_uploaded_audio already created AudioFile + AudioClip
+            # We just need to attach the AudioClip to our default playlist
+            audio_file_id = result.get("audio_file_id") or result.get("id")
+            audio_clip_id = result.get("audio_clip_id") or result.get("clip_id")
+            if audio_file_id:
+                from app.models.audio import AudioFile
+                af = db.session.get(AudioFile, audio_file_id)
+                if af:
+                    af.library_id = library.id
+            if audio_clip_id:
+                from app.models.audio import PlaylistClip
+                # Get max sort_order
+                existing_max = db.session.query(db.func.max(PlaylistClip.sort_order))\
+                    .filter_by(playlist_id=default_playlist.id).scalar() or 0
+                pc = PlaylistClip(
+                    playlist_id = default_playlist.id,
+                    clip_id     = audio_clip_id,
+                    sort_order  = existing_max + 1,
+                )
+                db.session.add(pc)
             uploaded_count += 1
         except Exception as e:
             errors.append({"file": member, "error": str(e)[:100]})
