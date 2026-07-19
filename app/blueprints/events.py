@@ -1120,8 +1120,10 @@ def render_mp4(event_id):
             deco_input_start = len(cmd) - 1 if len(cmd) else 0  # remember input count baseline
             input_count = 1 + (1 if (mixed and mixed.exists()) else 0)  # video + optional audio
             deco_input_indices = []
+            # Use local_frames count + duration_per_frame to estimate video duration
+            _est_duration = int(round(len(local_frames) * duration + 2)) if local_frames else 60
             for deco in deco_pngs:
-                cmd += ["-loop", "1", "-i", deco["path"]]
+                cmd += ["-loop", "1", "-t", str(_est_duration), "-i", deco["path"]]
                 deco_input_indices.append(input_count)
                 input_count += 1
 
