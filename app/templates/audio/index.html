@@ -199,6 +199,7 @@
           <span class="text-caption text-ink-soft tabular-nums flex-shrink-0" x-show="selectedSongs.length > 0" x-cloak>
             <span x-text="selectedSongs.length"></span> selected
           </span>
+          <button type="button" @click="deleteSelectedSongs()" x-show="selectedSongs.length > 0" x-cloak class="text-caption text-rose-600 hover:text-rose-800 underline flex-shrink-0">Delete</button>
           <button type="button" @click="clearSelection()" x-show="selectedSongs.length > 0" x-cloak class="text-caption text-ink-soft hover:text-ink underline flex-shrink-0">Clear</button>
         </div>
 
@@ -447,6 +448,27 @@ window._LIBRARIES = [{% for lib in libraries %}{id: {{ lib.id }}, name: '{{ lib.
 function audioLibrary() {
   return {
     activeLibrary: 'all',
+
+    async deleteSelectedSongs() {
+      if (!this.selectedSongs.length) return;
+      if (!confirm('Delete ' + this.selectedSongs.length + ' selected song(s)? This cannot be undone.')) return;
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      try {
+        const r = await fetch('/audio/songs/batch-delete', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', ...(csrf ? {'X-CSRFToken': csrf} : {})},
+          credentials: 'same-origin',
+          body: JSON.stringify({song_ids: this.selectedSongs}),
+        });
+        if (r.ok) {
+          this.selectedSongs = [];
+          window.location.reload();
+        } else {
+          const d = await r.json();
+          alert(d.error || 'Delete failed');
+        }
+      } catch (e) { alert('Delete failed: ' + e.message); }
+    },
 
     async renameSong(songId, currentName) {
       const newName = prompt('Rename song:', currentName);
