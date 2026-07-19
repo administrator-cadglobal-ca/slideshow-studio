@@ -1157,11 +1157,14 @@ def render_mp4(event_id):
                 cmd += ["-filter_complex", filter_complex, "-map", "[outv]"]
                 if mixed and mixed.exists():
                     cmd += ["-map", "1:a"]
-                cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "18"]
+                # -shortest ensures output ends when the shortest input (base video) ends
+                cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "18", "-shortest"]
             else:
                 cmd += ["-vf", vf, "-c:v", "libx264", "-preset", "fast", "-crf", "18"]
             if mixed and mixed.exists():
-                cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]
+                cmd += ["-c:a", "aac", "-b:a", "192k"]
+                if "-shortest" not in cmd:
+                    cmd += ["-shortest"]
             cmd.append(str(out_file))
 
             # -loglevel error keeps ffmpeg quiet except for progress and real errors
