@@ -228,13 +228,14 @@
         </button>
       </div>
       <p x-show="iconResults.length === 0 && !iconSearching && iconSearchDone" x-cloak class="text-caption text-ink-soft text-center py-4">No icons found - try different keywords</p>
-      <div class="grid grid-cols-4 sm:grid-cols-6 gap-2 overflow-y-auto flex-1" style="padding:4px;">
+      <div class="overflow-y-auto flex-1" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; padding:4px;">
         <template x-for="icon in iconResults" :key="icon.id">
           <button type="button" @click="importIcon(icon)"
                   :disabled="iconImporting"
-                  class="aspect-square border border-line rounded-standard bg-white hover:border-indigo hover:bg-indigo-soft flex items-center justify-center p-2 transition disabled:opacity-50"
+                  class="border border-line rounded-standard bg-white hover:border-indigo hover:bg-indigo-soft flex items-center justify-center transition disabled:opacity-50"
+                  style="aspect-ratio:1/1; padding:8px;"
                   :title="icon.id">
-            <img :src="icon.preview_url" style="max-width:100%;max-height:100%;" loading="lazy">
+            <img :src="icon.preview_url" style="max-width:100%;max-height:100%; object-fit:contain;" loading="lazy">
           </button>
         </template>
       </div>
