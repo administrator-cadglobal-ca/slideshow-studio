@@ -51,6 +51,12 @@ def upload():
     if not f:
         return jsonify({"error": "no file"}), 400
 
+    # Check if it's an archive - if so, extract audio files inside
+    orig_filename = (f.filename or "").lower()
+    ARCHIVE_EXTS = (".zip", ".7z", ".rar", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz")
+    if any(orig_filename.endswith(ext) for ext in ARCHIVE_EXTS):
+        return _handle_archive_upload(f, request.form.get("library_id"), orig_filename)
+
     result = save_uploaded_audio(f, current_user.id)
 
     # Resolve target library
