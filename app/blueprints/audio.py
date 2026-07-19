@@ -937,6 +937,29 @@ def freesound_import():
         duration_s=result.get("duration_s"),
     )
     db.session.add(song)
+    db.session.flush()
+
+    # Auto-create the "Full Song" clip (matches upload behavior)
+    base = song.orig_name.rsplit(".", 1)[0] if "." in song.orig_name else song.orig_name
+    clip = AudioClip(
+        song_id=song.id,
+        name=f"{base} - 1",
+        description="Full Song",
+        trim_start="",
+        trim_end="",
+        fade_in=False,
+        fade_out=True,
+    )
+    db.session.add(clip)
+    db.session.flush()
+
+    # Auto-add clip to library's default playlist
+    default_pl = db.session.query(Playlist).filter_by(
+        library_id=library.id, is_default=True
+    ).first()
+    if default_pl:
+        default_pl.clips.append(clip)
+
     db.session.commit()
 
     return jsonify({"ok": True, "song_id": song.id, "name": song.orig_name})
@@ -965,11 +988,11 @@ def rename_song(song_id):
 
     new_base = song.orig_name.rsplit(".", 1)[0] if "." in song.orig_name else song.orig_name
 
-    # Cascade to auto-created clip named "{old_base}-1"
-    auto_clip_name = f"{old_orig_base}-1"
+    # Cascade to auto-created clip named "{old_base} - 1"
+    auto_clip_name = f"{old_orig_base} - 1"
     clip = db.session.query(AudioClip).filter_by(song_id=song.id, name=auto_clip_name).first()
     if clip:
-        clip.name = f"{new_base}-1"
+        clip.name = f"{new_base} - 1"
 
     db.session.commit()
     return jsonify({"ok": True, "new_name": song.orig_name})
