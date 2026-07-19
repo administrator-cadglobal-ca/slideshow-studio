@@ -389,12 +389,12 @@
           <div class="mb-3">
             <p class="text-caption text-ink-soft mb-2">Position mode</p>
             <div class="flex gap-2">
-              <button type="button" @click="uploadPositionType = 'anchor'"
+              <button type="button" @click="switchToAnchorMode()"
                       class="text-small px-3 py-1.5 rounded-full border"
                       :class="uploadPositionType === 'anchor' ? 'border-indigo bg-indigo-soft text-indigo font-medium' : 'border-line text-ink-soft'">
                 Anchor (fixed corners/edges)
               </button>
-              <button type="button" @click="uploadPositionType = 'freeform'"
+              <button type="button" @click="switchToFreeformMode()"
                       class="text-small px-3 py-1.5 rounded-full border"
                       :class="uploadPositionType === 'freeform' ? 'border-indigo bg-indigo-soft text-indigo font-medium' : 'border-line text-ink-soft'">
                 Freeform (drag anywhere)
