@@ -377,8 +377,25 @@
             </label>
           </div>
 
-          {# Positions - checkbox pills #}
-          <div class="mb-4">
+          {# Position mode toggle #}
+          <div class="mb-3">
+            <p class="text-caption text-ink-soft mb-2">Position mode</p>
+            <div class="flex gap-2">
+              <button type="button" @click="uploadPositionType = 'anchor'"
+                      class="text-small px-3 py-1.5 rounded-full border"
+                      :class="uploadPositionType === 'anchor' ? 'border-indigo bg-indigo-soft text-indigo font-medium' : 'border-line text-ink-soft'">
+                Anchor (fixed corners/edges)
+              </button>
+              <button type="button" @click="uploadPositionType = 'freeform'"
+                      class="text-small px-3 py-1.5 rounded-full border"
+                      :class="uploadPositionType === 'freeform' ? 'border-indigo bg-indigo-soft text-indigo font-medium' : 'border-line text-ink-soft'">
+                Freeform (drag anywhere)
+              </button>
+            </div>
+          </div>
+
+          {# Anchor mode: position pills #}
+          <div class="mb-4" x-show="uploadPositionType === 'anchor'" x-cloak>
             <p class="text-caption text-ink-soft mb-2">Positions (where the clip appears on each photo)</p>
             <div class="flex flex-wrap gap-2">
               <template x-for="pos in availablePositions" :key="pos.value">
@@ -390,6 +407,28 @@
               </template>
             </div>
             <p x-show="selectedPositions.length === 0" x-cloak class="text-caption text-rose-600 mt-1">Select at least one position</p>
+          </div>
+
+          {# Freeform mode: drag stage #}
+          <div class="mb-4" x-show="uploadPositionType === 'freeform'" x-cloak>
+            <p class="text-caption text-ink-soft mb-2">Drag to place (click anywhere on the stage to add a position)</p>
+            <div class="relative bg-slate-800 rounded-standard mx-auto"
+                 style="aspect-ratio:16/9; max-width:400px; cursor:crosshair;"
+                 @click="addFreeformPosition($event)">
+              <div class="absolute inset-0 flex items-center justify-center text-white/30 text-caption pointer-events-none">Click to place</div>
+              <template x-for="(pt, i) in uploadFreeformPositions" :key="i">
+                <div class="absolute" style="transform:translate(-50%,-50%);"
+                     :style="'left:' + pt.x + '%; top:' + pt.y + '%;'">
+                  <div class="w-6 h-6 rounded-full bg-indigo border-2 border-white flex items-center justify-center text-white text-caption font-medium" x-text="i+1"></div>
+                  <button type="button" @click.stop="removeFreeformPosition(i)"
+                          class="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-rose-600 text-white text-micro leading-none">×</button>
+                </div>
+              </template>
+            </div>
+            <p x-show="uploadFreeformPositions.length === 0" x-cloak class="text-caption text-rose-600 mt-1">Click on the stage to add at least one position</p>
+            <p x-show="uploadFreeformPositions.length > 0" x-cloak class="text-caption text-ink-soft mt-1">
+              <span x-text="uploadFreeformPositions.length"></span> position(s) placed
+            </p>
           </div>
 
           {# Animation + Size + Count in a compact row #}
@@ -415,7 +454,7 @@
           </div>
 
           <button type="button" @click="uploadClip()"
-                  :disabled="uploadingClip || !clipPreviewUrl || selectedPositions.length === 0"
+                  :disabled="uploadingClip || !clipPreviewUrl || (uploadPositionType === 'anchor' && selectedPositions.length === 0) || (uploadPositionType === 'freeform' && uploadFreeformPositions.length === 0)"
                   class="btn-primary text-small w-full disabled:opacity-50 disabled:cursor-not-allowed">
             <span x-show="!uploadingClip">Add this clip</span>
             <span x-show="uploadingClip" x-cloak>Uploading&hellip;</span>
@@ -606,15 +645,18 @@ function themesPage() {
       const fd = new FormData();
       fd.append('file', fileInput.files[0]);
       fd.append('positions', this.selectedPositions.join(','));
+      fd.append('position_type', this.uploadPositionType);
+      fd.append('freeform', JSON.stringify(this.uploadFreeformPositions));
       fd.append('size_pct', this.newClipSize);
       fd.append('animation', this.newClipAnim);
-      fd.append('count', this.newClipCount);
+      fd.append('count', this.uploadPositionType === 'freeform' ? this.uploadFreeformPositions.length : this.newClipCount);
       this.uploadingClip = true;
       try {
         const r = await fetch('/themes/api/themes/' + this.editingTheme.id + '/clips', {method:'POST', credentials:'same-origin', body: fd});
         if (r.ok) {
           fileInput.value = '';
           this.clipPreviewUrl = ''; this.clipPreviewName = ''; this.clipPreviewSize = '';
+          this.uploadFreeformPositions = [];
           await this.openTheme(this.editingTheme);
         }
         else { const d = await r.json(); alert(d.error || 'Upload failed'); }
@@ -634,6 +676,18 @@ function themesPage() {
     iconSearchDone: false,
     iconImporting: false,
     iconAddedIds: [],
+    uploadPositionType: 'anchor',
+    uploadFreeformPositions: [],
+
+    addFreeformPosition(event) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 100;
+      const y = ((event.clientY - rect.top) / rect.height) * 100;
+      this.uploadFreeformPositions.push({x: Math.round(x*10)/10, y: Math.round(y*10)/10});
+    },
+    removeFreeformPosition(idx) {
+      this.uploadFreeformPositions.splice(idx, 1);
+    },
     showThemePreview: false,
     previewOrientation: 'landscape',
     previewClips: [],
