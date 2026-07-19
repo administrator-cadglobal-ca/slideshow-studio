@@ -58,6 +58,8 @@ class ThemeClip(db.Model):
     theme_id       = db.Column(db.Integer, db.ForeignKey("themes_v2.id"), nullable=False)
     file_path      = db.Column(db.String(300), nullable=False)
     positions_json = db.Column(db.Text, nullable=False)
+    position_type  = db.Column(db.String(20), default="anchor")
+    freeform_json  = db.Column(db.Text)
     size_pct       = db.Column(db.Integer, default=10)
     animation      = db.Column(db.String(60), default="twinkle")
     count          = db.Column(db.Integer, default=1)

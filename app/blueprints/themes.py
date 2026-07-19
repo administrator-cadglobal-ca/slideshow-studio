@@ -223,6 +223,8 @@ def get_theme(theme_id):
         "clips": [
             {"id": c.id, "file_path": c.file_path,
              "positions": json.loads(c.positions_json) if c.positions_json else [],
+             "position_type": c.position_type or "anchor",
+             "freeform": json.loads(c.freeform_json) if c.freeform_json else [],
              "size_pct": c.size_pct, "animation": c.animation, "count": c.count,
              "sort_order": c.sort_order}
             for c in theme.clips
@@ -289,6 +291,12 @@ def upload_clip(theme_id):
 
     positions = request.form.get("positions", "top-left")
     positions_list = [p.strip() for p in positions.split(",") if p.strip()]
+    position_type = request.form.get("position_type", "anchor")
+    freeform_raw = request.form.get("freeform", "[]")
+    try:
+        freeform_list = json.loads(freeform_raw)
+    except Exception:
+        freeform_list = []
 
     max_order = db.session.query(db.func.coalesce(db.func.max(ThemeClip.sort_order), 0))\
                   .filter_by(theme_id=theme_id).scalar() or 0
@@ -297,6 +305,8 @@ def upload_clip(theme_id):
         theme_id=theme_id,
         file_path=file_path,
         positions_json=json.dumps(positions_list),
+        position_type=position_type,
+        freeform_json=json.dumps(freeform_list),
         size_pct=int(request.form.get("size_pct", 10) or 10),
         animation=request.form.get("animation", "twinkle"),
         count=int(request.form.get("count", 1) or 1),
@@ -317,6 +327,10 @@ def update_clip(clip_id):
     data = request.json or {}
     if "positions" in data:
         clip.positions_json = json.dumps(data["positions"])
+    if "position_type" in data:
+        clip.position_type = data["position_type"]
+    if "freeform" in data:
+        clip.freeform_json = json.dumps(data["freeform"] or [])
     if "size_pct" in data:
         clip.size_pct = int(data["size_pct"] or 10)
     if "animation" in data:
