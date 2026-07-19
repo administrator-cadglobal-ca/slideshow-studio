@@ -484,9 +484,13 @@ function themesPage() {
     selectedPositions: ['top-left', 'top-right'],
     availablePositions: [
       {value: 'top-left',     label: 'Top-left'},
-      {value: 'top-right',    label: 'Top-right'},
       {value: 'center-top',   label: 'Center-top'},
+      {value: 'top-right',    label: 'Top-right'},
+      {value: 'left-center',  label: 'Left-center'},
+      {value: 'center',       label: 'Center'},
+      {value: 'right-center', label: 'Right-center'},
       {value: 'bottom-left',  label: 'Bottom-left'},
+      {value: 'center-bottom','label': 'Center-bottom'},
       {value: 'bottom-right', label: 'Bottom-right'},
     ],
     clipPreviewUrl: '',
@@ -660,12 +664,16 @@ function themesPage() {
       var sizePct = clip.size + '%';
       var posStyle = '';
       switch (clip.position) {
-        case 'top-left':     posStyle = 'top:4%;left:4%;'; break;
-        case 'top-right':    posStyle = 'top:4%;right:4%;'; break;
-        case 'bottom-left':  posStyle = 'bottom:4%;left:4%;'; break;
-        case 'bottom-right': posStyle = 'bottom:4%;right:4%;'; break;
-        case 'center-top':   posStyle = 'top:6%;left:50%;transform:translateX(-50%);'; break;
-        default:             posStyle = 'top:4%;left:4%;';
+        case 'top-left':      posStyle = 'top:4%;left:4%;'; break;
+        case 'top-right':     posStyle = 'top:4%;right:4%;'; break;
+        case 'bottom-left':   posStyle = 'bottom:4%;left:4%;'; break;
+        case 'bottom-right':  posStyle = 'bottom:4%;right:4%;'; break;
+        case 'center-top':    posStyle = 'top:6%;left:50%;transform:translateX(-50%);'; break;
+        case 'center-bottom': posStyle = 'bottom:6%;left:50%;transform:translateX(-50%);'; break;
+        case 'left-center':   posStyle = 'top:50%;left:4%;transform:translateY(-50%);'; break;
+        case 'right-center':  posStyle = 'top:50%;right:4%;transform:translateY(-50%);'; break;
+        case 'center':        posStyle = 'top:50%;left:50%;transform:translate(-50%,-50%);'; break;
+        default:              posStyle = 'top:4%;left:4%;';
       }
       return 'position:absolute; width:' + sizePct + '; height:' + sizePct + '; ' + posStyle;
     },
