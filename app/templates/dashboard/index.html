@@ -309,7 +309,7 @@
 
 <script>
   function buildShareMessage(kind, name, url, password, expiresOn) {
-    var inviter = {{ current_user.first_name|tojson }};
+    var inviter = {{ current_user.first_name|tojson|safe }};
     var lines = [];
     lines.push('🎉 Welcome to Slideshow Studio!');
     lines.push('');
