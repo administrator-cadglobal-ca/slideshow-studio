@@ -375,7 +375,7 @@ def iconify_search():
                 "id": icon_ref,
                 "prefix": prefix,
                 "name": name,
-                "preview_url": f"https://api.iconify.design/{prefix}/{name}.svg",
+                "preview_url": f"https://api.iconify.design/{prefix}/{name}.svg?height=64",
             })
         return jsonify({"icons": results, "total": data.get("total", len(results))})
     except Exception as e:
