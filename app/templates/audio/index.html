@@ -1,6 +1,60 @@
 {% extends "shared/base.html" %}
 
-{% block title %}Audio - Slideshow Studio{% endblock %}
+{% block title %}Audio - Slideshow Studio{# Freesound browser modal #}
+<div x-show="showFreesound" x-cloak @keydown.escape.window="showFreesound = false"
+     style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+  <div @click.stop class="bg-white rounded-comfortable w-full flex flex-col" style="max-width:560px; max-height:85vh; padding:20px 24px;">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <p class="text-small font-medium text-ink">Browse Freesound</p>
+        <p class="text-caption text-ink-soft">Free CC-licensed audio clips</p>
+      </div>
+      <button type="button" @click="showFreesound = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
+    </div>
+
+    <div class="flex gap-2 mb-3">
+      <input type="text" x-model="freesoundQuery" @keydown.enter="searchFreesound()"
+             placeholder="happy birthday, wedding music, background..." class="input flex-1 text-small">
+      <button type="button" @click="searchFreesound()" :disabled="!freesoundQuery || freesoundSearching" class="btn-primary text-small">
+        <span x-show="!freesoundSearching">Search</span>
+        <span x-show="freesoundSearching" x-cloak>...</span>
+      </button>
+    </div>
+
+    <div class="overflow-y-auto flex-1 space-y-2" style="padding-right:4px;">
+      <p x-show="freesoundResults.length === 0 && !freesoundSearching && freesoundSearchDone" x-cloak class="text-caption text-ink-soft text-center py-4">No results — try different keywords</p>
+      <template x-for="sound in freesoundResults" :key="sound.id">
+        <div class="border border-line rounded-standard flex items-center gap-3" style="padding:10px 12px;"
+             :class="freesoundImportedIds.includes(sound.id) ? 'border-emerald-500 bg-emerald-50' : ''">
+          <button type="button" @click="togglePreview(sound)"
+                  class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                  :style="freesoundPlayingId === sound.id ? 'background:#4f46e5;' : 'background:#e0e7ff;'"
+                  :class="freesoundPlayingId === sound.id ? 'text-white' : 'text-indigo'">
+            <svg x-show="freesoundPlayingId !== sound.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg x-show="freesoundPlayingId === sound.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+          </button>
+          <div class="flex-1 min-w-0 pl-1">
+            <p class="text-small font-medium text-ink truncate" x-text="sound.name"></p>
+            <p class="text-caption text-ink-soft" x-text="sound.duration + 's • by ' + sound.username + ' • ' + sound.license.split('/').slice(-2, -1)[0]"></p>
+          </div>
+          <button type="button" @click="importFreesound(sound)"
+                  :disabled="freesoundImporting || freesoundImportedIds.includes(sound.id)"
+                  class="btn-primary text-caption flex-shrink-0 py-1 px-3"
+                  :class="freesoundImportedIds.includes(sound.id) ? 'opacity-60' : ''">
+            <span x-show="!freesoundImportedIds.includes(sound.id)">Add</span>
+            <span x-show="freesoundImportedIds.includes(sound.id)" x-cloak>✓ Added</span>
+          </button>
+        </div>
+      </template>
+    </div>
+
+    <p class="text-micro text-ink-faint mt-3">Sounds are from Freesound.org and use Creative Commons licenses. Check individual attribution requirements per clip.</p>
+  </div>
+</div>
+
+<audio x-ref="freesoundAudio" @ended="freesoundPlayingId = null" style="display:none;"></audio>
+
+{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto py-6"
@@ -19,6 +73,12 @@
       </p>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
+      <button type="button" @click="openFreesound()" class="btn-secondary" title="Search free music from Freesound">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <span class="ml-1 text-caption">Freesound</span>
+      </button>
       <button type="button" @click="$refs.filePicker.click()" class="btn-primary" title="Upload songs">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -379,6 +439,75 @@ function audioLibrary() {
     shuffleMode: false,
     repeatMode: false,
     uploading: false,
+    showFreesound: false,
+    freesoundQuery: '',
+    freesoundResults: [],
+    freesoundSearching: false,
+    freesoundSearchDone: false,
+    freesoundPlayingId: null,
+    freesoundImporting: false,
+    freesoundImportedIds: [],
+
+    openFreesound() {
+      this.showFreesound = true;
+      this.freesoundQuery = '';
+      this.freesoundResults = [];
+      this.freesoundSearchDone = false;
+      this.freesoundImportedIds = [];
+    },
+    async searchFreesound() {
+      if (!this.freesoundQuery.trim()) return;
+      this.freesoundSearching = true;
+      try {
+        const r = await fetch('/audio/api/freesound/search?q=' + encodeURIComponent(this.freesoundQuery), {credentials:'same-origin'});
+        const d = await r.json();
+        if (r.ok) {
+          this.freesoundResults = d.results || [];
+        } else {
+          alert(d.error || 'Search failed');
+          this.freesoundResults = [];
+        }
+        this.freesoundSearchDone = true;
+      } catch (e) {
+        alert('Search failed: ' + e.message);
+      } finally { this.freesoundSearching = false; }
+    },
+    togglePreview(sound) {
+      const audio = this.$refs.freesoundAudio;
+      if (this.freesoundPlayingId === sound.id) {
+        audio.pause();
+        this.freesoundPlayingId = null;
+      } else {
+        audio.src = sound.preview_url;
+        audio.play();
+        this.freesoundPlayingId = sound.id;
+      }
+    },
+    async importFreesound(sound) {
+      if (this.freesoundImporting) return;
+      this.freesoundImporting = true;
+      try {
+        const r = await fetch('/audio/api/freesound/import', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            sound_id: sound.id,
+            preview_url: sound.preview_url,
+            name: sound.name,
+          }),
+        });
+        if (r.ok) {
+          this.freesoundImportedIds.push(sound.id);
+          // Reload the audio library list
+          if (typeof this.loadSongs === 'function') { await this.loadSongs(); }
+          else { window.location.reload(); }
+        } else {
+          const d = await r.json();
+          alert(d.error || 'Import failed');
+        }
+      } finally { this.freesoundImporting = false; }
+    },
     uploadedCount: 0,
     uploadTotal: 0,
     uploadError: '',
@@ -670,4 +799,58 @@ function audioLibrary() {
   };
 }
 </script>
+{# Freesound browser modal #}
+<div x-show="showFreesound" x-cloak @keydown.escape.window="showFreesound = false"
+     style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+  <div @click.stop class="bg-white rounded-comfortable w-full flex flex-col" style="max-width:560px; max-height:85vh; padding:20px 24px;">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <p class="text-small font-medium text-ink">Browse Freesound</p>
+        <p class="text-caption text-ink-soft">Free CC-licensed audio clips</p>
+      </div>
+      <button type="button" @click="showFreesound = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
+    </div>
+
+    <div class="flex gap-2 mb-3">
+      <input type="text" x-model="freesoundQuery" @keydown.enter="searchFreesound()"
+             placeholder="happy birthday, wedding music, background..." class="input flex-1 text-small">
+      <button type="button" @click="searchFreesound()" :disabled="!freesoundQuery || freesoundSearching" class="btn-primary text-small">
+        <span x-show="!freesoundSearching">Search</span>
+        <span x-show="freesoundSearching" x-cloak>...</span>
+      </button>
+    </div>
+
+    <div class="overflow-y-auto flex-1 space-y-2" style="padding-right:4px;">
+      <p x-show="freesoundResults.length === 0 && !freesoundSearching && freesoundSearchDone" x-cloak class="text-caption text-ink-soft text-center py-4">No results — try different keywords</p>
+      <template x-for="sound in freesoundResults" :key="sound.id">
+        <div class="border border-line rounded-standard flex items-center gap-3" style="padding:10px 12px;"
+             :class="freesoundImportedIds.includes(sound.id) ? 'border-emerald-500 bg-emerald-50' : ''">
+          <button type="button" @click="togglePreview(sound)"
+                  class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+                  :style="freesoundPlayingId === sound.id ? 'background:#4f46e5;' : 'background:#e0e7ff;'"
+                  :class="freesoundPlayingId === sound.id ? 'text-white' : 'text-indigo'">
+            <svg x-show="freesoundPlayingId !== sound.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg x-show="freesoundPlayingId === sound.id" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+          </button>
+          <div class="flex-1 min-w-0 pl-1">
+            <p class="text-small font-medium text-ink truncate" x-text="sound.name"></p>
+            <p class="text-caption text-ink-soft" x-text="sound.duration + 's • by ' + sound.username + ' • ' + sound.license.split('/').slice(-2, -1)[0]"></p>
+          </div>
+          <button type="button" @click="importFreesound(sound)"
+                  :disabled="freesoundImporting || freesoundImportedIds.includes(sound.id)"
+                  class="btn-primary text-caption flex-shrink-0 py-1 px-3"
+                  :class="freesoundImportedIds.includes(sound.id) ? 'opacity-60' : ''">
+            <span x-show="!freesoundImportedIds.includes(sound.id)">Add</span>
+            <span x-show="freesoundImportedIds.includes(sound.id)" x-cloak>✓ Added</span>
+          </button>
+        </div>
+      </template>
+    </div>
+
+    <p class="text-micro text-ink-faint mt-3">Sounds are from Freesound.org and use Creative Commons licenses. Check individual attribution requirements per clip.</p>
+  </div>
+</div>
+
+<audio x-ref="freesoundAudio" @ended="freesoundPlayingId = null" style="display:none;"></audio>
+
 {% endblock %}
