@@ -9,7 +9,8 @@ LOOP_COLORS = ["#1e3a52","#2a1e3a","#0f3a2a","#3a1e1e","#1e2e3a","#2a3a1e"]
 @bp.route("/")
 @login_required
 def index():
-    from app.models import AudioFile, AudioClip, RenderOutput, Library, Playlist
+    from app.models.audio import AudioFile, AudioClip, Library, Playlist
+    from app.models import RenderOutput
     from app.models.event import ShareToken, RenderShare
 
     events = db.session.query(Event)\
