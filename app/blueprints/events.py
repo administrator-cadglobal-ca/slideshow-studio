@@ -1102,7 +1102,7 @@ def render_mp4(event_id):
                                     png_path = str(tmp / f"deco_{cidx}_{pidx}.png")
                                     # Rasterize SVG to PNG at 200px
                                     try:
-                                        subprocess.run(["rsvg-convert", "-w", "200", "-h", "200",
+                                        subprocess.run(["/usr/bin/rsvg-convert", "-w", "200", "-h", "200",
                                                        "-o", png_path, svg_path],
                                                        check=True, capture_output=True, timeout=10)
                                         deco_pngs.append({
