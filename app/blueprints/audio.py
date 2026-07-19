@@ -785,27 +785,35 @@ def _handle_archive_upload(archive_file, library_id, filename):
             safe_name = _os.path.basename(member)
             fs = FileStorage(stream=file_stream, filename=safe_name, content_type="audio/mpeg")
             result = save_uploaded_audio(fs, current_user.id)
-            # Create song row
-            # save_uploaded_audio already created AudioFile + AudioClip
-            # We just need to attach the AudioClip to our default playlist
-            audio_file_id = result.get("audio_file_id") or result.get("id")
-            audio_clip_id = result.get("audio_clip_id") or result.get("clip_id")
-            if audio_file_id:
-                from app.models.audio import AudioFile
-                af = db.session.get(AudioFile, audio_file_id)
-                if af:
-                    af.library_id = library.id
-            if audio_clip_id:
-                from app.models.audio import PlaylistClip
-                # Get max sort_order
-                existing_max = db.session.query(db.func.max(PlaylistClip.sort_order))\
-                    .filter_by(playlist_id=default_playlist.id).scalar() or 0
-                pc = PlaylistClip(
-                    playlist_id = default_playlist.id,
-                    clip_id     = audio_clip_id,
-                    sort_order  = existing_max + 1,
-                )
-                db.session.add(pc)
+            # Create AudioFile
+            max_sort = db.session.query(db.func.coalesce(db.func.max(AudioFile.sort_order), 0))\
+                         .filter_by(user_id=current_user.id).scalar() or 0
+            song = AudioFile(
+                user_id     = current_user.id,
+                filename    = result["filename"],
+                orig_name   = result["orig_name"],
+                file_size   = result["file_size"],
+                duration_s  = result.get("duration_s"),
+                library_id  = library.id,
+                sort_order  = max_sort + 1,
+            )
+            db.session.add(song)
+            db.session.flush()
+            # Create Full Song clip
+            base = song.orig_name.rsplit(".", 1)[0] if "." in song.orig_name else song.orig_name
+            clip = AudioClip(
+                song_id     = song.id,
+                name        = f"{base} - 1",
+                description = "Full Song",
+                trim_start  = "",
+                trim_end    = "",
+                fade_in     = False,
+                fade_out    = True,
+            )
+            db.session.add(clip)
+            db.session.flush()
+            # Attach to default playlist
+            default_playlist.clips.append(clip)
             uploaded_count += 1
         except Exception as e:
             errors.append({"file": member, "error": str(e)[:100]})
