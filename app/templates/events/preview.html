@@ -664,14 +664,25 @@ function previewPage() {
           positions.splice(pIdx, 1);
           // Fetch SVG content
           try {
-            const svgRes = await fetch('/static/clips/' + (this.currentSubcategory || this.currentTheme) + '/' + clipDef.file);
-            const svgText = await svgRes.text();
-            this.decoClips.push({
-              svg: svgText,
-              position: position,
-              size: clipDef.size,
-              animate: clipDef.animate || 'twinkle',
-            });
+            const url = '/static/clips/' + (this.currentSubcategory || this.currentTheme) + '/' + clipDef.file;
+            const isPng = clipDef.file.toLowerCase().endsWith('.png') || clipDef.file.toLowerCase().endsWith('.jpg') || clipDef.file.toLowerCase().endsWith('.jpeg') || clipDef.file.toLowerCase().endsWith('.gif');
+            if (isPng) {
+              this.decoClips.push({
+                svg: '<img src="' + url + '" style="width:100%;height:100%;object-fit:contain;">',
+                position: position,
+                size: clipDef.size,
+                animate: clipDef.animate || 'twinkle',
+              });
+            } else {
+              const svgRes = await fetch(url);
+              const svgText = await svgRes.text();
+              this.decoClips.push({
+                svg: svgText,
+                position: position,
+                size: clipDef.size,
+                animate: clipDef.animate || 'twinkle',
+              });
+            }
           } catch (e) {
             console.error('load clip', clipDef.file, e);
           }

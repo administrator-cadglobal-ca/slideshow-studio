@@ -282,9 +282,18 @@ function viewerPage() {
           const position = positions[pIdx];
           positions.splice(pIdx, 1);
           try {
-            const svgRes = await fetch('/static/clips/' + (this.decorationSubcategory || this.decorationTheme) + '/' + clipDef.file);
-            const svgText = await svgRes.text();
-            this.decoClips.push({ svg: svgText, position: position, size: clipDef.size, animate: clipDef.animate || 'twinkle' });
+            const url = '/static/clips/' + (this.decorationSubcategory || this.decorationTheme) + '/' + clipDef.file;
+            const isImage = ['.png','.jpg','.jpeg','.gif'].some(ext => clipDef.file.toLowerCase().endsWith(ext));
+            if (isImage) {
+              this.decoClips.push({
+                svg: '<img src="' + url + '" style="width:100%;height:100%;object-fit:contain;">',
+                position: position, size: clipDef.size, animate: clipDef.animate || 'twinkle'
+              });
+            } else {
+              const svgRes = await fetch(url);
+              const svgText = await svgRes.text();
+              this.decoClips.push({ svg: svgText, position: position, size: clipDef.size, animate: clipDef.animate || 'twinkle' });
+            }
           } catch (e) { console.error('load clip', clipDef.file, e); }
         }
       }

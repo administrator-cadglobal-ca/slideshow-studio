@@ -1099,19 +1099,29 @@ def render_mp4(event_id):
                                 # Take up to `count` positions
                                 positions_list = clip_def["positions"][:clip_def.get("count", 1)]
                                 for pidx, position in enumerate(positions_list):
-                                    png_path = str(tmp / f"deco_{cidx}_{pidx}.png")
-                                    # Rasterize SVG to PNG at 200px
-                                    try:
-                                        subprocess.run(["/usr/bin/rsvg-convert", "-w", "200", "-h", "200",
-                                                       "-o", png_path, svg_path],
-                                                       check=True, capture_output=True, timeout=10)
+                                    # If already an image format, use directly. Otherwise rasterize SVG.
+                                    file_ext = clip_def["file"].lower()
+                                    if file_ext.endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                                        # Use PNG directly (ffmpeg overlay handles them)
                                         deco_pngs.append({
-                                            "path": png_path,
+                                            "path": svg_path,
                                             "position": position,
                                             "size_pct": clip_def.get("size", 10),
                                         })
-                                    except Exception as _re:
-                                        log(f"  Failed to rasterize {clip_def['file']}: {_re}")
+                                    else:
+                                        png_path = str(tmp / f"deco_{cidx}_{pidx}.png")
+                                        # Rasterize SVG to PNG at 200px
+                                        try:
+                                            subprocess.run(["/usr/bin/rsvg-convert", "-w", "200", "-h", "200",
+                                                           "-o", png_path, svg_path],
+                                                           check=True, capture_output=True, timeout=10)
+                                            deco_pngs.append({
+                                                "path": png_path,
+                                                "position": position,
+                                                "size_pct": clip_def.get("size", 10),
+                                            })
+                                        except Exception as _re:
+                                            log(f"  Failed to rasterize {clip_def['file']}: {_re}")
                             log(f"Prepared {len(deco_pngs)} decoration overlays")
                 except Exception as _de:
                     log(f"Decoration setup failed: {_de}")
