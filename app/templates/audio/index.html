@@ -266,12 +266,20 @@
               </button>
 
               <div class="flex-1 min-w-0">
-                <p class="text-small font-medium text-ink truncate">{{ song.orig_name }}</p>
+                <p class="text-small font-medium text-ink truncate" id="song-name-{{ song.id }}">{{ song.orig_name }}</p>
                 <p class="text-caption text-ink-faint tabular-nums">
                   {% if song.duration_s %}{{ '%d:%02d' % (song.duration_s // 60, song.duration_s % 60) }}{% else %}--:--{% endif %}
                   {% if song.file_size %} &middot; {{ (song.file_size / (1024*1024)) | round(1) }} MB{% endif %}
                 </p>
               </div>
+              {# Rename #}
+              <button type="button" @click.stop="renameSong({{ song.id }}, {{ song.orig_name|tojson }})"
+                      class="text-ink-faint hover:text-indigo p-1" title="Rename">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+              </button>
 
 
               {# Delete #}
@@ -439,6 +447,29 @@ window._LIBRARIES = [{% for lib in libraries %}{id: {{ lib.id }}, name: '{{ lib.
 function audioLibrary() {
   return {
     activeLibrary: 'all',
+
+    async renameSong(songId, currentName) {
+      const newName = prompt('Rename song:', currentName);
+      if (newName === null || newName.trim() === '' || newName === currentName) return;
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+      try {
+        const r = await fetch('/audio/' + songId + '/rename', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', ...(csrf ? {'X-CSRFToken': csrf} : {})},
+          credentials: 'same-origin',
+          body: JSON.stringify({name: newName.trim()}),
+        });
+        if (r.ok) {
+          const data = await r.json();
+          // Update UI without reload
+          const el = document.getElementById('song-name-' + songId);
+          if (el) el.textContent = data.new_name;
+        } else {
+          const d = await r.json();
+          alert(d.error || 'Rename failed');
+        }
+      } catch (e) { alert('Rename failed: ' + e.message); }
+    },
     selectedSongs: [],
     moveToLibraryId: '',
     queue: [],

@@ -940,3 +940,36 @@ def freesound_import():
     db.session.commit()
 
     return jsonify({"ok": True, "song_id": song.id, "name": song.orig_name})
+
+@bp.route("/<int:song_id>/rename", methods=["POST"])
+@login_required
+def rename_song(song_id):
+    """Rename an audio file, cascading to its auto-created clip (songname-1)."""
+    song = db.session.get(AudioFile, song_id)
+    if not song or song.user_id != current_user.id:
+        return jsonify({"error": "not found"}), 404
+
+    data = request.json or {}
+    new_name = (data.get("name") or "").strip()
+    if not new_name:
+        return jsonify({"error": "name required"}), 400
+
+    old_orig_base = song.orig_name.rsplit(".", 1)[0] if "." in song.orig_name else song.orig_name
+    ext = "." + song.orig_name.rsplit(".", 1)[1] if "." in song.orig_name else ""
+
+    # Keep extension if user didn't provide one
+    if not new_name.lower().endswith(ext.lower()) and ext:
+        song.orig_name = new_name + ext
+    else:
+        song.orig_name = new_name
+
+    new_base = song.orig_name.rsplit(".", 1)[0] if "." in song.orig_name else song.orig_name
+
+    # Cascade to auto-created clip named "{old_base}-1"
+    auto_clip_name = f"{old_orig_base}-1"
+    clip = db.session.query(AudioClip).filter_by(song_id=song.id, name=auto_clip_name).first()
+    if clip:
+        clip.name = f"{new_base}-1"
+
+    db.session.commit()
+    return jsonify({"ok": True, "new_name": song.orig_name})
