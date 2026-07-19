@@ -812,6 +812,7 @@ def render_mp4(event_id):
     title_color    = str(data.get("title_color", "#ffffff") or "#ffffff")
     subtitle_color = str(data.get("subtitle_color", "#ffffff") or "#ffffff")
     photo_color    = str(data.get("photo_color", "#ffffff") or "#ffffff")
+    include_decorations = bool(data.get("include_decorations", False))
 
     def _hex_to_ass(hex_color):
         """Convert #RRGGBB to ASS &HBBGGRR& format (ASS uses BGR order)."""
@@ -891,6 +892,9 @@ def render_mp4(event_id):
     _title_col = _title_color_ass
     _subtitle_col = _subtitle_color_ass
     _photo_col = _photo_color_ass
+    _include_decorations = include_decorations
+    _event_id = event_id
+    _user_id_capture = current_user.id
     _incl_title = include_event_title
     _incl_subtitle = include_event_subtitle
     _incl_photo = include_photo_captions
@@ -1071,8 +1075,91 @@ def render_mp4(event_id):
                 subs_style = "PrimaryColour=&Hffffff,OutlineColour=&H000000,Outline=1,Shadow=0,BorderStyle=1"
                 vf = f"subtitles='{srt_esc}':force_style='{subs_style}'," + vf
 
-            cmd += ["-vf", vf,
-                    "-c:v", "libx264", "-preset", "fast", "-crf", "18"]
+            # Decoration overlays (static PNG overlays from event theme)
+            deco_pngs = []  # list of (path, position, size_pct) tuples
+            if _include_decorations:
+                try:
+                    from app.models import Event as _EventCls
+                    _evt_for_deco = db.session.get(_EventCls, _event_id)
+                    theme_id = _evt_for_deco.decoration_theme if _evt_for_deco else None
+                    if theme_id:
+                        from app.services.decoration_themes import get_theme
+                        theme_data = get_theme(theme_id)
+                        if theme_data:
+                            log(f"Applying decoration theme: {theme_id}")
+                            sub_id = theme_data.get("_subcategory_id")
+                            # Rasterize each clip's SVG to PNG
+                            import os as _os_r
+                            clips_dir = _os_r.path.join("/var/www/slideshow/app/static/clips", sub_id or theme_id)
+                            for cidx, clip_def in enumerate(theme_data.get("clips", [])):
+                                svg_path = _os_r.path.join(clips_dir, clip_def["file"])
+                                if not _os_r.path.exists(svg_path):
+                                    log(f"  Skipping missing clip: {clip_def['file']}")
+                                    continue
+                                # Take up to `count` positions
+                                positions_list = clip_def["positions"][:clip_def.get("count", 1)]
+                                for pidx, position in enumerate(positions_list):
+                                    png_path = str(tmp / f"deco_{cidx}_{pidx}.png")
+                                    # Rasterize SVG to PNG at 200px
+                                    try:
+                                        subprocess.run(["rsvg-convert", "-w", "200", "-h", "200",
+                                                       "-o", png_path, svg_path],
+                                                       check=True, capture_output=True, timeout=10)
+                                        deco_pngs.append({
+                                            "path": png_path,
+                                            "position": position,
+                                            "size_pct": clip_def.get("size", 10),
+                                        })
+                                    except Exception as _re:
+                                        log(f"  Failed to rasterize {clip_def['file']}: {_re}")
+                            log(f"Prepared {len(deco_pngs)} decoration overlays")
+                except Exception as _de:
+                    log(f"Decoration setup failed: {_de}")
+
+            # Add decoration PNGs as inputs
+            deco_input_start = len(cmd) - 1 if len(cmd) else 0  # remember input count baseline
+            input_count = 1 + (1 if (mixed and mixed.exists()) else 0)  # video + optional audio
+            deco_input_indices = []
+            for deco in deco_pngs:
+                cmd += ["-loop", "1", "-i", deco["path"]]
+                deco_input_indices.append(input_count)
+                input_count += 1
+
+            # Build filter_complex chain if we have decorations
+            if deco_pngs:
+                # First apply base vf to [0:v] as a labeled stream
+                fc_parts = [f"[0:v]{vf}[base0]"]
+                prev_label = "base0"
+                for i, (deco, ii) in enumerate(zip(deco_pngs, deco_input_indices)):
+                    # Scale deco PNG to size_pct of video width (assume 1920 wide, scale relative)
+                    scale_w = int(1920 * deco["size_pct"] / 100)
+                    fc_parts.append(f"[{ii}:v]scale={scale_w}:-1[deco{i}]")
+                    # Position: top-left = 40,40 ; top-right = W-w-40,40; bottom-left = 40,H-h-100; bottom-right = W-w-40,H-h-100; center-top = (W-w)/2,80
+                    pos = deco["position"]
+                    if pos == "top-left":
+                        overlay_pos = "40:40"
+                    elif pos == "top-right":
+                        overlay_pos = "W-w-40:40"
+                    elif pos == "bottom-left":
+                        overlay_pos = "40:H-h-140"
+                    elif pos == "bottom-right":
+                        overlay_pos = "W-w-40:H-h-140"
+                    elif pos == "center-top":
+                        overlay_pos = "(W-w)/2:80"
+                    else:
+                        overlay_pos = "40:40"
+                    next_label = f"tmp{i}"
+                    if i == len(deco_pngs) - 1:
+                        next_label = "outv"
+                    fc_parts.append(f"[{prev_label}][deco{i}]overlay={overlay_pos}[{next_label}]")
+                    prev_label = next_label
+                filter_complex = ";".join(fc_parts)
+                cmd += ["-filter_complex", filter_complex, "-map", "[outv]"]
+                if mixed and mixed.exists():
+                    cmd += ["-map", "1:a"]
+                cmd += ["-c:v", "libx264", "-preset", "fast", "-crf", "18"]
+            else:
+                cmd += ["-vf", vf, "-c:v", "libx264", "-preset", "fast", "-crf", "18"]
             if mixed and mixed.exists():
                 cmd += ["-c:a", "aac", "-b:a", "192k", "-shortest"]
             cmd.append(str(out_file))
