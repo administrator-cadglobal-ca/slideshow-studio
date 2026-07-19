@@ -867,22 +867,37 @@ function themesPage() {
     previewClips: [],
 
     openThemePreview() {
-      // Build clip list from themeClips, expanded for count and positions
       const list = [];
       const seed = Date.now();
       for (var ci = 0; ci < this.themeClips.length; ci++) {
         const clip = this.themeClips[ci];
-        const positions = clip.positions.slice();
-        for (var i = 0; i < clip.count && positions.length > 0; i++) {
-          const pIdx = (seed + ci*10 + i) % positions.length;
-          const position = positions[pIdx];
-          positions.splice(pIdx, 1);
-          list.push({
-            file_path: clip.file_path,
-            position: position,
-            size: clip.size_pct,
-            animate: clip.animation,
-          });
+        // Freeform: use XY coordinates
+        if (clip.position_type === 'freeform' && clip.freeform && clip.freeform.length) {
+          for (var f = 0; f < clip.freeform.length; f++) {
+            list.push({
+              file_path: clip.file_path,
+              position_type: 'freeform',
+              x: clip.freeform[f].x,
+              y: clip.freeform[f].y,
+              size: clip.size_pct,
+              animate: clip.animation,
+            });
+          }
+        } else {
+          // Anchor: use position names
+          const positions = clip.positions.slice();
+          for (var i = 0; i < clip.count && positions.length > 0; i++) {
+            const pIdx = (seed + ci*10 + i) % positions.length;
+            const position = positions[pIdx];
+            positions.splice(pIdx, 1);
+            list.push({
+              file_path: clip.file_path,
+              position_type: 'anchor',
+              position: position,
+              size: clip.size_pct,
+              animate: clip.animation,
+            });
+          }
         }
       }
       this.previewClips = list;
@@ -890,6 +905,12 @@ function themesPage() {
     },
     clipPositionStyle(clip) {
       var sizePct = clip.size + '%';
+      // Freeform: use x/y percentages with center-aligned transform
+      if (clip.position_type === 'freeform' && typeof clip.x === 'number' && typeof clip.y === 'number') {
+        return 'position:absolute; width:' + sizePct + '; height:' + sizePct
+             + '; left:' + clip.x + '%; top:' + clip.y + '%; transform:translate(-50%,-50%);';
+      }
+      // Anchor: use named positions
       var posStyle = '';
       switch (clip.position) {
         case 'top-left':      posStyle = 'top:4%;left:4%;'; break;
