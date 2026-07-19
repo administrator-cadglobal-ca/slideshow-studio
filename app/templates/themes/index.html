@@ -411,15 +411,23 @@
 
           {# Freeform mode: drag stage #}
           <div class="mb-4" x-show="uploadPositionType === 'freeform'" x-cloak>
-            <p class="text-caption text-ink-soft mb-2">Drag to place (click anywhere on the stage to add a position)</p>
+            <p class="text-caption text-ink-soft mb-2">Click empty area to add. Drag existing dots to move.</p>
             <div class="relative bg-slate-800 rounded-standard mx-auto"
                  style="aspect-ratio:16/9; max-width:400px; cursor:crosshair;"
-                 @click="addFreeformPosition($event)">
+                 x-ref="freeformStage"
+                 @click="stageClickAdd($event)"
+                 @mousemove="onStageMouseMove($event)"
+                 @mouseup.window="onStageMouseUp()"
+                 @touchmove.prevent="onStageTouchMove($event)"
+                 @touchend.window="onStageMouseUp()">
               <div class="absolute inset-0 flex items-center justify-center text-white/30 text-caption pointer-events-none">Click to place</div>
               <template x-for="(pt, i) in uploadFreeformPositions" :key="i">
-                <div class="absolute" style="transform:translate(-50%,-50%);"
-                     :style="'left:' + pt.x + '%; top:' + pt.y + '%;'">
-                  <div class="w-6 h-6 rounded-full bg-indigo border-2 border-white flex items-center justify-center text-white text-caption font-medium" x-text="i+1"></div>
+                <div class="absolute" style="transform:translate(-50%,-50%); cursor:grab;"
+                     :style="'left:' + pt.x + '%; top:' + pt.y + '%;'"
+                     @mousedown.stop="startDrag($event, i)"
+                     @touchstart.stop="startDragTouch($event, i)"
+                     @click.stop>
+                  <div class="w-6 h-6 rounded-full bg-indigo border-2 border-white flex items-center justify-center text-white text-caption font-medium select-none" x-text="i+1"></div>
                   <button type="button" @click.stop="removeFreeformPosition(i)"
                           class="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-rose-600 text-white text-micro leading-none">×</button>
                 </div>
@@ -679,7 +687,15 @@ function themesPage() {
     uploadPositionType: 'anchor',
     uploadFreeformPositions: [],
 
-    addFreeformPosition(event) {
+    draggingIndex: -1,
+    dragMoved: false,
+
+    stageClickAdd(event) {
+      // Only add if not currently dragging (drag doesn't fire click)
+      if (this.draggingIndex !== -1 || this.dragMoved) {
+        this.dragMoved = false;
+        return;
+      }
       const rect = event.currentTarget.getBoundingClientRect();
       const x = ((event.clientX - rect.left) / rect.width) * 100;
       const y = ((event.clientY - rect.top) / rect.height) * 100;
@@ -687,6 +703,47 @@ function themesPage() {
     },
     removeFreeformPosition(idx) {
       this.uploadFreeformPositions.splice(idx, 1);
+    },
+    startDrag(event, idx) {
+      this.draggingIndex = idx;
+      this.dragMoved = false;
+    },
+    startDragTouch(event, idx) {
+      this.draggingIndex = idx;
+      this.dragMoved = false;
+    },
+    onStageMouseMove(event) {
+      if (this.draggingIndex === -1) return;
+      const stage = this.$refs.freeformStage;
+      const rect = stage.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100));
+      this.uploadFreeformPositions[this.draggingIndex] = {
+        x: Math.round(x*10)/10,
+        y: Math.round(y*10)/10,
+      };
+      this.dragMoved = true;
+    },
+    onStageTouchMove(event) {
+      if (this.draggingIndex === -1) return;
+      const t = event.touches[0];
+      if (!t) return;
+      const stage = this.$refs.freeformStage;
+      const rect = stage.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((t.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((t.clientY - rect.top) / rect.height) * 100));
+      this.uploadFreeformPositions[this.draggingIndex] = {
+        x: Math.round(x*10)/10,
+        y: Math.round(y*10)/10,
+      };
+      this.dragMoved = true;
+    },
+    onStageMouseUp() {
+      if (this.draggingIndex !== -1) {
+        this.draggingIndex = -1;
+        // dragMoved stays true briefly to prevent click-add from firing
+        setTimeout(() => { this.dragMoved = false; }, 50);
+      }
     },
     showThemePreview: false,
     previewOrientation: 'landscape',
