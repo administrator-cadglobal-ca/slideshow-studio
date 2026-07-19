@@ -165,7 +165,7 @@
   {# Edit clip modal #}
   <div x-show="showEditClipModal && editingClip" x-cloak @keydown.escape.window="showEditClipModal = false"
        style="z-index:90;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
-    <div @click.stop class="bg-white rounded-comfortable max-w-md w-full p-5">
+    <div @click.stop class="bg-white rounded-comfortable max-w-sm w-full" style="padding:20px 24px;">
       <p class="text-small font-medium text-ink mb-3">Edit clip</p>
       <div class="space-y-4">
         <div>
