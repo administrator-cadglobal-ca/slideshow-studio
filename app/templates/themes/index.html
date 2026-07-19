@@ -2,6 +2,21 @@
 {% block title %}Decoration Themes{% endblock %}
 {% block section %}themes{% endblock %}
 
+{% block extra_head %}
+<style>
+  @keyframes float-pulse { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.05); } }
+  .deco-anim-float-pulse { animation: float-pulse 2.5s ease-in-out infinite; }
+  @keyframes sway-gentle { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+  .deco-anim-sway-gentle { animation: sway-gentle 3.5s ease-in-out infinite; transform-origin: 50% 100%; }
+  @keyframes twinkle { 0%,100% { opacity: 0.6; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.15); } }
+  .deco-anim-twinkle { animation: twinkle 1.5s ease-in-out infinite; }
+  @keyframes confetti-fall { 0% { transform: translateY(-20px) rotate(0deg); } 100% { transform: translateY(10px) rotate(360deg); } }
+  .deco-anim-confetti-fall { animation: confetti-fall 4s linear infinite; }
+  @keyframes float-flutter { 0%,100% { transform: translate(0,0) rotate(-5deg); } 50% { transform: translate(5px,-5px) rotate(5deg); } }
+  .deco-anim-float-flutter { animation: float-flutter 2s ease-in-out infinite; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-5xl mx-auto py-4 px-4" x-data="themesPage()" x-init="init()">
   {# Header #}
@@ -250,16 +265,21 @@
   {# Theme clips editor modal #}
   <div x-show="showThemeEditor" x-cloak @keydown.escape.window="showThemeEditor = false"
        style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
-    <div @click.stop class="bg-white rounded-comfortable max-w-lg w-full max-h-[90vh] overflow-y-auto">
-      <div class="border-b border-line flex items-center justify-between sticky top-0 bg-white z-10" style="padding:16px 24px;">
+    <div @click.stop class="bg-white rounded-comfortable max-w-lg w-full flex flex-col" style="max-height:90vh;">
+      {# Header - fixed #}
+      <div class="border-b border-line flex items-center justify-between bg-white flex-shrink-0" style="padding:16px 24px;">
         <div class="min-w-0">
           <p class="text-small font-medium text-ink truncate" x-text="editingTheme ? editingTheme.name : ''"></p>
           <p class="text-caption text-ink-soft">Manage decoration clips</p>
         </div>
-        <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink text-h3 leading-none ml-3">×</button>
+        <div class="flex items-center gap-2 ml-3">
+          <button type="button" @click="openThemePreview()" class="btn-secondary text-caption">Preview</button>
+          <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
+        </div>
       </div>
 
-      <div class="space-y-5" style="padding:20px 24px;">
+      {# Body - scrollable #}
+      <div class="overflow-y-auto flex-1 space-y-5" style="padding:20px 24px;">
         {# Browse icon library #}
         <button type="button" @click="openIconBrowser()" class="btn-secondary text-small w-full mb-3 flex items-center justify-center gap-2">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -346,12 +366,13 @@
           </button>
         </div>
 
-        {# Existing clips #}
+        {# Existing clips - scrollable list #}
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <p class="text-small font-medium text-ink">Current clips <span class="text-ink-soft" x-text="'(' + themeClips.length + ')'"></span></p>
           </div>
           <p x-show="themeClips.length === 0" x-cloak class="text-caption text-ink-soft text-center py-6 border border-dashed border-line rounded-standard">No clips yet - add one above</p>
+          <div x-show="themeClips.length > 0" style="max-height:280px; overflow-y:auto; padding-right:4px;" class="space-y-2">
           <template x-for="clip in themeClips" :key="clip.id">
             <div class="border border-line rounded-standard flex items-start gap-3 hover:border-indigo transition" style="padding:12px 16px;">
               <div class="w-16 h-16 rounded bg-line-soft flex-shrink-0 flex items-center justify-center border border-line">
@@ -553,6 +574,45 @@ function themesPage() {
     iconSearchDone: false,
     iconImporting: false,
     iconAddedIds: [],
+    showThemePreview: false,
+    previewOrientation: 'landscape',
+    previewClips: [],
+
+    openThemePreview() {
+      // Build clip list from themeClips, expanded for count and positions
+      const list = [];
+      const seed = Date.now();
+      for (var ci = 0; ci < this.themeClips.length; ci++) {
+        const clip = this.themeClips[ci];
+        const positions = clip.positions.slice();
+        for (var i = 0; i < clip.count && positions.length > 0; i++) {
+          const pIdx = (seed + ci*10 + i) % positions.length;
+          const position = positions[pIdx];
+          positions.splice(pIdx, 1);
+          list.push({
+            file_path: clip.file_path,
+            position: position,
+            size: clip.size_pct,
+            animate: clip.animation,
+          });
+        }
+      }
+      this.previewClips = list;
+      this.showThemePreview = true;
+    },
+    clipPositionStyle(clip) {
+      var sizePct = clip.size + '%';
+      var posStyle = '';
+      switch (clip.position) {
+        case 'top-left':     posStyle = 'top:4%;left:4%;'; break;
+        case 'top-right':    posStyle = 'top:4%;right:4%;'; break;
+        case 'bottom-left':  posStyle = 'bottom:4%;left:4%;'; break;
+        case 'bottom-right': posStyle = 'bottom:4%;right:4%;'; break;
+        case 'center-top':   posStyle = 'top:6%;left:50%;transform:translateX(-50%);'; break;
+        default:             posStyle = 'top:4%;left:4%;';
+      }
+      return 'position:absolute; width:' + sizePct + '; height:' + sizePct + '; ' + posStyle;
+    },
 
     openIconBrowser() {
       this.iconSearchQuery = '';
