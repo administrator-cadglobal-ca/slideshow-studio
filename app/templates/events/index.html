@@ -1106,9 +1106,15 @@
           <input type="color" x-model="renderPhotoColor" class="w-8 h-8 rounded cursor-pointer" title="Font color" :disabled="!renderIncludePhotoCaptions">
         </div>
 
-        <div class="mt-3 flex items-center gap-2">
+        <div class="mt-3 flex items-center gap-2 flex-wrap">
           <input type="checkbox" x-model="renderIncludeDecorations" id="renderIncludeDecoCheckbox">
-          <label for="renderIncludeDecoCheckbox" class="text-small">Include decorations (event theme)</label>
+          <label for="renderIncludeDecoCheckbox" class="text-small">Include decorations</label>
+          <span class="text-caption text-ink-soft" x-show="renderCurrentThemeName" x-cloak>
+            (theme: <span class="font-medium" x-text="renderCurrentThemeName"></span>)
+          </span>
+          <span class="text-caption text-rose-600" x-show="!renderCurrentThemeName" x-cloak>
+            (no theme set - go to Preview to pick one)
+          </span>
         </div>
 
         <div class="mt-2 rounded-standard p-4 text-center" style="background:#334155;">
@@ -1400,6 +1406,18 @@ function eventsPage() {
     renderIncludeEventTitle: true,
     renderIncludeEventSubtitle: true,
     renderIncludeDecorations: true,
+    renderCurrentThemeName: '',
+    async loadCurrentDecorationTheme() {
+      try {
+        const r = await fetch('/events/' + this.eventId + '/decoration-theme', {credentials: 'same-origin'});
+        const data = await r.json();
+        if (data.current_theme_data) {
+          this.renderCurrentThemeName = data.current_theme_data.name || data.current_theme;
+        } else {
+          this.renderCurrentThemeName = '';
+        }
+      } catch (e) { console.error('load theme', e); }
+    },
     renderTitleFontSize: 8,
     renderTitleFontFamily: 'DejaVu Sans,Bold',
     renderTitleColor: '#ffffff',
@@ -1501,6 +1519,7 @@ function eventsPage() {
       this.loadRenderVersions();
       this.loadRenders();
       this.loadEventCaptionStyles();
+      this.loadCurrentDecorationTheme();
       this.loadSlideshows();
     },
 
