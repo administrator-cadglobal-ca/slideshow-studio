@@ -472,6 +472,7 @@ function audioLibrary() {
         const selectedSounds = this.freesoundResults.filter(s => this.freesoundSelectedIds.includes(s.id));
         for (const sound of selectedSounds) {
           try {
+            const targetLibId = (typeof this.activeLibrary === 'number' && this.activeLibrary > 0) ? this.activeLibrary : null;
             const r = await fetch('/audio/api/freesound/import', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -480,6 +481,7 @@ function audioLibrary() {
                 sound_id: sound.id,
                 preview_url: sound.preview_url,
                 name: sound.name,
+                library_id: targetLibId,
               }),
             });
             if (r.ok) {
