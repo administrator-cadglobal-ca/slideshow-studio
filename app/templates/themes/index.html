@@ -342,12 +342,20 @@
           Browse free icon library (200k+ icons)
         </button>
 
-        {# Upload new clip #}
+        {# Add/Edit clip form #}
         <div class="border-2 border-dashed border-line rounded-standard bg-line-soft/30" style="padding:16px 20px;">
-          <p class="text-small font-medium text-ink mb-3 flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Or upload a file
-          </p>
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-small font-medium text-ink flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span x-text="editingClipId ? 'Editing clip' : 'Or upload a file'"></span>
+            </p>
+            <button type="button" x-show="editingClipId" x-cloak
+                    @click="cancelEdit()" class="text-caption text-ink-soft hover:text-ink">
+              Cancel edit
+            </button>
+          </div>
 
           {# Custom file drop zone with preview #}
           <div class="mb-4">
@@ -461,11 +469,12 @@
             </label>
           </div>
 
-          <button type="button" @click="uploadClip()"
-                  :disabled="uploadingClip || !clipPreviewUrl || (uploadPositionType === 'anchor' && selectedPositions.length === 0) || (uploadPositionType === 'freeform' && uploadFreeformPositions.length === 0)"
+          <button type="button" @click="saveOrUploadClip()"
+                  :disabled="uploadingClip || (!clipPreviewUrl && !editingClipId) || (uploadPositionType === 'anchor' && selectedPositions.length === 0) || (uploadPositionType === 'freeform' && uploadFreeformPositions.length === 0)"
                   class="btn-primary text-small w-full disabled:opacity-50 disabled:cursor-not-allowed">
-            <span x-show="!uploadingClip">Add this clip</span>
-            <span x-show="uploadingClip" x-cloak>Uploading&hellip;</span>
+            <span x-show="!uploadingClip && !editingClipId">Add this clip</span>
+            <span x-show="!uploadingClip && editingClipId" x-cloak>Save changes</span>
+            <span x-show="uploadingClip" x-cloak>Saving&hellip;</span>
           </button>
         </div>
 
@@ -477,7 +486,10 @@
           <p x-show="themeClips.length === 0" x-cloak class="text-caption text-ink-soft text-center py-6 border border-dashed border-line rounded-standard">No clips yet - add one above</p>
           <div x-show="themeClips.length > 0" style="max-height:280px; overflow-y:auto; padding-right:4px;" class="space-y-2">
           <template x-for="clip in themeClips" :key="clip.id">
-            <div class="border border-line rounded-standard flex items-start gap-3 hover:border-indigo transition" style="padding:12px 16px;">
+            <div class="border rounded-standard flex items-start gap-3 hover:border-indigo transition cursor-pointer"
+                 :class="editingClipId === clip.id ? 'border-indigo bg-indigo-soft/30' : 'border-line'"
+                 style="padding:12px 16px;"
+                 @click="loadClipForEdit(clip)">
               <div class="w-16 h-16 rounded bg-line-soft flex-shrink-0 flex items-center justify-center border border-line">
                 <img :src="'/static/clips/' + clip.file_path" style="max-width:64px;max-height:64px;object-fit:contain;">
               </div>
@@ -487,15 +499,15 @@
                   <template x-for="p in clip.positions" :key="p">
                     <span class="text-micro px-2 py-0.5 rounded-full bg-indigo-soft text-indigo" x-text="p"></span>
                   </template>
+                  <span x-show="clip.position_type === 'freeform' && clip.freeform && clip.freeform.length"
+                        class="text-micro px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700"
+                        x-text="clip.freeform.length + ' freeform pt(s)'"></span>
                 </div>
                 <p class="text-caption text-ink-soft mt-1" x-text="clip.size_pct + '% • ' + clip.animation + ' • x' + clip.count"></p>
+                <p x-show="editingClipId === clip.id" x-cloak class="text-caption text-indigo mt-1 font-medium">Editing this clip — change form above and click Save</p>
               </div>
-              <div class="flex flex-col gap-1 flex-shrink-0">
-                <button type="button" @click="editClip(clip)"
-                        class="text-caption text-indigo hover:bg-indigo-soft rounded px-2 py-1">Edit</button>
-                <button type="button" @click="deleteClip(clip)"
-                        class="text-caption text-rose-600 hover:bg-rose-50 rounded px-2 py-1">Delete</button>
-              </div>
+              <button type="button" @click.stop="deleteClip(clip)"
+                      class="text-caption text-rose-600 hover:bg-rose-50 rounded px-2 py-1 flex-shrink-0">Delete</button>
             </div>
           </template>
         </div>
@@ -677,6 +689,78 @@ function themesPage() {
     },
 
     editingClip: null,
+    editingClipId: null,
+
+    loadClipForEdit(clip) {
+      if (this.editingClipId === clip.id) {
+        // Toggle off if same clip clicked again
+        this.cancelEdit();
+        return;
+      }
+      this.editingClipId = clip.id;
+      this.uploadPositionType = clip.position_type || 'anchor';
+      this.selectedPositions = [...(clip.positions || [])];
+      this.uploadFreeformPositions = [...(clip.freeform || [])];
+      this.newClipSize = clip.size_pct;
+      this.newClipAnim = clip.animation;
+      this.newClipCount = clip.count;
+      // Show existing file preview
+      this.clipPreviewUrl = '/static/clips/' + clip.file_path;
+      this.clipPreviewName = clip.file_path.split('/').pop();
+      this.clipPreviewSize = '';
+      // Scroll form into view
+      this.$nextTick(() => {
+        var form = document.querySelector('[x-show="showThemeEditor"] .border-dashed');
+        if (form) form.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    },
+    cancelEdit() {
+      this.editingClipId = null;
+      this.clipPreviewUrl = '';
+      this.clipPreviewName = '';
+      this.clipPreviewSize = '';
+      this.selectedPositions = ['top-left', 'top-right'];
+      this.uploadFreeformPositions = [];
+      this.uploadPositionType = 'anchor';
+      this.newClipSize = 10;
+      this.newClipAnim = 'twinkle';
+      this.newClipCount = 2;
+      // Clear the file input
+      var fileInput = this.$refs.clipFile;
+      if (fileInput) fileInput.value = '';
+    },
+    async saveOrUploadClip() {
+      if (this.editingClipId) {
+        // Update existing clip via PATCH
+        this.uploadingClip = true;
+        try {
+          const r = await fetch('/themes/api/clips/' + this.editingClipId, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              positions: this.selectedPositions,
+              position_type: this.uploadPositionType,
+              freeform: this.uploadFreeformPositions,
+              size_pct: this.newClipSize,
+              animation: this.newClipAnim,
+              count: this.uploadPositionType === 'freeform' ? this.uploadFreeformPositions.length : this.newClipCount,
+            }),
+          });
+          if (r.ok) {
+            this.cancelEdit();
+            await this.openTheme(this.editingTheme);
+          } else {
+            const d = await r.json();
+            alert(d.error || 'Save failed');
+          }
+        } finally { this.uploadingClip = false; }
+      } else {
+        // New upload
+        await this.uploadClip();
+      }
+    },
+
     showIconBrowser: false,
     iconSearchQuery: '',
     iconResults: [],
