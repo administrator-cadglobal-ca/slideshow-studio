@@ -208,6 +208,40 @@
     </div>
   </div>
 
+  {# Iconify browser modal #}
+  <div x-show="showIconBrowser" x-cloak @keydown.escape.window="showIconBrowser = false"
+       style="z-index:95;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable w-full max-h-[85vh] flex flex-col" style="max-width:640px; padding:20px 24px;">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <p class="text-small font-medium text-ink">Browse Icon Library</p>
+          <p class="text-caption text-ink-soft">Iconify - 200k+ open-source icons (free)</p>
+        </div>
+        <button type="button" @click="showIconBrowser = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
+      </div>
+      <div class="flex gap-2 mb-3">
+        <input type="text" x-model="iconSearchQuery" @keydown.enter="searchIcons()"
+               placeholder="Search: diya, balloon, star, heart, cake..." class="input flex-1 text-small">
+        <button type="button" @click="searchIcons()" :disabled="!iconSearchQuery || iconSearching" class="btn-primary text-small">
+          <span x-show="!iconSearching">Search</span>
+          <span x-show="iconSearching" x-cloak>...</span>
+        </button>
+      </div>
+      <p x-show="iconResults.length === 0 && !iconSearching && iconSearchDone" x-cloak class="text-caption text-ink-soft text-center py-4">No icons found - try different keywords</p>
+      <div class="grid grid-cols-4 sm:grid-cols-6 gap-2 overflow-y-auto flex-1" style="padding:4px;">
+        <template x-for="icon in iconResults" :key="icon.id">
+          <button type="button" @click="importIcon(icon)"
+                  :disabled="iconImporting"
+                  class="aspect-square border border-line rounded-standard bg-white hover:border-indigo hover:bg-indigo-soft flex items-center justify-center p-2 transition disabled:opacity-50"
+                  :title="icon.id">
+            <img :src="icon.preview_url" style="max-width:100%;max-height:100%;" loading="lazy">
+          </button>
+        </template>
+      </div>
+      <p x-show="iconImporting" x-cloak class="text-caption text-indigo text-center mt-2">Adding to theme...</p>
+    </div>
+  </div>
+
   {# Theme clips editor modal #}
   <div x-show="showThemeEditor" x-cloak @keydown.escape.window="showThemeEditor = false"
        style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
@@ -221,11 +255,17 @@
       </div>
 
       <div class="space-y-5" style="padding:20px 24px;">
+        {# Browse icon library #}
+        <button type="button" @click="openIconBrowser()" class="btn-secondary text-small w-full mb-3 flex items-center justify-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Browse free icon library (200k+ icons)
+        </button>
+
         {# Upload new clip #}
         <div class="border-2 border-dashed border-line rounded-standard bg-line-soft/30" style="padding:16px 20px;">
           <p class="text-small font-medium text-ink mb-3 flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add new clip
+            Or upload a file
           </p>
 
           {# Custom file drop zone with preview #}
@@ -501,6 +541,56 @@ function themesPage() {
     },
 
     editingClip: null,
+    showIconBrowser: false,
+    iconSearchQuery: '',
+    iconResults: [],
+    iconSearching: false,
+    iconSearchDone: false,
+    iconImporting: false,
+
+    openIconBrowser() {
+      this.iconSearchQuery = '';
+      this.iconResults = [];
+      this.iconSearchDone = false;
+      this.showIconBrowser = true;
+    },
+    async searchIcons() {
+      if (!this.iconSearchQuery.trim()) return;
+      this.iconSearching = true;
+      try {
+        const r = await fetch('/themes/api/iconify/search?q=' + encodeURIComponent(this.iconSearchQuery) + '&limit=48', {credentials:'same-origin'});
+        const d = await r.json();
+        this.iconResults = d.icons || [];
+        this.iconSearchDone = true;
+      } catch (e) {
+        alert('Search failed: ' + e.message);
+      } finally { this.iconSearching = false; }
+    },
+    async importIcon(icon) {
+      if (this.iconImporting) return;
+      this.iconImporting = true;
+      try {
+        const r = await fetch('/themes/api/themes/' + this.editingTheme.id + '/import-iconify', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            icon_id: icon.id,
+            positions: this.selectedPositions,
+            size_pct: this.newClipSize,
+            animation: this.newClipAnim,
+            count: this.newClipCount,
+          }),
+        });
+        if (r.ok) {
+          await this.openTheme(this.editingTheme);
+          this.showIconBrowser = false;
+        } else {
+          const d = await r.json();
+          alert(d.error || 'Import failed');
+        }
+      } finally { this.iconImporting = false; }
+    },
     editClip(clip) {
       this.editingClip = {
         id: clip.id,
