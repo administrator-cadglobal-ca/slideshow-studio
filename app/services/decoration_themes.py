@@ -209,6 +209,86 @@ CATEGORIES = {
                     },
                 },
             },
+            "milestone": {
+                "name": "Milestone Birthday",
+                "themes": {
+                    "milestone-60": {
+                        "name": "60th Birthday",
+                        "description": "Gold 60 balloons with celebration cake",
+                        "clips": [
+                            {"file": "balloon-60.svg",    "positions": ["top-left", "top-right"],  "size": 18, "animate": "sway-gentle","count": 2},
+                            {"file": "cake-candles.svg",  "positions": ["bottom-right"],           "size": 15, "animate": "float-pulse","count": 1},
+                        ],
+                    },
+                    "milestone-70": {
+                        "name": "70th Birthday",
+                        "description": "Silver 70 balloons with cake",
+                        "clips": [
+                            {"file": "balloon-70.svg",    "positions": ["top-left", "top-right"],  "size": 18, "animate": "sway-gentle","count": 2},
+                            {"file": "cake-candles.svg",  "positions": ["bottom-right"],           "size": 15, "animate": "float-pulse","count": 1},
+                        ],
+                    },
+                    "milestone-80": {
+                        "name": "80th Birthday",
+                        "description": "Pink 80 balloons with cake",
+                        "clips": [
+                            {"file": "balloon-80.svg",    "positions": ["top-left", "top-right"],  "size": 18, "animate": "sway-gentle","count": 2},
+                            {"file": "cake-candles.svg",  "positions": ["bottom-right"],           "size": 15, "animate": "float-pulse","count": 1},
+                        ],
+                    },
+                },
+            },
+        },
+    },
+    "milestones": {
+        "name": "Anniversaries & Graduation",
+        "subcategories": {
+            "anniversary": {
+                "name": "Anniversary",
+                "themes": {
+                    "anniversary-25": {
+                        "name": "25th Silver Anniversary",
+                        "description": "Silver 25 balloons and heart",
+                        "clips": [
+                            {"file": "balloon-25.svg",         "positions": ["top-left", "top-right"],       "size": 18, "animate": "sway-gentle","count": 2},
+                            {"file": "heart-balloon-gold.svg", "positions": ["center-top"],                  "size": 12, "animate": "float-pulse","count": 1},
+                            {"file": "rose-bouquet.svg",       "positions": ["bottom-right"],                "size": 15, "animate": "sway-gentle","count": 1},
+                        ],
+                    },
+                    "anniversary-50": {
+                        "name": "50th Gold Anniversary",
+                        "description": "Gold 50 balloons and roses",
+                        "clips": [
+                            {"file": "balloon-50.svg",         "positions": ["top-left", "top-right"],       "size": 18, "animate": "sway-gentle","count": 2},
+                            {"file": "heart-balloon-gold.svg", "positions": ["center-top"],                  "size": 12, "animate": "float-pulse","count": 1},
+                            {"file": "rose-bouquet.svg",       "positions": ["bottom-right"],                "size": 15, "animate": "sway-gentle","count": 1},
+                        ],
+                    },
+                    "anniversary-classic": {
+                        "name": "Classic Anniversary",
+                        "description": "Silver and gold balloon cluster with roses",
+                        "clips": [
+                            {"file": "cluster-gold-silver.svg","positions": ["top-left", "top-right"],       "size": 18, "animate": "sway-gentle","count": 2},
+                            {"file": "rose-bouquet.svg",       "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "sway-gentle","count": 2},
+                            {"file": "heart-balloon-gold.svg", "positions": ["center-top"],                  "size": 10, "animate": "float-pulse","count": 1},
+                        ],
+                    },
+                },
+            },
+            "graduation": {
+                "name": "Graduation",
+                "themes": {
+                    "graduation-classic": {
+                        "name": "Graduation Day",
+                        "description": "Grad caps, diploma, and balloons",
+                        "clips": [
+                            {"file": "grad-cap.svg",      "positions": ["top-left", "top-right"],       "size": 12, "animate": "sway-gentle","count": 2},
+                            {"file": "diploma.svg",       "positions": ["bottom-right"],                "size": 15, "animate": "float-pulse","count": 1},
+                            {"file": "grad-balloons.svg", "positions": ["bottom-left"],                 "size": 15, "animate": "sway-gentle","count": 1},
+                        ],
+                    },
+                },
+            },
         },
     },
 }

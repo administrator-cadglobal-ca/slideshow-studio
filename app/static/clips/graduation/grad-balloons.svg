@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="25" cy="25" rx="15" ry="18" fill="#000" stroke="#333" stroke-width="1"/>
+  <ellipse cx="55" cy="20" rx="15" ry="18" fill="#FFD700" stroke="#B8860B" stroke-width="1"/>
+  <ellipse cx="80" cy="30" rx="13" ry="16" fill="#000" stroke="#333" stroke-width="1"/>
+  <text x="25" y="30" text-anchor="middle" font-family="Arial Black" font-size="14" fill="#FFD700">2026</text>
+  <line x1="25" y1="43" x2="42" y2="90" stroke="#666" stroke-width="1"/>
+  <line x1="55" y1="38" x2="45" y2="90" stroke="#666" stroke-width="1"/>
+  <line x1="80" y1="46" x2="48" y2="90" stroke="#666" stroke-width="1"/>
+</svg>
