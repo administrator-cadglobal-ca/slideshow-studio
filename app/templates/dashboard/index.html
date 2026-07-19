@@ -288,7 +288,7 @@
 </style>
 
 <script>
-  function shareViaWhatsApp(kind, name, url, password, expiresOn) {
+  function buildShareMessage(kind, name, url, password, expiresOn) {
     var inviter = {{ current_user.first_name|tojson }};
     var lines = [];
     lines.push('🎉 Welcome to Slideshow Studio!');
@@ -319,10 +319,51 @@
     lines.push('');
     lines.push('With best compliments,');
     lines.push(inviter);
+    return lines.join('\n');
+  }
 
-    var message = lines.join('\n');
+  function shareViaWhatsApp(kind, name, url, password, expiresOn) {
+    var message = buildShareMessage(kind, name, url, password, expiresOn);
     var waUrl = 'https://wa.me/?text=' + encodeURIComponent(message);
     window.open(waUrl, '_blank');
+  }
+
+  function copyShareMessage(kind, name, url, password, expiresOn) {
+    var message = buildShareMessage(kind, name, url, password, expiresOn);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(message).then(function() {
+        showCopyToast('Message copied! Paste in WhatsApp, email, or anywhere.');
+      }).catch(function() {
+        fallbackCopy(message);
+      });
+    } else {
+      fallbackCopy(message);
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showCopyToast('Message copied!');
+    } catch (e) {
+      showCopyToast('Copy failed - please copy manually');
+    }
+    document.body.removeChild(ta);
+  }
+
+  function showCopyToast(msg) {
+    var t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#166534;color:#fff;padding:10px 20px;border-radius:8px;font-size:14px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+    document.body.appendChild(t);
+    setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; }, 2000);
+    setTimeout(function() { if (t.parentNode) document.body.removeChild(t); }, 2500);
   }
 </script>
 {% endblock %}
