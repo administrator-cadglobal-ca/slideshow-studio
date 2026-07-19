@@ -162,6 +162,52 @@
     </div>
   </div>
 
+  {# Edit clip modal #}
+  <div x-show="showEditClipModal && editingClip" x-cloak @keydown.escape.window="showEditClipModal = false"
+       style="z-index:90;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+    <div @click.stop class="bg-white rounded-comfortable max-w-md w-full p-5">
+      <p class="text-small font-medium text-ink mb-3">Edit clip</p>
+      <div class="space-y-4">
+        <div>
+          <p class="text-caption text-ink-soft mb-2">Positions</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="pos in availablePositions" :key="pos.value">
+              <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition text-small"
+                     :class="editingClip && editingClip.positions.includes(pos.value) ? 'border-indigo bg-indigo-soft text-indigo font-medium' : 'border-line bg-white text-ink-soft hover:border-indigo'">
+                <input type="checkbox" @change="togglePositionForEdit(pos.value)" :checked="editingClip && editingClip.positions.includes(pos.value)" class="sr-only">
+                <span x-text="pos.label"></span>
+              </label>
+            </template>
+          </div>
+        </div>
+        <label class="block">
+          <span class="text-caption text-ink-soft">Animation</span>
+          <select x-model="editingClip.animation" class="input w-full text-small mt-1">
+            <option value="twinkle">Twinkle (sparkle)</option>
+            <option value="float-pulse">Float & Pulse</option>
+            <option value="sway-gentle">Sway Gently</option>
+            <option value="float-flutter">Float & Flutter</option>
+            <option value="confetti-fall">Confetti Fall</option>
+          </select>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-caption text-ink-soft">Size (% of frame)</span>
+            <input type="number" x-model.number="editingClip.size_pct" min="4" max="50" class="input w-full text-small mt-1">
+          </label>
+          <label class="block">
+            <span class="text-caption text-ink-soft">Count per photo</span>
+            <input type="number" x-model.number="editingClip.count" min="1" max="5" class="input w-full text-small mt-1">
+          </label>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button @click="showEditClipModal = false; editingClip = null" class="btn-secondary text-small">Cancel</button>
+        <button @click="saveClipEdit()" :disabled="!editingClip || editingClip.positions.length === 0" class="btn-primary text-small">Save</button>
+      </div>
+    </div>
+  </div>
+
   {# Theme clips editor modal #}
   <div x-show="showThemeEditor" x-cloak @keydown.escape.window="showThemeEditor = false"
        style="z-index:80;" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
@@ -266,7 +312,7 @@
               <div class="w-16 h-16 rounded bg-line-soft flex-shrink-0 flex items-center justify-center border border-line">
                 <img :src="'/static/clips/' + clip.file_path" style="max-width:64px;max-height:64px;object-fit:contain;">
               </div>
-              <div class="flex-1 min-w-0">
+              <div class="flex-1 min-w-0 pl-1">
                 <p class="text-small font-medium text-ink truncate" x-text="clip.file_path.split('/').pop()"></p>
                 <div class="flex flex-wrap gap-1 mt-1">
                   <template x-for="p in clip.positions" :key="p">
@@ -275,8 +321,12 @@
                 </div>
                 <p class="text-caption text-ink-soft mt-1" x-text="clip.size_pct + '% • ' + clip.animation + ' • x' + clip.count"></p>
               </div>
-              <button type="button" @click="deleteClip(clip)"
-                      class="text-caption text-rose-600 hover:bg-rose-50 rounded px-2 py-1 flex-shrink-0">Delete</button>
+              <div class="flex flex-col gap-1 flex-shrink-0">
+                <button type="button" @click="editClip(clip)"
+                        class="text-caption text-indigo hover:bg-indigo-soft rounded px-2 py-1">Edit</button>
+                <button type="button" @click="deleteClip(clip)"
+                        class="text-caption text-rose-600 hover:bg-rose-50 rounded px-2 py-1">Delete</button>
+              </div>
             </div>
           </template>
         </div>
@@ -448,6 +498,47 @@ function themesPage() {
       if (!confirm('Delete this clip?')) return;
       const r = await fetch('/themes/api/clips/' + clip.id, {method:'DELETE', credentials:'same-origin'});
       if (r.ok) { await this.openTheme(this.editingTheme); }
+    },
+
+    editingClip: null,
+    editClip(clip) {
+      this.editingClip = {
+        id: clip.id,
+        positions: [...clip.positions],
+        size_pct: clip.size_pct,
+        animation: clip.animation,
+        count: clip.count,
+      };
+      this.showEditClipModal = true;
+    },
+    async saveClipEdit() {
+      const r = await fetch('/themes/api/clips/' + this.editingClip.id, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          positions: this.editingClip.positions,
+          size_pct: this.editingClip.size_pct,
+          animation: this.editingClip.animation,
+          count: this.editingClip.count,
+        }),
+      });
+      if (r.ok) {
+        this.showEditClipModal = false;
+        this.editingClip = null;
+        await this.openTheme(this.editingTheme);
+      } else {
+        const d = await r.json();
+        alert(d.error || 'Update failed');
+      }
+    },
+    showEditClipModal: false,
+
+    togglePositionForEdit(pos) {
+      if (!this.editingClip) return;
+      const idx = this.editingClip.positions.indexOf(pos);
+      if (idx >= 0) this.editingClip.positions.splice(idx, 1);
+      else this.editingClip.positions.push(pos);
     },
   };
 }
