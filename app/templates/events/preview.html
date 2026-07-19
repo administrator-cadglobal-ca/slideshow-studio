@@ -360,7 +360,8 @@ body.fs-lock { overflow: hidden !important; }
     {# Decoration overlay #}
     <div class="deco-layer" x-show="showDecorations && currentTheme" x-cloak>
       <template x-for="(clip, i) in decoClips" :key="i">
-        <div :class="'deco-clip deco-' + clip.position + ' deco-anim-' + clip.animate"
+        <div :class="clip.position_type === 'freeform' ? 'deco-clip deco-anim-' + clip.animate : 'deco-clip deco-' + clip.position + ' deco-anim-' + clip.animate"
+             :style="clip.position_type === 'freeform' ? 'left:' + clip.x + '%; top:' + clip.y + '%; width:' + clip.size + '%; height:' + clip.size + '%; transform:translate(-50%,-50%);' : 'width:' + clip.size + '%; height:' + clip.size + '%;'"
              :style="'width:' + clip.size + '%; height:' + clip.size + '%;'"
              x-html="clip.svg"></div>
       </template>
@@ -651,40 +652,48 @@ function previewPage() {
       this.decoClips = [];
       if (!this.currentThemeData || !this.currentThemeData.clips) return;
       const clips = this.currentThemeData.clips;
-      // Randomize per-photo (but consistent for same photo index)
       const seed = this.currentIndex + 1;
       const rand = (n) => ((seed * 9301 + 49297) % 233280 + n * 137) % 100;
+
+      const buildClip = async (clipDef, positionData) => {
+        // clipDef.file is now a full path relative to /static/clips/
+        const url = '/static/clips/' + clipDef.file;
+        const isImage = ['.png','.jpg','.jpeg','.gif'].some(ext => clipDef.file.toLowerCase().endsWith(ext));
+        let svg;
+        if (isImage) {
+          svg = '<img src="' + url + '" style="width:100%;height:100%;object-fit:contain;">';
+        } else {
+          try {
+            const r = await fetch(url);
+            svg = await r.text();
+          } catch (e) { console.error('load clip', clipDef.file, e); return; }
+        }
+        this.decoClips.push({
+          svg: svg,
+          position_type: positionData.position_type,
+          position: positionData.position,
+          x: positionData.x,
+          y: positionData.y,
+          size: clipDef.size,
+          animate: clipDef.animate || 'twinkle',
+        });
+      };
+
       for (var ci = 0; ci < clips.length; ci++) {
         const clipDef = clips[ci];
-        // Pick position(s) - up to clipDef.count from allowed positions
-        const positions = clipDef.positions.slice();
-        for (var i = 0; i < clipDef.count && positions.length > 0; i++) {
-          const pIdx = rand(ci * 10 + i) % positions.length;
-          const position = positions[pIdx];
-          positions.splice(pIdx, 1);
-          // Fetch SVG content
-          try {
-            const url = '/static/clips/' + (this.currentSubcategory || this.currentTheme) + '/' + clipDef.file;
-            const isPng = clipDef.file.toLowerCase().endsWith('.png') || clipDef.file.toLowerCase().endsWith('.jpg') || clipDef.file.toLowerCase().endsWith('.jpeg') || clipDef.file.toLowerCase().endsWith('.gif');
-            if (isPng) {
-              this.decoClips.push({
-                svg: '<img src="' + url + '" style="width:100%;height:100%;object-fit:contain;">',
-                position: position,
-                size: clipDef.size,
-                animate: clipDef.animate || 'twinkle',
-              });
-            } else {
-              const svgRes = await fetch(url);
-              const svgText = await svgRes.text();
-              this.decoClips.push({
-                svg: svgText,
-                position: position,
-                size: clipDef.size,
-                animate: clipDef.animate || 'twinkle',
-              });
-            }
-          } catch (e) {
-            console.error('load clip', clipDef.file, e);
+        // Freeform positions
+        if (clipDef.position_type === 'freeform' && clipDef.freeform && clipDef.freeform.length) {
+          for (var f = 0; f < clipDef.freeform.length; f++) {
+            await buildClip(clipDef, {position_type: 'freeform', x: clipDef.freeform[f].x, y: clipDef.freeform[f].y});
+          }
+        } else {
+          // Anchor positions
+          const positions = clipDef.positions.slice();
+          for (var i = 0; i < clipDef.count && positions.length > 0; i++) {
+            const pIdx = rand(ci * 10 + i) % positions.length;
+            const position = positions[pIdx];
+            positions.splice(pIdx, 1);
+            await buildClip(clipDef, {position_type: 'anchor', position: position});
           }
         }
       }
