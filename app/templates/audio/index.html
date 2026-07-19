@@ -416,6 +416,15 @@
       </template>
     </div>
 
+    <div x-show="freesoundSelectedIds.length > 0" x-cloak class="mt-3 flex items-center gap-2">
+      <button type="button" @click="importSelected()" :disabled="freesoundImporting"
+              class="btn-primary text-small flex-1">
+        <span x-show="!freesoundImporting">Add <span x-text="freesoundSelectedIds.length"></span> selected</span>
+        <span x-show="freesoundImporting" x-cloak>Importing (<span x-text="freesoundImportProgress"></span>/<span x-text="freesoundSelectedIds.length"></span>)...</span>
+      </button>
+      <button type="button" @click="freesoundSelectedIds = []" :disabled="freesoundImporting"
+              class="btn-secondary text-small">Clear</button>
+    </div>
     <p class="text-micro text-ink-faint mt-3">Sounds are from Freesound.org and use Creative Commons licenses. Check individual attribution requirements per clip.</p>
   </div>
 </div>
@@ -446,6 +455,45 @@ function audioLibrary() {
     freesoundPlayingId: null,
     freesoundImporting: false,
     freesoundImportedIds: [],
+    freesoundSelectedIds: [],
+    freesoundImportProgress: 0,
+
+    toggleSelect(sound) {
+      if (this.freesoundImportedIds.includes(sound.id)) return;
+      const idx = this.freesoundSelectedIds.indexOf(sound.id);
+      if (idx >= 0) this.freesoundSelectedIds.splice(idx, 1);
+      else this.freesoundSelectedIds.push(sound.id);
+    },
+    async importSelected() {
+      if (this.freesoundImporting || this.freesoundSelectedIds.length === 0) return;
+      this.freesoundImporting = true;
+      this.freesoundImportProgress = 0;
+      try {
+        const selectedSounds = this.freesoundResults.filter(s => this.freesoundSelectedIds.includes(s.id));
+        for (const sound of selectedSounds) {
+          try {
+            const r = await fetch('/audio/api/freesound/import', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                sound_id: sound.id,
+                preview_url: sound.preview_url,
+                name: sound.name,
+              }),
+            });
+            if (r.ok) {
+              this.freesoundImportedIds.push(sound.id);
+            }
+          } catch (e) { console.error('import failed', sound.name, e); }
+          this.freesoundImportProgress++;
+        }
+        this.freesoundSelectedIds = [];
+        // Reload the audio library
+        if (typeof this.loadSongs === 'function') { await this.loadSongs(); }
+        else { setTimeout(() => window.location.reload(), 500); }
+      } finally { this.freesoundImporting = false; }
+    },
 
     openFreesound() {
       this.showFreesound = true;
@@ -453,6 +501,7 @@ function audioLibrary() {
       this.freesoundResults = [];
       this.freesoundSearchDone = false;
       this.freesoundImportedIds = [];
+      this.freesoundSelectedIds = [];
     },
     async searchFreesound() {
       if (!this.freesoundQuery.trim()) return;
