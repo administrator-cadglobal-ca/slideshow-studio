@@ -1,334 +1,59 @@
-"""Decoration themes registry - 3-level category tree."""
+"""Decoration themes registry - now reads from DB (themes_v2 tables).
 
-# Structure:
-# CATEGORIES = {
-#     category_id: {
-#         name: str,
-#         subcategories: {
-#             subcategory_id: {
-#                 name: str,
-#                 themes: {
-#                     theme_id: { name, description, clips: [...] }
-#                 }
-#             }
-#         }
-#     }
-# }
-
-CATEGORIES = {
-    "occasions": {
-        "name": "Occasions",
-        "subcategories": {
-            "wedding": {
-                "name": "Wedding",
-                "themes": {
-                    "wedding-classic": {
-                        "name": "Classic Wedding",
-                        "description": "Hearts, roses, and gold sparkles",
-                        "clips": [
-                            {"file": "heart-gold.svg",   "positions": ["top-left", "top-right"],     "size": 10, "animate": "float-pulse",  "count": 2},
-                            {"file": "rose-pink.svg",    "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "sway-gentle",  "count": 2},
-                            {"file": "sparkle-gold.svg", "positions": ["center-top"],                "size": 8,  "animate": "twinkle",      "count": 1},
-                        ],
-                    },
-                },
-            },
-            "party": {
-                "name": "Party & Celebration",
-                "themes": {
-                    "party-fun": {
-                        "name": "Fun Party",
-                        "description": "Confetti, balloons, and stars",
-                        "clips": [
-                            {"file": "confetti.svg",   "positions": ["top-left", "top-right"],     "size": 15, "animate": "confetti-fall", "count": 2},
-                            {"file": "balloon-red.svg","positions": ["bottom-right"],              "size": 12, "animate": "sway-gentle",  "count": 1},
-                            {"file": "star-gold.svg",  "positions": ["top-left", "top-right", "bottom-left"], "size": 8,  "animate": "twinkle", "count": 3},
-                        ],
-                    },
-                },
-            },
-            "nature": {
-                "name": "Nature",
-                "themes": {
-                    "nature-butterflies": {
-                        "name": "Butterflies & Flowers",
-                        "description": "Butterflies dancing over pink flowers",
-                        "clips": [
-                            {"file": "butterfly.svg",   "positions": ["top-left", "top-right"],     "size": 12, "animate": "float-flutter", "count": 2},
-                            {"file": "flower-pink.svg", "positions": ["bottom-left", "bottom-right"], "size": 10, "animate": "sway-gentle",  "count": 2},
-                            {"file": "leaf-green.svg",  "positions": ["top-right"],                 "size": 10, "animate": "sway-gentle",  "count": 1},
-                        ],
-                    },
-                },
-            },
-        },
-    },
-    "festivals": {
-        "name": "Festivals",
-        "subcategories": {
-            "diwali": {
-                "name": "Diwali",
-                "themes": {
-                    "diwali-classic": {
-                        "name": "Diyas & Rangoli",
-                        "description": "Traditional diyas with rangoli patterns",
-                        "clips": [
-                            {"file": "diya.svg",       "positions": ["bottom-left", "bottom-right"], "size": 10, "animate": "twinkle",     "count": 2},
-                            {"file": "rangoli.svg",    "positions": ["top-left", "top-right"],       "size": 12, "animate": "sway-gentle","count": 2},
-                            {"file": "firework.svg",   "positions": ["center-top"],                  "size": 15, "animate": "twinkle",     "count": 1},
-                        ],
-                    },
-                    "diwali-lotus": {
-                        "name": "Lotus & Fireworks",
-                        "description": "Elegant lotus flowers with sparkling fireworks",
-                        "clips": [
-                            {"file": "lotus-row.svg",  "positions": ["bottom-left", "bottom-right"], "size": 15, "animate": "sway-gentle","count": 2},
-                            {"file": "firework.svg",   "positions": ["top-left", "top-right", "center-top"], "size": 12, "animate": "twinkle","count": 3},
-                        ],
-                    },
-                },
-            },
-            "christmas": {
-                "name": "Christmas",
-                "themes": {
-                    "christmas-classic": {
-                        "name": "Trees & Stars",
-                        "description": "Christmas trees, snowflakes, and stars",
-                        "clips": [
-                            {"file": "tree.svg",       "positions": ["bottom-left"], "size": 15, "animate": "sway-gentle","count": 1},
-                            {"file": "snowflake.svg",  "positions": ["top-left", "top-right", "center-top"], "size": 8, "animate": "twinkle","count": 3},
-                            {"file": "star-red.svg",   "positions": ["top-right"],                  "size": 10, "animate": "twinkle",     "count": 1},
-                        ],
-                    },
-                    "christmas-snowfall": {
-                        "name": "Snowfall",
-                        "description": "Gentle snowfall with scattered snowflakes",
-                        "clips": [
-                            {"file": "snowflake.svg",  "positions": ["top-left", "top-right", "center-top", "bottom-left", "bottom-right"], "size": 10, "animate": "twinkle","count": 5},
-                        ],
-                    },
-                },
-            },
-            "thanksgiving": {
-                "name": "Thanksgiving",
-                "themes": {
-                    "thanksgiving-harvest": {
-                        "name": "Autumn Harvest",
-                        "description": "Autumn leaves and pumpkins",
-                        "clips": [
-                            {"file": "pumpkin.svg",     "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "sway-gentle","count": 2},
-                            {"file": "autumn-leaf.svg", "positions": ["top-left", "top-right"],       "size": 10, "animate": "sway-gentle","count": 2},
-                        ],
-                    },
-                },
-            },
-            "holi": {
-                "name": "Holi",
-                "themes": {
-                    "holi-colors": {
-                        "name": "Colors & Pichkari",
-                        "description": "Colorful powder splashes and pichkari",
-                        "clips": [
-                            {"file": "powder-cloud.svg", "positions": ["top-left", "top-right"],       "size": 15, "animate": "twinkle",     "count": 2},
-                            {"file": "splash-pink.svg",  "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "float-pulse", "count": 2},
-                            {"file": "pichkari.svg",     "positions": ["center-top"],                  "size": 15, "animate": "sway-gentle","count": 1},
-                        ],
-                    },
-                },
-            },
-            "eid": {
-                "name": "Eid",
-                "themes": {
-                    "eid-classic": {
-                        "name": "Crescent & Lantern",
-                        "description": "Golden crescent, star, and lanterns",
-                        "clips": [
-                            {"file": "crescent-star.svg","positions": ["top-left", "top-right"],       "size": 12, "animate": "float-pulse", "count": 2},
-                            {"file": "lantern.svg",      "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "sway-gentle","count": 2},
-                            {"file": "mosque.svg",       "positions": ["center-top"],                  "size": 15, "animate": "twinkle",     "count": 1},
-                        ],
-                    },
-                },
-            },
-            "ganesh": {
-                "name": "Ganesh Chaturthi",
-                "themes": {
-                    "ganesh-classic": {
-                        "name": "Lotus & Om",
-                        "description": "Lotus, modak, and Om symbols",
-                        "clips": [
-                            {"file": "lotus-pink.svg",   "positions": ["top-left", "top-right"],       "size": 12, "animate": "sway-gentle","count": 2},
-                            {"file": "modak.svg",        "positions": ["bottom-left", "bottom-right"], "size": 10, "animate": "float-pulse","count": 2},
-                            {"file": "om.svg",           "positions": ["center-top"],                  "size": 12, "animate": "twinkle",    "count": 1},
-                        ],
-                    },
-                },
-            },
-        },
-    },
-    "birthdays": {
-        "name": "Birthdays",
-        "subcategories": {
-            "kids": {
-                "name": "Kids",
-                "themes": {
-                    "kids-toys": {
-                        "name": "Balloons & Toys",
-                        "description": "Colorful balloons and toys for kids",
-                        "clips": [
-                            {"file": "balloon-multi.svg","positions": ["top-left", "top-right"], "size": 12, "animate": "sway-gentle","count": 2},
-                            {"file": "cake.svg",         "positions": ["bottom-right"],           "size": 15, "animate": "float-pulse","count": 1},
-                            {"file": "gift.svg",         "positions": ["bottom-left"],            "size": 12, "animate": "sway-gentle","count": 1},
-                        ],
-                    },
-                },
-            },
-            "teen": {
-                "name": "Teen",
-                "themes": {
-                    "teen-modern": {
-                        "name": "Modern Vibes",
-                        "description": "Neon stars and confetti",
-                        "clips": [
-                            {"file": "neon-star.svg",  "positions": ["top-left", "top-right", "bottom-left"], "size": 10, "animate": "twinkle","count": 3},
-                            {"file": "confetti.svg",   "positions": ["center-top"],                "size": 15, "animate": "confetti-fall","count": 1},
-                        ],
-                    },
-                },
-            },
-            "adults": {
-                "name": "Adults",
-                "themes": {
-                    "adults-elegant": {
-                        "name": "Elegant Celebration",
-                        "description": "Gold sparkles and champagne",
-                        "clips": [
-                            {"file": "sparkle-gold.svg","positions": ["top-left", "top-right", "bottom-left", "bottom-right"], "size": 8, "animate": "twinkle","count": 4},
-                            {"file": "champagne.svg",   "positions": ["bottom-right"],                          "size": 12,"animate": "sway-gentle","count": 1},
-                        ],
-                    },
-                },
-            },
-            "milestone": {
-                "name": "Milestone Birthday",
-                "themes": {
-                    "milestone-60": {
-                        "name": "60th Birthday",
-                        "description": "Gold 60 balloons with celebration cake",
-                        "clips": [
-                            {"file": "balloon-60.svg",    "positions": ["top-left", "top-right"],  "size": 18, "animate": "sway-gentle","count": 2},
-                            {"file": "cake-candles.svg",  "positions": ["bottom-right"],           "size": 15, "animate": "float-pulse","count": 1},
-                        ],
-                    },
-                    "milestone-70": {
-                        "name": "70th Birthday",
-                        "description": "Silver 70 balloons with cake",
-                        "clips": [
-                            {"file": "balloon-70.svg",    "positions": ["top-left", "top-right"],  "size": 18, "animate": "sway-gentle","count": 2},
-                            {"file": "cake-candles.svg",  "positions": ["bottom-right"],           "size": 15, "animate": "float-pulse","count": 1},
-                        ],
-                    },
-                    "milestone-80": {
-                        "name": "80th Birthday",
-                        "description": "Pink 80 balloons with cake",
-                        "clips": [
-                            {"file": "balloon-80.svg",    "positions": ["top-left", "top-right"],  "size": 18, "animate": "sway-gentle","count": 2},
-                            {"file": "cake-candles.svg",  "positions": ["bottom-right"],           "size": 15, "animate": "float-pulse","count": 1},
-                        ],
-                    },
-                },
-            },
-        },
-    },
-    "milestones": {
-        "name": "Anniversaries & Graduation",
-        "subcategories": {
-            "anniversary": {
-                "name": "Anniversary",
-                "themes": {
-                    "anniversary-25": {
-                        "name": "25th Silver Anniversary",
-                        "description": "Silver 25 balloons and heart",
-                        "clips": [
-                            {"file": "balloon-25.svg",         "positions": ["top-left", "top-right"],       "size": 18, "animate": "sway-gentle","count": 2},
-                            {"file": "heart-balloon-gold.svg", "positions": ["center-top"],                  "size": 12, "animate": "float-pulse","count": 1},
-                            {"file": "rose-bouquet.svg",       "positions": ["bottom-right"],                "size": 15, "animate": "sway-gentle","count": 1},
-                        ],
-                    },
-                    "anniversary-50": {
-                        "name": "50th Gold Anniversary",
-                        "description": "Gold 50 balloons and roses",
-                        "clips": [
-                            {"file": "balloon-50.svg",         "positions": ["top-left", "top-right"],       "size": 18, "animate": "sway-gentle","count": 2},
-                            {"file": "heart-balloon-gold.svg", "positions": ["center-top"],                  "size": 12, "animate": "float-pulse","count": 1},
-                            {"file": "rose-bouquet.svg",       "positions": ["bottom-right"],                "size": 15, "animate": "sway-gentle","count": 1},
-                        ],
-                    },
-                    "anniversary-classic": {
-                        "name": "Classic Anniversary",
-                        "description": "Silver and gold balloon cluster with roses",
-                        "clips": [
-                            {"file": "cluster-gold-silver.svg","positions": ["top-left", "top-right"],       "size": 18, "animate": "sway-gentle","count": 2},
-                            {"file": "rose-bouquet.svg",       "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "sway-gentle","count": 2},
-                            {"file": "heart-balloon-gold.svg", "positions": ["center-top"],                  "size": 10, "animate": "float-pulse","count": 1},
-                        ],
-                    },
-                },
-            },
-            "graduation": {
-                "name": "Graduation",
-                "themes": {
-                    "graduation-classic": {
-                        "name": "Graduation Day",
-                        "description": "Grad caps, diploma, and balloons",
-                        "clips": [
-                            {"file": "grad-cap.svg",      "positions": ["top-left", "top-right"],       "size": 12, "animate": "sway-gentle","count": 2},
-                            {"file": "diploma.svg",       "positions": ["bottom-right"],                "size": 15, "animate": "float-pulse","count": 1},
-                            {"file": "grad-balloons.svg", "positions": ["bottom-left"],                 "size": 15, "animate": "sway-gentle","count": 1},
-                        ],
-                    },
-                },
-            },
-        },
-    },
-}
+Kept the same public API (get_theme, list_categories, list_themes) for backward
+compatibility with events blueprint, preview page, viewer, and MP4 render.
+"""
+from app import db
+from app.models.theme import ThemeCategory, ThemeSubcategory, ThemeV2, ThemeClip
+import json
 
 
-def find_theme(theme_id):
-    """Find a theme by its full theme_id across categories."""
-    for cat in CATEGORIES.values():
-        for sub in cat["subcategories"].values():
-            if theme_id in sub["themes"]:
-                theme = sub["themes"][theme_id].copy()
-                # Attach category for clip lookup
-                theme["_subcategory_id"] = None
-                for sub_id, sub_data in cat["subcategories"].items():
-                    if theme_id in sub_data["themes"]:
-                        theme["_subcategory_id"] = sub_id
-                return theme
-    return None
+def _clip_to_dict(clip):
+    """Serialize a ThemeClip row to a dict matching the old Python format."""
+    return {
+        "file": clip.file_path,   # includes subcategory or user_uploads path
+        "positions": json.loads(clip.positions_json) if clip.positions_json else [],
+        "size": clip.size_pct or 10,
+        "animate": clip.animation or "twinkle",
+        "count": clip.count or 1,
+        "position_type": (clip.position_type or "anchor"),
+        "freeform": json.loads(clip.freeform_json) if clip.freeform_json else [],
+    }
 
 
 def get_theme(theme_id):
-    return find_theme(theme_id)
+    """Return a theme dict by slug, or None."""
+    if not theme_id:
+        return None
+    theme = db.session.query(ThemeV2).filter_by(slug=theme_id).first()
+    if not theme:
+        return None
+    return {
+        "name": theme.name,
+        "description": theme.description or "",
+        "clips": [_clip_to_dict(c) for c in theme.clips],
+        "_subcategory_id": theme.subcategory.slug if theme.subcategory else None,
+        "_theme_slug": theme.slug,
+    }
 
 
 def list_categories():
-    """Return the full category tree for the UI."""
+    """Return the full category tree in the old dict format."""
+    cats = db.session.query(ThemeCategory).order_by(ThemeCategory.sort_order, ThemeCategory.name).all()
     result = []
-    for cat_id, cat in CATEGORIES.items():
+    for c in cats:
         cat_out = {
-            "id": cat_id,
-            "name": cat["name"],
+            "id": c.slug,
+            "name": c.name,
             "subcategories": [],
         }
-        for sub_id, sub in cat["subcategories"].items():
+        for s in c.subcategories:
             sub_out = {
-                "id": sub_id,
-                "name": sub["name"],
+                "id": s.slug,
+                "name": s.name,
                 "themes": [
-                    {"id": tid, "name": t["name"], "description": t["description"]}
-                    for tid, t in sub["themes"].items()
+                    {"id": t.slug, "name": t.name, "description": t.description or ""}
+                    for t in s.themes
                 ],
             }
             cat_out["subcategories"].append(sub_out)
@@ -336,14 +61,7 @@ def list_categories():
     return result
 
 
-# Backwards compat: flat theme lookup
-THEMES = {}
-for _cat in CATEGORIES.values():
-    for _sub in _cat["subcategories"].values():
-        THEMES.update(_sub["themes"])
-
-
 def list_themes():
-    """Flat list (backwards compat)."""
-    return [{"id": tid, "name": t["name"], "description": t["description"]}
-            for tid, t in THEMES.items()]
+    """Flat list of all themes."""
+    themes = db.session.query(ThemeV2).order_by(ThemeV2.sort_order).all()
+    return [{"id": t.slug, "name": t.name, "description": t.description or ""} for t in themes]
