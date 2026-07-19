@@ -416,14 +416,11 @@
                  @touchend.window="onStageMouseUp()">
               <div class="absolute inset-0 flex items-center justify-center text-white/30 text-caption pointer-events-none">Click to place</div>
 
-              {# Other-orientation overlay outline - shows visible area in the other mode #}
-              <div class="absolute pointer-events-none border-2 border-dashed border-amber-400/70"
-                   :style="dragStageOrientation === 'landscape'
-                     ? 'top:0; bottom:0; left:50%; width:auto; aspect-ratio:9/16; transform:translateX(-50%); height:100%;'
-                     : 'left:0; right:0; top:50%; height:auto; aspect-ratio:16/9; transform:translateY(-50%); width:100%;'">
+              {# Current-orientation outline label #}
+              <div class="absolute pointer-events-none border-2 border-dashed border-amber-400/70 inset-0">
                 <div class="absolute bg-amber-400/70 text-slate-900 text-micro font-medium px-1.5 py-0.5 rounded"
-                     :style="dragStageOrientation === 'landscape' ? 'top:2px; left:50%; transform:translateX(-50%);' : 'top:50%; left:2px; transform:translateY(-50%);'"
-                     x-text="dragStageOrientation === 'landscape' ? 'Mobile safe area' : 'Desktop safe area'"></div>
+                     style="top:4px; left:50%; transform:translateX(-50%);"
+                     x-text="dragStageOrientation === 'landscape' ? 'Desktop safe area' : 'Mobile safe area'"></div>
               </div>
               <template x-for="(pt, i) in uploadFreeformPositions" :key="i">
                 <div class="absolute" style="transform:translate(-50%,-50%); cursor:grab;"
