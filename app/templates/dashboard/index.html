@@ -344,8 +344,30 @@
 
   function shareViaWhatsApp(kind, name, url, password, expiresOn) {
     var message = buildShareMessage(kind, name, url, password, expiresOn);
-    var waUrl = 'https://wa.me/?text=' + encodeURIComponent(message);
-    window.open(waUrl, '_blank');
+    // Detect mobile - use copy + open pattern (wa.me drops emoji/newlines on mobile)
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      // Copy to clipboard first, then open WhatsApp - user pastes into chat
+      var copyPromise;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        copyPromise = navigator.clipboard.writeText(message).catch(function() {
+          fallbackCopy(message);
+        });
+      } else {
+        fallbackCopy(message);
+        copyPromise = Promise.resolve();
+      }
+      copyPromise.then(function() {
+        showCopyToast('Message copied - paste into WhatsApp chat!');
+        setTimeout(function() {
+          window.open('https://wa.me/', '_blank');
+        }, 800);
+      });
+    } else {
+      // Desktop - wa.me works fine
+      var waUrl = 'https://wa.me/?text=' + encodeURIComponent(message);
+      window.open(waUrl, '_blank');
+    }
   }
 
   function copyShareMessage(kind, name, url, password, expiresOn) {
