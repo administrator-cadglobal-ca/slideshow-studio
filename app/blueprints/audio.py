@@ -827,3 +827,116 @@ def _handle_archive_upload(archive_file, library_id, filename):
         "errors": errors[:5],
         "message": f"Uploaded {uploaded_count} audio file(s) from ZIP" + (f", skipped {len(skipped)} non-audio" if skipped else ""),
     })
+
+# -- Freesound integration -----------------------------------------------------
+@bp.route("/api/freesound/search", methods=["GET"])
+@login_required
+def freesound_search():
+    """Search Freesound.org for free CC-licensed audio clips."""
+    import requests, os
+    api_key = os.environ.get("FREESOUND_API_KEY", "")
+    if not api_key:
+        return jsonify({"error": "FREESOUND_API_KEY not configured"}), 500
+
+    query = (request.args.get("q") or "").strip()
+    if not query:
+        return jsonify({"error": "query required"}), 400
+
+    min_dur = int(request.args.get("min_dur", 10) or 10)
+    max_dur = int(request.args.get("max_dur", 300) or 300)
+
+    try:
+        r = requests.get(
+            "https://freesound.org/apiv2/search/text/",
+            params={
+                "query": query,
+                "filter": f"duration:[{min_dur} TO {max_dur}]",
+                "fields": "id,name,duration,previews,username,license,tags",
+                "page_size": 20,
+                "sort": "score",
+                "token": api_key,
+            },
+            timeout=15,
+        )
+        r.raise_for_status()
+        data = r.json()
+        results = []
+        for s in data.get("results", []):
+            results.append({
+                "id": s.get("id"),
+                "name": s.get("name"),
+                "duration": round(s.get("duration") or 0, 1),
+                "preview_url": (s.get("previews") or {}).get("preview-hq-mp3", ""),
+                "username": s.get("username", ""),
+                "license": s.get("license", ""),
+                "tags": (s.get("tags") or [])[:5],
+            })
+        return jsonify({"results": results, "total": data.get("count", 0)})
+    except Exception as e:
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+@bp.route("/api/freesound/import", methods=["POST"])
+@login_required
+def freesound_import():
+    """Download a Freesound preview MP3 and add it to the user's audio library."""
+    import requests, io
+    data = request.json or {}
+    preview_url = data.get("preview_url", "")
+    name = data.get("name", "freesound-clip")
+    library_id = data.get("library_id")
+
+    if not preview_url:
+        return jsonify({"error": "preview_url required"}), 400
+
+    try:
+        r = requests.get(preview_url, timeout=30)
+        r.raise_for_status()
+        mp3_bytes = r.content
+    except Exception as e:
+        return jsonify({"error": f"download failed: {e}"}), 500
+
+    from werkzeug.datastructures import FileStorage
+    safe_name = (name[:40].replace("/", "_").replace("\\", "_")) + ".mp3"
+    fake_file = FileStorage(
+        stream=io.BytesIO(mp3_bytes),
+        filename=safe_name,
+        content_type="audio/mpeg",
+    )
+
+    from app.services.storage import save_uploaded_audio_r2
+    result = save_uploaded_audio_r2(fake_file, current_user.id)
+
+    library = None
+    if library_id:
+        library = db.session.get(Library, int(library_id))
+        if not library or library.user_id != current_user.id:
+            library = None
+    if library is None:
+        library = Library.query.filter_by(user_id=current_user.id, name="Unsorted").first()
+        if library is None:
+            library = Library(
+                user_id=current_user.id, name="Unsorted",
+                color="#8A90A8", sort_order=999,
+            )
+            db.session.add(library)
+            db.session.flush()
+            default_pl = Playlist(
+                user_id=current_user.id, library_id=library.id,
+                name=library.name, color=library.color, sort_order=0, is_default=True,
+            )
+            db.session.add(default_pl)
+            db.session.flush()
+
+    song = AudioFile(
+        user_id=current_user.id,
+        library_id=library.id,
+        filename=result["filename"],
+        orig_name=result["orig_name"],
+        file_size=result["file_size"],
+        duration_s=result.get("duration_s"),
+    )
+    db.session.add(song)
+    db.session.commit()
+
+    return jsonify({"ok": True, "song_id": song.id, "name": song.orig_name})
