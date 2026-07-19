@@ -1158,6 +1158,14 @@ def render_mp4(event_id):
                         overlay_pos = "W-w-40:H-h-140"
                     elif pos == "center-top":
                         overlay_pos = "(W-w)/2:80"
+                    elif pos == "center-bottom":
+                        overlay_pos = "(W-w)/2:H-h-140"
+                    elif pos == "left-center":
+                        overlay_pos = "40:(H-h)/2"
+                    elif pos == "right-center":
+                        overlay_pos = "W-w-40:(H-h)/2"
+                    elif pos == "center":
+                        overlay_pos = "(W-w)/2:(H-h)/2"
                     else:
                         overlay_pos = "40:40"
                     next_label = f"tmp{i}"
