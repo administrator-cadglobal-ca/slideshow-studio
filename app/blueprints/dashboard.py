@@ -34,6 +34,34 @@ def index():
                      .join(RenderJob).join(Event)\
                      .filter(Event.user_id == current_user.id).count()
 
+    # Storage breakdown
+    from app.models import Photo
+    from app.models.render import RenderOutput as RO
+    from app.models.theme import ThemeClip
+    import os
+
+    audio_bytes = db.session.query(db.func.coalesce(db.func.sum(AudioFile.file_size), 0))\
+                    .filter_by(user_id=current_user.id).scalar() or 0
+
+    photo_bytes = db.session.query(db.func.coalesce(db.func.sum(Photo.file_size), 0))\
+                    .join(Event).filter(Event.user_id == current_user.id).scalar() or 0
+
+    video_bytes = db.session.query(db.func.coalesce(db.func.sum(RO.file_size), 0))\
+                    .join(RenderJob).join(Event)\
+                    .filter(Event.user_id == current_user.id).scalar() or 0
+
+    # Theme user uploads (approximate - not stored in DB, count files on disk)
+    theme_bytes = 0
+    try:
+        theme_upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "clips", "user_uploads")
+        theme_upload_dir = os.path.abspath(theme_upload_dir)
+        if os.path.exists(theme_upload_dir):
+            for root, dirs, files in os.walk(theme_upload_dir):
+                for f in files:
+                    theme_bytes += os.path.getsize(os.path.join(root, f))
+    except Exception:
+        pass
+
     event_ids = [e.id for e in events]
 
     # Per-event summaries
@@ -83,6 +111,10 @@ def index():
         library_count=library_count,
         playlist_count=playlist_count,
         total_outputs=total_outputs,
+        audio_bytes=audio_bytes,
+        photo_bytes=photo_bytes,
+        video_bytes=video_bytes,
+        theme_bytes=theme_bytes,
         total_slideshow_shares=total_slideshow_shares,
         total_video_shares=total_video_shares,
         loop_colors=LOOP_COLORS,

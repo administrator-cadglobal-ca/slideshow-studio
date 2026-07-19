@@ -5,23 +5,27 @@
 {% block content %}
 <div class="max-w-7xl mx-auto py-4 px-4">
 
-  {# Header greeting #}
-  <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
-    <div>
-      <h1 class="text-h2 text-ink">Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 17 else 'evening') }}, {{ current_user.first_name }}</h1>
-      <p class="text-caption text-ink-soft">
-        {% if active_job %}
-          Rendering now - {{ active_job.event.name }}
-          {% if active_job.current_version %} ({{ active_job.current_version.upper() }}){% endif %}
-        {% else %}
-          {{ events|length }} event{{ 's' if events|length != 1 }} - {{ total_outputs }} video{{ 's' if total_outputs != 1 }} rendered
-        {% endif %}
-      </p>
+  {# Hero header #}
+  <div class="rounded-comfortable overflow-hidden mb-5"
+       style="background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%); padding:24px 28px; color:#fff;">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="rounded-full flex items-center justify-center"
+           style="width:40px; height:40px; background:rgba(255,255,255,0.2);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+      </div>
+      <p class="text-h3 font-medium" style="color:#fff;">Slideshow Studio</p>
     </div>
-    <a href="{{ url_for('events.new') }}" class="btn-primary text-small">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      New event
-    </a>
+    <h1 class="text-h2" style="color:#fff;">Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 17 else 'evening') }}, {{ current_user.first_name }}</h1>
+    <p class="text-small mt-1" style="color:rgba(255,255,255,0.85);">
+      {% if active_job %}
+        Rendering now - {{ active_job.event.name }}
+        {% if active_job.current_version %} ({{ active_job.current_version.upper() }}){% endif %}
+      {% else %}
+        {{ events|length }} event{{ 's' if events|length != 1 }} - {{ total_outputs }} video{{ 's' if total_outputs != 1 }} rendered - {{ total_slideshow_shares + total_video_shares }} active share{{ 's' if (total_slideshow_shares + total_video_shares) != 1 }}
+      {% endif %}
+    </p>
   </div>
 
   {# Active render banner #}
@@ -100,16 +104,59 @@
       <p class="text-caption text-ink-soft">{{ total_slideshow_shares }} slideshow{{ 's' if total_slideshow_shares != 1 }} - {{ total_video_shares }} video{{ 's' if total_video_shares != 1 }}</p>
     </div>
 
-    <div class="p-4 rounded-standard border border-line bg-white">
-      <div class="flex items-center gap-2 mb-1">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-        <span class="text-caption text-ink-soft">Storage</span>
+  </div>
+
+  {# Storage breakdown card #}
+  <div class="rounded-standard border border-line bg-white mb-6" style="padding:16px 20px;">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <p class="text-small font-medium text-ink">Storage</p>
+        <p class="text-caption text-ink-soft">{{ current_user.storage_used|filesizeformat }} of {{ current_user.quota_bytes|filesizeformat }} used ({{ current_user.storage_pct|round(1) }}%)</p>
       </div>
-      <p class="text-h2 text-ink font-medium">{{ current_user.storage_used|filesizeformat }}</p>
-      <p class="text-caption text-ink-soft">of {{ current_user.quota_bytes|filesizeformat }}</p>
-      <div class="mt-2 h-1.5 rounded-full overflow-hidden" style="background:#e5e7eb;">
-        <div class="h-full rounded-full"
-             style="width:{{ current_user.storage_pct|round(1) }}%; background:{% if current_user.storage_pct > 90 %}#dc2626{% elif current_user.storage_pct > 70 %}#d97706{% else %}#4f46e5{% endif %};"></div>
+      <span class="text-caption font-medium px-2 py-1 rounded-full"
+            style="background:{% if current_user.storage_pct > 90 %}#fee2e2; color:#991b1b{% elif current_user.storage_pct > 70 %}#fef3c7; color:#92400e{% else %}#dcfce7; color:#166534{% endif %};">
+        {% if current_user.storage_pct > 90 %}Nearly full{% elif current_user.storage_pct > 70 %}Getting full{% else %}Healthy{% endif %}
+      </span>
+    </div>
+
+    {# Stacked bar #}
+    {% set total_bytes = (photo_bytes + audio_bytes + video_bytes + theme_bytes) or 1 %}
+    {% set quota = current_user.quota_bytes or 1 %}
+    <div class="rounded-full overflow-hidden flex mb-3" style="height:8px; background:#e5e7eb;">
+      <div style="width:{{ (photo_bytes * 100 / quota)|round(2) }}%; background:#4f46e5;" title="Photos"></div>
+      <div style="width:{{ (audio_bytes * 100 / quota)|round(2) }}%; background:#ec4899;" title="Songs"></div>
+      <div style="width:{{ (video_bytes * 100 / quota)|round(2) }}%; background:#f59e0b;" title="Videos"></div>
+      <div style="width:{{ (theme_bytes * 100 / quota)|round(2) }}%; background:#10b981;" title="Themes"></div>
+    </div>
+
+    <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));">
+      <div class="flex items-center gap-2">
+        <span style="width:10px; height:10px; border-radius:2px; background:#4f46e5; display:inline-block;"></span>
+        <div>
+          <p class="text-caption text-ink-soft">Photos</p>
+          <p class="text-small font-medium text-ink">{{ photo_bytes|filesizeformat }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span style="width:10px; height:10px; border-radius:2px; background:#ec4899; display:inline-block;"></span>
+        <div>
+          <p class="text-caption text-ink-soft">Songs</p>
+          <p class="text-small font-medium text-ink">{{ audio_bytes|filesizeformat }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span style="width:10px; height:10px; border-radius:2px; background:#f59e0b; display:inline-block;"></span>
+        <div>
+          <p class="text-caption text-ink-soft">Videos</p>
+          <p class="text-small font-medium text-ink">{{ video_bytes|filesizeformat }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span style="width:10px; height:10px; border-radius:2px; background:#10b981; display:inline-block;"></span>
+        <div>
+          <p class="text-caption text-ink-soft">Themes</p>
+          <p class="text-small font-medium text-ink">{{ theme_bytes|filesizeformat }}</p>
+        </div>
       </div>
     </div>
   </div>
