@@ -1,144 +1,213 @@
 {% extends "shared/base.html" %}
-{% block title %}Dashboard — Slideshow Studio{% endblock %}
+{% block title %}Home - Slideshow Studio{% endblock %}
+{% block section %}home{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div class="page-header-left">
-    <h1>Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 17 else 'evening') }}, {{ current_user.first_name }}</h1>
-    <div class="page-sub">
-      {% if active_job %}
-        1 render in progress
-        {% if active_job.current_version %} — {{ active_job.current_version.upper() }}{% endif %}
-      {% else %}
-        No active renders
-      {% endif %}
-      &nbsp;·&nbsp;
-      {{ events|selectattr('status','eq','complete')|list|length }} event{{ 's' if events|length != 1 }} complete
-    </div>
-  </div>
-  <a href="{{ url_for('events.new') }}" class="btn btn-primary">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    New event
-  </a>
-</div>
+<div class="max-w-7xl mx-auto py-4 px-4">
 
-{# ── Stats ── #}
-<div class="stat-grid">
-  <div class="stat-card">
-    <div class="stat-label">Events</div>
-    <div class="stat-value">{{ events|length }}</div>
-    <div class="stat-sub">{{ events|selectattr('status','eq','complete')|list|length }} complete</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Videos rendered</div>
-    <div class="stat-value">{{ total_outputs }}</div>
-    <div class="stat-sub">across all events</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Audio library</div>
-    <div class="stat-value">{{ audio_count }}</div>
-    <div class="stat-sub">song{{ 's' if audio_count != 1 }}</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">Storage</div>
-    <div class="stat-value" style="font-size:18px">{{ current_user.storage_used|filesizeformat }}</div>
-    <div class="storage-bar-wrap">
-      <div class="storage-nums">
-        <span></span>
-        <span>{{ current_user.quota_bytes|filesizeformat }}</span>
-      </div>
-      <div class="progress">
-        <div class="progress-bar {% if current_user.storage_pct > 90 %}danger{% elif current_user.storage_pct > 70 %}warn{% endif %}"
-             style="width:{{ current_user.storage_pct|round(1) }}%"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-{# ── Active render ── #}
-{% if active_job %}
-<div class="card-padded" style="margin-bottom:20px;border-left:3px solid #d97706">
-  <div class="section-hd">
-    <div class="section-title" style="display:flex;align-items:center;gap:8px">
-      <span style="width:8px;height:8px;border-radius:50%;background:#d97706;display:inline-block;animation:pulse 1.5s infinite"></span>
-      Rendering now — {{ active_job.event.name }}
-    </div>
-    <a href="{{ url_for('renders.show', job_id=active_job.id) }}" class="btn btn-sm">View progress</a>
-  </div>
-  <div style="margin-top:10px">
-    <div style="display:flex;justify-content:space-between;font-size:12px;color:#8a9bb0;margin-bottom:5px">
-      <span>{{ active_job.current_version.upper() if active_job.current_version else 'Starting...' }}</span>
-      <span>{{ active_job.progress_pct|round(0)|int }}%</span>
-    </div>
-    <div class="progress">
-      <div class="progress-bar warn" style="width:{{ active_job.progress_pct or 0 }}%"></div>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-{# ── Events ── #}
-<div class="section-hd">
-  <div class="section-title">Your events</div>
-  <a href="{{ url_for('events.index') }}" class="btn btn-sm">View all</a>
-</div>
-
-{% if events %}
-<div class="events-grid">
-  {% for evt in events[:6] %}
-  <a href="{{ url_for('events.show', event_id=evt.id) }}" class="evt-card" style="display:block">
-    <div class="evt-thumb" style="background:{{ loop_colors[loop.index0 % loop_colors|length] }}">
-      {% if evt.photo_count > 0 %}
-        <span class="evt-thumb-count">{{ evt.photo_count }} photos</span>
-      {% endif %}
-    </div>
-    <div class="evt-body">
-      <div class="evt-name">{{ evt.name }}</div>
-      <div class="evt-meta">
-        {{ evt.photo_count }} photo{{ 's' if evt.photo_count != 1 }}
-        {% if evt.selected_songs|length %} · {{ evt.selected_songs|length }} song{{ 's' if evt.selected_songs|length != 1 }}{% endif %}
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        {% if evt.status == 'complete' %}
-          <span class="pill pill-success">
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            Complete
-          </span>
-        {% elif evt.status == 'rendering' %}
-          <span class="pill pill-warning">Rendering</span>
-          {% if evt.latest_job %}
-          <div class="progress" style="flex:1">
-            <div class="progress-bar warn" style="width:{{ evt.latest_job.progress_pct or 0 }}%"></div>
-          </div>
-          {% endif %}
-        {% elif evt.status == 'draft' %}
-          <span class="pill pill-gray">Draft</span>
+  {# Header greeting #}
+  <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+    <div>
+      <h1 class="text-h2 text-ink">Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 17 else 'evening') }}, {{ current_user.first_name }}</h1>
+      <p class="text-caption text-ink-soft">
+        {% if active_job %}
+          Rendering now - {{ active_job.event.name }}
+          {% if active_job.current_version %} ({{ active_job.current_version.upper() }}){% endif %}
         {% else %}
-          <span class="pill pill-info">{{ evt.status|capitalize }}</span>
+          {{ events|length }} event{{ 's' if events|length != 1 }} - {{ total_outputs }} video{{ 's' if total_outputs != 1 }} rendered
         {% endif %}
+      </p>
+    </div>
+    <a href="{{ url_for('events.new') }}" class="btn-primary text-small">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New event
+    </a>
+  </div>
+
+  {# Active render banner #}
+  {% if active_job %}
+  <div class="rounded-standard border border-amber-300 bg-amber-50 mb-4" style="padding:12px 16px;">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-2">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#d97706; animation:pulse 1.5s infinite;"></span>
+        <span class="text-small font-medium">Rendering {{ active_job.event.name }}</span>
+        <span class="text-caption text-ink-soft">
+          {% if active_job.current_version %}{{ active_job.current_version.upper() }} - {% endif %}{{ active_job.progress_pct|round(0)|int }}%
+        </span>
+      </div>
+      <a href="{{ url_for('events.show', event_id=active_job.event_id) }}" class="btn-secondary text-caption">View</a>
+    </div>
+    <div class="mt-2 h-1.5 rounded-full overflow-hidden" style="background:#fef3c7;">
+      <div class="h-full rounded-full transition-all" style="background:#d97706; width:{{ active_job.progress_pct or 0 }}%;"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Stat cards - top overview #}
+  <div class="grid gap-3 mb-6" style="grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));">
+
+    <a href="{{ url_for('events.index') }}" class="p-4 rounded-standard border border-line bg-white hover:border-indigo transition block">
+      <div class="flex items-center gap-2 mb-1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="text-caption text-ink-soft">Events</span>
+      </div>
+      <p class="text-h2 text-ink font-medium">{{ events|length }}</p>
+      <p class="text-caption text-ink-soft">{{ events|selectattr('status','eq','complete')|list|length }} complete</p>
+    </a>
+
+    <a href="{{ url_for('audio.index') }}" class="p-4 rounded-standard border border-line bg-white hover:border-indigo transition block">
+      <div class="flex items-center gap-2 mb-1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span class="text-caption text-ink-soft">Songs</span>
+      </div>
+      <p class="text-h2 text-ink font-medium">{{ audio_count }}</p>
+      <p class="text-caption text-ink-soft">{{ clip_count }} clip{{ 's' if clip_count != 1 }}</p>
+    </a>
+
+    <a href="{{ url_for('audio.index') }}" class="p-4 rounded-standard border border-line bg-white hover:border-indigo transition block">
+      <div class="flex items-center gap-2 mb-1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span class="text-caption text-ink-soft">Libraries</span>
+      </div>
+      <p class="text-h2 text-ink font-medium">{{ library_count }}</p>
+      <p class="text-caption text-ink-soft">{{ playlist_count }} playlist{{ 's' if playlist_count != 1 }}</p>
+    </a>
+
+    <a href="{{ url_for('themes.index') }}" class="p-4 rounded-standard border border-line bg-white hover:border-indigo transition block">
+      <div class="flex items-center gap-2 mb-1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span class="text-caption text-ink-soft">Themes</span>
+      </div>
+      <p class="text-h2 text-ink font-medium">Manage</p>
+      <p class="text-caption text-ink-soft">Decoration library</p>
+    </a>
+
+    <div class="p-4 rounded-standard border border-line bg-white">
+      <div class="flex items-center gap-2 mb-1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo"><path d="M4 16.5A2.5 2.5 0 0 1 6.5 14H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span class="text-caption text-ink-soft">Videos rendered</span>
+      </div>
+      <p class="text-h2 text-ink font-medium">{{ total_outputs }}</p>
+      <p class="text-caption text-ink-soft">across all events</p>
+    </div>
+
+    <div class="p-4 rounded-standard border border-line bg-white">
+      <div class="flex items-center gap-2 mb-1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <span class="text-caption text-ink-soft">Active shares</span>
+      </div>
+      <p class="text-h2 text-ink font-medium">{{ total_slideshow_shares + total_video_shares }}</p>
+      <p class="text-caption text-ink-soft">{{ total_slideshow_shares }} slideshow{{ 's' if total_slideshow_shares != 1 }} - {{ total_video_shares }} video{{ 's' if total_video_shares != 1 }}</p>
+    </div>
+
+    <div class="p-4 rounded-standard border border-line bg-white">
+      <div class="flex items-center gap-2 mb-1">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        <span class="text-caption text-ink-soft">Storage</span>
+      </div>
+      <p class="text-h2 text-ink font-medium">{{ current_user.storage_used|filesizeformat }}</p>
+      <p class="text-caption text-ink-soft">of {{ current_user.quota_bytes|filesizeformat }}</p>
+      <div class="mt-2 h-1.5 rounded-full overflow-hidden" style="background:#e5e7eb;">
+        <div class="h-full rounded-full"
+             style="width:{{ current_user.storage_pct|round(1) }}%; background:{% if current_user.storage_pct > 90 %}#dc2626{% elif current_user.storage_pct > 70 %}#d97706{% else %}#4f46e5{% endif %};"></div>
       </div>
     </div>
-  </a>
-  {% endfor %}
-
-  {% if events|length < 6 %}
-  <a href="{{ url_for('events.new') }}" class="evt-new-card">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    New event
-  </a>
-  {% endif %}
-</div>
-{% else %}
-<div class="empty-state">
-  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-  <p>No events yet.</p>
-  <div class="empty-cta">
-    <a href="{{ url_for('events.new') }}" class="btn btn-primary">Create your first event</a>
   </div>
+
+  {# Events with details #}
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-h3 text-ink">Your events</h2>
+    <a href="{{ url_for('events.index') }}" class="text-caption text-indigo hover:underline">View all</a>
+  </div>
+
+  {% if event_summaries %}
+  <div class="space-y-3">
+    {% for es in event_summaries[:6] %}
+    <div class="rounded-standard border border-line bg-white" style="padding:16px 20px;">
+      <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+        <div class="flex-1 min-w-0">
+          <a href="{{ url_for('events.show', event_id=es.event.id) }}" class="text-small font-medium text-ink hover:text-indigo truncate block">{{ es.event.name }}</a>
+          <p class="text-caption text-ink-soft">
+            {{ es.photo_count }} photo{{ 's' if es.photo_count != 1 }}
+            {% if es.render_count %} - {{ es.render_count }} render{{ 's' if es.render_count != 1 }}{% endif %}
+            - {{ es.event.status|title }}
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          {% if es.event.status == 'complete' %}
+            <span class="text-micro font-medium px-2 py-0.5 rounded-full" style="background:#dcfce7; color:#166534;">Complete</span>
+          {% elif es.event.status == 'in_progress' %}
+            <span class="text-micro font-medium px-2 py-0.5 rounded-full" style="background:#fef3c7; color:#92400e;">In progress</span>
+          {% else %}
+            <span class="text-micro font-medium px-2 py-0.5 rounded-full" style="background:#f3f4f6; color:#374151;">{{ es.event.status|title }}</span>
+          {% endif %}
+          <a href="{{ url_for('events.show', event_id=es.event.id) }}" class="text-caption text-indigo hover:underline">Open</a>
+        </div>
+      </div>
+
+      {# Slideshow shares #}
+      {% if es.slideshow_shares %}
+      <div class="mt-2">
+        <p class="text-caption text-ink-soft font-medium mb-1">Slideshow shares ({{ es.slideshow_shares|length }})</p>
+        <div class="space-y-1">
+          {% for sh in es.slideshow_shares[:5] %}
+          <div class="flex items-center gap-2 text-caption flex-wrap" style="padding:6px 10px; background:#f8fafc; border-radius:6px;">
+            <span class="text-ink font-medium truncate" style="max-width:200px;">{{ sh.name or sh.description or 'Slideshow' }}</span>
+            {% if sh.plain_password %}
+              <span class="text-micro font-mono" style="background:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px;">{{ sh.plain_password }}</span>
+            {% endif %}
+            <span class="text-ink-faint text-micro">{{ sh.use_count }} view{{ 's' if sh.use_count != 1 }}</span>
+            <a href="/s/{{ sh.token }}" target="_blank" class="text-indigo text-micro hover:underline ml-auto">Open</a>
+          </div>
+          {% endfor %}
+          {% if es.slideshow_shares|length > 5 %}
+          <p class="text-caption text-ink-faint">+ {{ es.slideshow_shares|length - 5 }} more</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# Video shares #}
+      {% if es.video_shares %}
+      <div class="mt-3">
+        <p class="text-caption text-ink-soft font-medium mb-1">Video shares ({{ es.video_shares|length }})</p>
+        <div class="space-y-1">
+          {% for vs in es.video_shares[:5] %}
+          <div class="flex items-center gap-2 text-caption flex-wrap" style="padding:6px 10px; background:#f8fafc; border-radius:6px;">
+            <span class="text-ink font-medium truncate" style="max-width:250px;">{{ vs.filename }}</span>
+            {% if vs.plain_password %}
+              <span class="text-micro font-mono" style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px;">{{ vs.plain_password }}</span>
+            {% endif %}
+            <span class="text-ink-faint text-micro">{{ vs.use_count }} view{{ 's' if vs.use_count != 1 }}</span>
+            <a href="/r/{{ vs.token }}" target="_blank" class="text-indigo text-micro hover:underline ml-auto">Open</a>
+          </div>
+          {% endfor %}
+          {% if es.video_shares|length > 5 %}
+          <p class="text-caption text-ink-faint">+ {{ es.video_shares|length - 5 }} more</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if not es.slideshow_shares and not es.video_shares %}
+      <p class="text-caption text-ink-faint mt-1">No active shares</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="rounded-standard border-2 border-dashed border-line p-8 text-center">
+    <p class="text-small text-ink-soft mb-3">No events yet</p>
+    <a href="{{ url_for('events.new') }}" class="btn-primary text-small">Create your first event</a>
+  </div>
+  {% endif %}
+
 </div>
-{% endif %}
 
 <style>
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
 </style>
 {% endblock %}
