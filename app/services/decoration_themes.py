@@ -78,6 +78,14 @@ CATEGORIES = {
                             {"file": "firework.svg",   "positions": ["center-top"],                  "size": 15, "animate": "twinkle",     "count": 1},
                         ],
                     },
+                    "diwali-lotus": {
+                        "name": "Lotus & Fireworks",
+                        "description": "Elegant lotus flowers with sparkling fireworks",
+                        "clips": [
+                            {"file": "lotus-row.svg",  "positions": ["bottom-left", "bottom-right"], "size": 15, "animate": "sway-gentle","count": 2},
+                            {"file": "firework.svg",   "positions": ["top-left", "top-right", "center-top"], "size": 12, "animate": "twinkle","count": 3},
+                        ],
+                    },
                 },
             },
             "christmas": {
@@ -92,6 +100,13 @@ CATEGORIES = {
                             {"file": "star-red.svg",   "positions": ["top-right"],                  "size": 10, "animate": "twinkle",     "count": 1},
                         ],
                     },
+                    "christmas-snowfall": {
+                        "name": "Snowfall",
+                        "description": "Gentle snowfall with scattered snowflakes",
+                        "clips": [
+                            {"file": "snowflake.svg",  "positions": ["top-left", "top-right", "center-top", "bottom-left", "bottom-right"], "size": 10, "animate": "twinkle","count": 5},
+                        ],
+                    },
                 },
             },
             "thanksgiving": {
@@ -103,6 +118,48 @@ CATEGORIES = {
                         "clips": [
                             {"file": "pumpkin.svg",     "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "sway-gentle","count": 2},
                             {"file": "autumn-leaf.svg", "positions": ["top-left", "top-right"],       "size": 10, "animate": "sway-gentle","count": 2},
+                        ],
+                    },
+                },
+            },
+            "holi": {
+                "name": "Holi",
+                "themes": {
+                    "holi-colors": {
+                        "name": "Colors & Pichkari",
+                        "description": "Colorful powder splashes and pichkari",
+                        "clips": [
+                            {"file": "powder-cloud.svg", "positions": ["top-left", "top-right"],       "size": 15, "animate": "twinkle",     "count": 2},
+                            {"file": "splash-pink.svg",  "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "float-pulse", "count": 2},
+                            {"file": "pichkari.svg",     "positions": ["center-top"],                  "size": 15, "animate": "sway-gentle","count": 1},
+                        ],
+                    },
+                },
+            },
+            "eid": {
+                "name": "Eid",
+                "themes": {
+                    "eid-classic": {
+                        "name": "Crescent & Lantern",
+                        "description": "Golden crescent, star, and lanterns",
+                        "clips": [
+                            {"file": "crescent-star.svg","positions": ["top-left", "top-right"],       "size": 12, "animate": "float-pulse", "count": 2},
+                            {"file": "lantern.svg",      "positions": ["bottom-left", "bottom-right"], "size": 12, "animate": "sway-gentle","count": 2},
+                            {"file": "mosque.svg",       "positions": ["center-top"],                  "size": 15, "animate": "twinkle",     "count": 1},
+                        ],
+                    },
+                },
+            },
+            "ganesh": {
+                "name": "Ganesh Chaturthi",
+                "themes": {
+                    "ganesh-classic": {
+                        "name": "Lotus & Om",
+                        "description": "Lotus, modak, and Om symbols",
+                        "clips": [
+                            {"file": "lotus-pink.svg",   "positions": ["top-left", "top-right"],       "size": 12, "animate": "sway-gentle","count": 2},
+                            {"file": "modak.svg",        "positions": ["bottom-left", "bottom-right"], "size": 10, "animate": "float-pulse","count": 2},
+                            {"file": "om.svg",           "positions": ["center-top"],                  "size": 12, "animate": "twinkle",    "count": 1},
                         ],
                     },
                 },

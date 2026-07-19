@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="crescent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#DAA520"/>
+    </linearGradient>
+  </defs>
+  <path d="M50,10 A40,40 0 1,0 65,85 A32,32 0 1,1 50,10 Z" fill="url(#crescent)" stroke="#B8860B" stroke-width="1.5"/>
+  <polygon points="75,30 78,38 86,38 80,44 82,52 75,47 68,52 70,44 64,38 72,38" fill="#FFD700"/>
+</svg>
