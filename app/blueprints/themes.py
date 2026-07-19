@@ -403,6 +403,9 @@ def import_iconify_icon(theme_id):
     if color:
         params["color"] = color
 
+    # Request at 64px size (default is 24, too small)
+    if "height" not in params:
+        params["height"] = "64"
     try:
         r = requests.get(f"https://api.iconify.design/{prefix}/{name}.svg", params=params, timeout=10)
         r.raise_for_status()
