@@ -232,7 +232,7 @@
           <p class="text-small font-medium text-ink">Browse Icon Library</p>
           <p class="text-caption text-ink-soft">Iconify - 200k+ open-source icons (free)</p>
         </div>
-        <button type="button" @click="showIconBrowser = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
+        <button type="button" @click="showIconBrowser = false" class="text-ink-soft hover:text-ink text-h3 leading-none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="flex gap-2 mb-3">
         <input type="text" x-model="iconSearchQuery" @keydown.enter="searchIcons()"
@@ -271,7 +271,7 @@
           <p class="text-small font-medium text-ink truncate" x-text="editingTheme ? 'Preview: ' + editingTheme.name : ''"></p>
           <p class="text-caption text-ink-soft">See how decorations look on a slideshow photo</p>
         </div>
-        <button type="button" @click="showThemePreview = false" class="text-ink-soft hover:text-ink text-h3 leading-none ml-3">×</button>
+        <button type="button" @click="showThemePreview = false" class="text-ink-soft hover:text-ink text-h3 leading-none ml-3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
 
       {# Device toggle - desktop/mobile icons #}
@@ -330,7 +330,7 @@
         </div>
         <div class="flex items-center gap-2 ml-3">
           <button type="button" @click="openThemePreview()" class="btn-secondary text-caption">Preview</button>
-          <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink text-h3 leading-none">×</button>
+          <button type="button" @click="showThemeEditor = false" class="text-ink-soft hover:text-ink text-h3 leading-none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       </div>
 
@@ -432,7 +432,7 @@
                        style="width:28px; height:28px;" x-text="i+1"></div>
                   <button type="button" @click.stop="removeFreeformPosition(i)"
                           class="rounded-full leading-none flex items-center justify-center"
-                          style="position:absolute; top:-8px; right:-8px; width:18px; height:18px; font-size:14px; background:#dc2626; color:#fff; border:2px solid #fff; font-weight:700; z-index:10;">×</button>
+                          style="position:absolute; top:-8px; right:-8px; width:18px; height:18px; font-size:14px; background:#dc2626; color:#fff; border:2px solid #fff; font-weight:700; z-index:10;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 </div>
               </template>
             </div>
