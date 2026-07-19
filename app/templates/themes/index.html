@@ -428,9 +428,11 @@
                      @mousedown.stop="startDrag($event, i)"
                      @touchstart.stop="startDragTouch($event, i)"
                      @click.stop>
-                  <div class="w-6 h-6 rounded-full bg-indigo border-2 border-white flex items-center justify-center text-white text-caption font-medium select-none" x-text="i+1"></div>
+                  <div class="rounded-full bg-indigo border-2 border-white flex items-center justify-center text-white text-caption font-medium select-none"
+                       style="width:28px; height:28px;" x-text="i+1"></div>
                   <button type="button" @click.stop="removeFreeformPosition(i)"
-                          class="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-rose-600 text-white text-micro leading-none">×</button>
+                          class="rounded-full bg-rose-600 text-white leading-none flex items-center justify-center"
+                          style="position:absolute; top:-8px; right:-8px; width:18px; height:18px; font-size:12px;">×</button>
                 </div>
               </template>
             </div>
