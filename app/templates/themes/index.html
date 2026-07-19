@@ -407,7 +407,7 @@
               </div>
             </div>
             <div class="relative bg-slate-800 rounded-standard mx-auto"
-                 :style="dragStageOrientation === 'landscape' ? 'aspect-ratio:16/9; max-width:400px; cursor:crosshair;' : 'aspect-ratio:9/16; max-width:200px; cursor:crosshair;'"
+                 :style="dragStageOrientation === 'landscape' ? 'width:400px; height:225px; cursor:crosshair;' : 'width:225px; height:400px; cursor:crosshair;'"
                  x-ref="freeformStage"
                  @click="stageClickAdd($event)"
                  @mousemove="onStageMouseMove($event)"
