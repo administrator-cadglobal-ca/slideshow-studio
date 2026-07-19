@@ -1032,39 +1032,3 @@ def batch_delete_songs():
 
     db.session.commit()
     return jsonify({"ok": True, "deleted": deleted})
-
-@bp.route("/songs/batch-delete", methods=["POST"])
-@login_required
-def batch_delete_songs():
-    """Delete multiple songs at once (and their clips/playlist entries)."""
-    data = request.json or {}
-    song_ids = data.get("song_ids") or []
-    if not song_ids:
-        return jsonify({"error": "no song_ids provided"}), 400
-
-    # Only delete songs owned by the current user
-    songs = db.session.query(AudioFile).filter(
-        AudioFile.id.in_(song_ids),
-        AudioFile.user_id == current_user.id,
-    ).all()
-
-    from app.services import r2 as R2
-    deleted = 0
-    for song in songs:
-        # Delete clips + playlist entries (cascade if configured, otherwise manual)
-        clips = db.session.query(AudioClip).filter_by(song_id=song.id).all()
-        for c in clips:
-            db.session.query(PlaylistClip).filter_by(clip_id=c.id).delete()
-            db.session.delete(c)
-
-        # Delete R2 object
-        try:
-            R2.delete_audio(current_user.id, song.filename)
-        except Exception:
-            pass
-
-        db.session.delete(song)
-        deleted += 1
-
-    db.session.commit()
-    return jsonify({"ok": True, "deleted": deleted})
