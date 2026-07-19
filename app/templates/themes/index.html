@@ -231,11 +231,15 @@
       <div class="overflow-y-auto flex-1" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; padding:4px;">
         <template x-for="icon in iconResults" :key="icon.id">
           <button type="button" @click="importIcon(icon)"
-                  :disabled="iconImporting"
-                  class="border border-line rounded-standard bg-white hover:border-indigo hover:bg-indigo-soft flex items-center justify-center transition disabled:opacity-50"
+                  :disabled="iconImporting || iconAddedIds.includes(icon.id)"
+                  class="border rounded-standard hover:border-indigo flex items-center justify-center transition relative"
+                  :class="iconAddedIds.includes(icon.id) ? 'border-emerald-500 bg-emerald-50' : 'border-line bg-white hover:bg-indigo-soft'"
                   style="aspect-ratio:1/1; padding:8px;"
-                  :title="icon.id">
+                  :title="iconAddedIds.includes(icon.id) ? 'Already added' : icon.id">
             <img :src="icon.preview_url" style="max-width:100%;max-height:100%; object-fit:contain;" loading="lazy">
+            <span x-show="iconAddedIds.includes(icon.id)"
+                  class="absolute top-1 right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center"
+                  style="font-size:10px;">✓</span>
           </button>
         </template>
       </div>
@@ -548,11 +552,13 @@ function themesPage() {
     iconSearching: false,
     iconSearchDone: false,
     iconImporting: false,
+    iconAddedIds: [],
 
     openIconBrowser() {
       this.iconSearchQuery = '';
       this.iconResults = [];
       this.iconSearchDone = false;
+      this.iconAddedIds = [];
       this.showIconBrowser = true;
     },
     async searchIcons() {
@@ -584,8 +590,11 @@ function themesPage() {
           }),
         });
         if (r.ok) {
+          // Refresh the theme's clip list but keep the browser open for more selections
           await this.openTheme(this.editingTheme);
-          this.showIconBrowser = false;
+          // Mark this icon as added so user knows
+          if (!this.iconAddedIds) this.iconAddedIds = [];
+          this.iconAddedIds.push(icon.id);
         } else {
           const d = await r.json();
           alert(d.error || 'Import failed');
